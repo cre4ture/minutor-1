@@ -1,0 +1,164 @@
+{
+  "name": "Vanilla",
+  "type": "enchantment",
+  "version": "1.0",
+  "data": [
+        {
+          "id": 0,
+          "tag": "minecraft:protection",
+          "name": "Protection",
+          "name-de": ""
+        },
+        {
+          "id": 1,
+          "tag": "minecraft:fire_protection",
+          "name": "Fire Protection",
+          "name-de": ""
+        },
+        {
+          "id": 2,
+          "tag": "minecraft:feather_falling",
+          "name": "Feather Falling",
+          "name-de": ""
+        },
+        {
+          "id": 3,
+          "tag": "minecraft:blast_protection",
+          "name": "Blast Protection",
+          "name-de": "Explosionsschutz"
+        },
+        {
+          "id": 4,
+          "tag": "minecraft:projectile_protection",
+          "name": "Projectile Protection",
+          "name-de": ""
+        },
+        {
+          "id": 5,
+          "tag": "minecraft:respiration",
+          "name": "Respiration",
+          "name-de": "Atmung"
+        },
+        {
+          "id": 6,
+          "tag": "minecraft:aqua_affinity",
+          "name": "Aqua Affinity",
+          "name-de": ""
+        },
+        {
+          "id": 7,
+          "tag": "minecraft:thorns",
+          "name": "Thorns",
+          "name-de": ""
+        },
+        {
+          "id": 8,
+          "tag": "minecraft:depth_strider",
+          "name": "Depth Strider (1.8)",
+          "name-de": ""
+        },
+        {
+          "id": 9,
+          "tag": "minecraft:frost_walker",
+          "name": "Frost Walker (1.9)",
+          "name-de": ""
+        },
+        {
+           "id": 17,
+           "tag": "minecraft:smite",
+           "name": "Smite",
+           "name-de": ""
+         },
+         {
+           "id": 18,
+           "tag": "minecraft:bane_of_arthropods",
+           "name": "Bane Of Arthropods",
+           "name-de": ""
+         },
+         {
+           "id": 19,
+           "tag": "minecraft:knockback",
+           "name": "Knockback",
+           "name-de": ""
+         },
+         {
+           "id": 20,
+           "tag": "minecraft:fire_aspect",
+           "name": "Fire Aspect",
+           "name-de": ""
+         },
+         {
+           "id": 21,
+           "tag": "minecraft:looting",
+           "name": "Looting",
+           "name-de": ""
+         },
+         {
+           "id": 32,
+           "tag": "minecraft:efficiency",
+           "name": "Efficiency",
+           "name-de": ""
+         },
+         {
+           "id": 33,
+           "tag": "minecraft:silk_touch",
+           "name": "Silk Touch",
+           "name-de": ""
+         },
+         {
+           "id": 34,
+           "tag": "minecraft:unbreaking",
+           "name": "Unbreaking",
+           "name-de": ""
+         },
+         {
+           "id": 35,
+           "tag": "minecraft:fortune",
+           "name": "Fortune",
+           "name-de": ""
+         },
+         {
+           "id": 48,
+           "tag": "minecraft:power",
+           "name": "Power",
+           "name-de": "Stärke"
+         },
+         {
+           "id": 49,
+           "tag": "minecraft:punch",
+           "name": "Punch",
+           "name-de": ""
+         },
+         {
+           "id": 50,
+           "tag": "minecraft:flame",
+           "name": "Flame",
+           "name-de": "Flamme"
+         },
+         {
+           "id": 51,
+           "tag": "minecraft:infinity",
+           "name": "Infinity",
+           "name-de": ""
+         },
+         {
+           "id": 61,
+           "tag": "minecraft:luck_of_the_sea",
+           "name": "Luck of the Sea (1.8)",
+           "name-de": ""
+         },
+         {
+           "id": 62,
+           "tag": "minecraft:lure",
+           "name": "Lure (1.8)",
+           "name-de": ""
+         },
+         {
+           "id": 70,
+           "tag": "minecraft:mending",
+           "name": "Mending (1.9)",
+           "name-de": "Reparatur"
+         }
+       ],
+  "update": ""
+}

@@ -1,9 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <author/>
- <comment/>
- <exportmacro/>
  <class>SearchResultWidget</class>
- <widget name="SearchResultWidget" class="QWidget">
+ <widget class="QWidget" name="SearchResultWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,7 +13,28 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTreeWidget" name="treeWidget">
+     <column>
+      <property name="text">
+       <string>Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Buys</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Sells</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+  </layout>
  </widget>
- <pixmapfunction/>
+ <resources/>
  <connections/>
 </ui>
