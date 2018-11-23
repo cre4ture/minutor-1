@@ -35,6 +35,7 @@ class MapView : public QWidget {
   QSize sizeHint() const;
 
   void attach(DefinitionManager *dm);
+  void attach(QSharedPointer<ChunkCache> chunkCache_);
 
   void setLocation(double x, double z);
   void setLocation(double x, int y, double z, bool ignoreScale, bool useHeight);
@@ -78,9 +79,23 @@ class MapView : public QWidget {
 
  private:
   void drawChunk(int x, int z);
+  void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   int getY(int x, int z);
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
+
+  struct TopViewPosition
+  {
+      TopViewPosition(double _x, double _z)
+          : x(_x)
+          , z(_z)
+      {}
+
+      double x;
+      double z;
+  };
+
+  TopViewPosition transformMousePos(QPoint mouse_pos);
 
   static const int CAVE_DEPTH = 16;  // maximum depth caves are searched in cave mode
   float caveshade[CAVE_DEPTH];
@@ -90,7 +105,7 @@ class MapView : public QWidget {
   int scale;
   double zoom;
   int flags;
-  ChunkCache cache;
+  QSharedPointer<ChunkCache> cache;
   QImage image;
   DefinitionManager *dm;
   BlockIdentifier *blocks;
@@ -99,6 +114,9 @@ class MapView : public QWidget {
   QSet<QString> overlayItemTypes;
   QMap<QString, QList<QSharedPointer<OverlayItem>>> overlayItems;
   BlockLocation currentLocation;
+
+  QPoint lastMousePressPosition;
+  bool dragging;
 };
 
 #endif  // MAPVIEW_H_

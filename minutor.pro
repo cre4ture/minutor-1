@@ -15,6 +15,9 @@ macx:ICON=icon.icns
 #	QMAKE_LFLAGS += -pg
 #}
 
+QMAKE_CXXFLAGS_WARN_ON=-Wreturn-type
+QMAKE_CFLAGS_WARN_ON=-Wreturn-type
+
 # Input
 HEADERS += \
     zlib/zlib.h \
@@ -43,7 +46,12 @@ HEADERS += \
     zipreader.h \
     clamp.h \
     jumpto.h \
-    pngexport.h
+    pngexport.h \
+    searchresultwidget.h \
+    searchentitywidget.h \
+    propertietreecreator.h \
+    genericidentifier.h \
+    identifierinterface.h
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \
@@ -68,7 +76,11 @@ SOURCES += \
     worldsave.cpp \
     zipreader.cpp \
     jumpto.cpp \
-    pngexport.cpp
+    pngexport.cpp \
+    searchresultwidget.cpp \
+    searchentitywidget.cpp \
+    propertietreecreator.cpp \
+    genericidentifier.cpp
 RESOURCES = minutor.qrc
 
 win32:SOURCES += zlib/adler32.c \
@@ -98,4 +110,8 @@ FORMS += \
     properties.ui \
     settings.ui \
     jumpto.ui \
-    pngexport.ui
+    pngexport.ui \
+    searchresultwidget.ui \
+    searchentitywidget.ui
+
+DISTFILES +=

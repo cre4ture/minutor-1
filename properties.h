@@ -2,6 +2,8 @@
 #ifndef PROPERTIES_H_
 #define PROPERTIES_H_
 
+#include "propertietreecreator.h"
+
 #include <QDialog>
 #include <QMap>
 
@@ -20,18 +22,9 @@ class Properties : public QDialog {
 
   void DisplayProperties(QVariant p);
 
- protected:
-  void CreateTree(QTreeWidgetItem *node, const QVariant& v);
-  QString GetSummary(const QString& key, const QVariant& v);
-
-  template <class IterableT>
-      void ParseIterable(QTreeWidgetItem* node, const IterableT& seq);
-  template <class IterableT>
-      void ParseList(QTreeWidgetItem* node, const IterableT& seq);
-
  private:
   Ui::Properties *ui;
-  QMap<QString, QString> summary;
+  PropertieTreeCreator m_creator;
 };
 
 #endif  // PROPERTIES_H_

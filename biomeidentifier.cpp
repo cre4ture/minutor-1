@@ -205,17 +205,12 @@ BiomeInfo &BiomeIdentifier::getBiome(int biome) {
   return unknownBiome;
 }
 
-void BiomeIdentifier::enableDefinitions(int pack) {
-  if (pack < 0) return;
-  int len = packs[pack].length();
-  for (int i = 0; i < len; i++)
-    packs[pack][i]->enabled = true;
-}
-void BiomeIdentifier::disableDefinitions(int pack) {
-  if (pack < 0) return;
-  int len = packs[pack].length();
-  for (int i = 0; i < len; i++)
-    packs[pack][i]->enabled = false;
+void BiomeIdentifier::setDefinitionsEnabled(int pack, bool enabled)
+{
+    if (pack < 0) return;
+    int len = packs[pack].length();
+    for (int i = 0; i < len; i++)
+        packs[pack][i]->enabled = enabled;
 }
 
 int BiomeIdentifier::addDefinitions(JSONArray *defs, int pack) {

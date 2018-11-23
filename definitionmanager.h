@@ -19,17 +19,20 @@ class EntityIdentifier;
 class MapView;
 class JSONData;
 class DefinitionUpdater;
+class GenericIdentifier;
+class IdentifierI;
 
 struct Definition {
   QString name;
   QString version;
   QString path;
   QString update;
-  enum {Block, Biome, Dimension, Entity, Pack} type;
+  enum Type {Block, Biome, Dimension, Entity, Pack, Enchantment};
+  Type type;
   int id;
   bool enabled;
   // for packs only
-  int blockid, biomeid, dimensionid, entityid;
+  int blockid, biomeid, dimensionid, entityid, enchantmentid;
 };
 
 class DefinitionManager : public QWidget {
@@ -45,6 +48,7 @@ class DefinitionManager : public QWidget {
   BlockIdentifier *blockIdentifier();
   BiomeIdentifier *biomeIdentifier();
   DimensionIdentifier *dimensionIdentifer();
+  QSharedPointer<GenericIdentifier> enchantmentIdentifier();
   void autoUpdate();
 
  signals:
@@ -77,11 +81,16 @@ class DefinitionManager : public QWidget {
   BlockIdentifier *blockManager;  // todo: migrate to reference to singleton
   DimensionIdentifier *dimensionManager;  // todo: migrate to reference to singleton
   EntityIdentifier &entityManager;
+  QSharedPointer<GenericIdentifier> enchantmentManager;
   QString selected;
   QList<QVariant> sorted;
 
+  QMap<Definition::Type, IdentifierI*> m_managers;
+
   bool isUpdating;
   QList<DefinitionUpdater *> updateQueue;
+
+  void setManagerEnabled(const Definition& def, bool onoff);
 };
 
 #endif  // DEFINITIONMANAGER_H_

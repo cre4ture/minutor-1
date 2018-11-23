@@ -25,9 +25,18 @@
 #include "./village.h"
 #include "./jumpto.h"
 #include "./pngexport.h"
+#include "./searchentitywidget.h"
 
-Minutor::Minutor(): maxentitydistance(0) {
+Minutor::Minutor()
+    : cache(nullptr)
+    , searchMenu(nullptr)
+    , searchEntityAction(nullptr)
+    , maxentitydistance(0)
+    , searchEntityForm(nullptr)
+{
+  cache = QSharedPointer<ChunkCache>::create();
   mapview = new MapView;
+  mapview->attach(cache);
   connect(mapview, SIGNAL(hoverTextChanged(QString)),
           statusBar(), SLOT(showMessage(QString)));
   connect(mapview, SIGNAL(showProperties(QVariant)),
@@ -414,6 +423,9 @@ void Minutor::createActions() {
   updatesAct->setStatusTip(tr("Check for updated packs"));
   connect(updatesAct, SIGNAL(triggered()),
           dm,         SLOT(checkForUpdates()));
+
+  searchEntityAction = new QAction(tr("Search entity"), this);
+  connect(searchEntityAction, SIGNAL(triggered()), this, SLOT(searchEntity()));
 }
 
 // actionName will be modified, a "&" is added
@@ -513,6 +525,10 @@ void Minutor::createMenus() {
   viewMenu->addAction(manageDefsAct);
 
   menuBar()->addSeparator();
+
+  // [Search]
+  searchMenu = menuBar()->addMenu(tr("&Search"));
+  searchMenu->addAction(searchEntityAction);
 
   // [Help]
   helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -717,6 +733,16 @@ void Minutor::showProperties(QVariant props) {
     propView->DisplayProperties(props);
     propView->show();
   }
+}
+
+void Minutor::searchEntity()
+{
+    if (!searchEntityForm)
+    {
+        searchEntityForm = new SearchEntityWidget(cache, dm->enchantmentIdentifier());
+    }
+
+    searchEntityForm->showNormal();
 }
 
 void Minutor::loadStructures(const QDir &dataPath) {

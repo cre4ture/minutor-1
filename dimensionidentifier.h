@@ -2,6 +2,8 @@
 #ifndef DIMENSIONIDENTIFIER_H_
 #define DIMENSIONIDENTIFIER_H_
 
+#include "identifierinterface.h"
+
 #include <QString>
 #include <QList>
 #include <QHash>
@@ -23,15 +25,14 @@ class DimensionInfo {
 
 class DimensionDef;
 
-class DimensionIdentifier : public QObject {
+class DimensionIdentifier : public QObject, public IdentifierI {
   Q_OBJECT
 
  public:
   DimensionIdentifier();
   ~DimensionIdentifier();
-  int addDefinitions(JSONArray *, int pack = -1);
-  void enableDefinitions(int id);
-  void disableDefinitions(int id);
+  int addDefinitions(JSONArray *, int pack = -1) override;
+  void setDefinitionsEnabled(int pack, bool enabled) override;
   void getDimensions(QDir path, QMenu *menu, QObject *parent);
   void removeDimensions(QMenu *menu);
 

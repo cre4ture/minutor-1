@@ -15,6 +15,7 @@
 #include "./blockidentifier.h"
 #include "./dimensionidentifier.h"
 #include "./entityidentifier.h"
+#include "./genericidentifier.h"
 #include "./mapview.h"
 #include "./json.h"
 #include "./zipreader.h"
@@ -23,7 +24,10 @@
 DefinitionManager::DefinitionManager(QWidget *parent) :
     QWidget(parent),
     isUpdating(false),
-    entityManager(EntityIdentifier::Instance()) {
+    entityManager(EntityIdentifier::Instance())
+{
+  m_managers[Definition::Entity] = &entityManager;
+
   setWindowFlags(Qt::Window);
   setWindowTitle(tr("Definitions"));
 
@@ -66,8 +70,16 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   setLayout(layout);
 
   dimensionManager = new DimensionIdentifier;
+  m_managers[Definition::Dimension] = dimensionManager;
+
   blockManager = new BlockIdentifier;
+  m_managers[Definition::Block] = blockManager;
+
   biomeManager = new BiomeIdentifier;
+  m_managers[Definition::Biome] = biomeManager;
+
+  enchantmentManager = QSharedPointer<GenericIdentifier>::create();
+  m_managers[Definition::Enchantment] = enchantmentManager.get();
 
   QSettings settings;
   sorted = settings.value("packs").toList();
@@ -108,7 +120,12 @@ BiomeIdentifier *DefinitionManager::biomeIdentifier() {
   return biomeManager;
 }
 DimensionIdentifier *DefinitionManager::dimensionIdentifer() {
-  return dimensionManager;
+    return dimensionManager;
+}
+
+QSharedPointer<GenericIdentifier> DefinitionManager::enchantmentIdentifier()
+{
+    return enchantmentManager;
 }
 
 void DefinitionManager::refresh() {
@@ -116,7 +133,7 @@ void DefinitionManager::refresh() {
   table->setRowCount(0);
   QStringList types;
   types << tr("block") << tr("biome") << tr("dimension")
-        << tr("entity") << tr("pack");
+        << tr("entity") << tr("pack") << tr("enchantment");
   for (int i = 0; i < sorted.length(); i++) {
     Definition &def = definitions[sorted[i].toString()];
     int row = table->rowCount();
@@ -149,48 +166,29 @@ void DefinitionManager::toggledPack(bool onoff) {
   if (definitions.contains(selected)) {
     Definition &def = definitions[selected];
     def.enabled = onoff;
-    switch (def.type) {
-      case Definition::Block:
-        if (onoff)
-          blockManager->enableDefinitions(def.id);
-        else
-          blockManager->disableDefinitions(def.id);
-        break;
-      case Definition::Biome:
-        if (onoff)
-          biomeManager->enableDefinitions(def.id);
-        else
-          biomeManager->disableDefinitions(def.id);
-        break;
-      case Definition::Dimension:
-        if (onoff)
-          dimensionManager->enableDefinitions(def.id);
-        else
-          dimensionManager->disableDefinitions(def.id);
-        break;
-      case Definition::Entity:
-        if (onoff)
-          entityManager.enableDefinitions(def.id);
-        else
-          entityManager.disableDefinitions(def.id);
-        break;
-      case Definition::Pack:
-        if (onoff) {
-          blockManager->enableDefinitions(def.blockid);
-          biomeManager->enableDefinitions(def.biomeid);
-          dimensionManager->enableDefinitions(def.dimensionid);
-          entityManager.enableDefinitions(def.entityid);
-        } else {
-          blockManager->disableDefinitions(def.blockid);
-          biomeManager->disableDefinitions(def.biomeid);
-          dimensionManager->disableDefinitions(def.dimensionid);
-          entityManager.disableDefinitions(def.entityid);
-        }
-        break;
-    }
+    setManagerEnabled(def, onoff);
   }
   emit packsChanged();
   refresh();
+}
+
+void DefinitionManager::setManagerEnabled(const Definition& def, bool onoff)
+{
+    switch (def.type) {
+      case Definition::Pack:
+        blockManager->setDefinitionsEnabled(def.blockid, onoff);
+        biomeManager->setDefinitionsEnabled(def.biomeid, onoff);
+        dimensionManager->setDefinitionsEnabled(def.dimensionid, onoff);
+        entityManager.setDefinitionsEnabled(def.entityid, onoff);
+        enchantmentManager->setDefinitionsEnabled(def.enchantmentid, onoff);
+        break;
+    default:
+        {
+            IdentifierI* manager = m_managers[def.type];
+            manager->setDefinitionsEnabled(def.id, onoff);
+        }
+        break;
+    }
 }
 
 void DefinitionManager::addPack() {
@@ -386,6 +384,10 @@ void DefinitionManager::loadDefinition(QString path) {
       d.id = entityManager.addDefinitions(
           dynamic_cast<JSONArray*>(def->at("data")));
       d.type = Definition::Entity;
+    } else if (type == "enchantment") {
+      d.id = enchantmentManager->addDefinitions(
+          dynamic_cast<JSONArray*>(def->at("data")));
+      d.type = Definition::Entity;
     }
     definitions.insert(path, d);
     delete def;
@@ -433,6 +435,9 @@ void DefinitionManager::loadDefinition(QString path) {
       else if (type == "entity")
         d.entityid = entityManager.addDefinitions(
             dynamic_cast<JSONArray*>(def->at("data")), d.entityid);
+      else if (type == "enchantment")
+        d.entityid = enchantmentManager->addDefinitions(
+            dynamic_cast<JSONArray*>(def->at("data")), d.enchantmentid);
       delete def;
     }
     definitions.insert(path, d);
@@ -444,26 +449,7 @@ void DefinitionManager::removeDefinition(QString path) {
   // find the definition and remove it from disk
   Definition &def = definitions[path];
   if (def.path == path) {
-    switch (def.type) {
-      case Definition::Block:
-        blockManager->disableDefinitions(def.id);
-        break;
-      case Definition::Biome:
-        biomeManager->disableDefinitions(def.id);
-        break;
-      case Definition::Dimension:
-        dimensionManager->disableDefinitions(def.id);
-        break;
-      case Definition::Entity:
-        entityManager.disableDefinitions(def.id);
-        break;
-      case Definition::Pack:
-        blockManager->disableDefinitions(def.blockid);
-        biomeManager->disableDefinitions(def.biomeid);
-        dimensionManager->disableDefinitions(def.dimensionid);
-        entityManager.disableDefinitions(def.entityid);
-        break;
-    }
+    setManagerEnabled(def, false);
     definitions.remove(path);
     QFile::remove(path);
     sorted.removeOne(path);

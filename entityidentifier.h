@@ -2,6 +2,8 @@
 #ifndef ENTITYIDENTIFIER_H_
 #define ENTITYIDENTIFIER_H_
 
+#include "identifierinterface.h"
+
 #include <QString>
 #include <QColor>
 #include <QList>
@@ -21,14 +23,13 @@ class EntityInfo {
   QColor  penColor;
 };
 
-class EntityIdentifier {
+class EntityIdentifier: public IdentifierI {
  public:
   // singleton: access to global usable instance
   static EntityIdentifier &Instance();
 
-  int addDefinitions(JSONArray *, int packID = -1);
-  void enableDefinitions(int id);
-  void disableDefinitions(int id);
+  int addDefinitions(JSONArray *, int packID = -1) override;
+  void setDefinitionsEnabled(int packId, bool enabled) override;
 
   // interface to list of main categories
   typedef QList<QPair<QString, QColor>> TcatList;

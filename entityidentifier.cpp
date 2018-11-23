@@ -20,22 +20,15 @@ EntityIdentifier& EntityIdentifier::Instance() {
   return singleton;
 }
 
-void EntityIdentifier::enableDefinitions(int packID) {
-  if (packID < 0) return;
-  for (auto it = packs.begin(); it != packs.end(); ++it) {
-    if (it->packID == packID) {
-      it->enabled = true;
-      return;
+void EntityIdentifier::setDefinitionsEnabled(int packID, bool enabled)
+{
+    if (packID < 0) return;
+    for (auto it = packs.begin(); it != packs.end(); ++it) {
+      if (it->packID == packID) {
+        it->enabled = enabled;
+        return;
+      }
     }
-  }
-}
-
-void EntityIdentifier::disableDefinitions(int packID) {
-  if (packID < 0) return;
-  for (auto it = packs.begin(); it != packs.end(); ++it) {
-    if (it->packID == packID)
-      it->enabled = false;
-  }
 }
 
 int EntityIdentifier::addDefinitions(JSONArray *defs, int packID) {

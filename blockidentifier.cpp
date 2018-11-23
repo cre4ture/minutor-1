@@ -125,22 +125,14 @@ BlockInfo &BlockIdentifier::getBlock(int id, int data) {
   return unknownBlock;
 }
 
-void BlockIdentifier::enableDefinitions(int pack) {
-  if (pack < 0) return;
-  int len = packs[pack].length();
-  for (int i = 0; i < len; i++)
-    packs[pack][i]->enabled = true;
-  // clear cache
-  clearCache();
-}
-
-void BlockIdentifier::disableDefinitions(int pack) {
-  if (pack < 0) return;
-  int len = packs[pack].length();
-  for (int i = 0; i < len; i++)
-    packs[pack][i]->enabled = false;
-  // clear cache
-  clearCache();
+void BlockIdentifier::setDefinitionsEnabled(int pack, bool enabled)
+{
+    if (pack < 0) return;
+    int len = packs[pack].length();
+    for (int i = 0; i < len; i++)
+      packs[pack][i]->enabled = enabled;
+    // clear cache
+    clearCache();
 }
 
 int BlockIdentifier::addDefinitions(JSONArray *defs, int pack) {

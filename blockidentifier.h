@@ -2,6 +2,8 @@
 #ifndef BLOCKIDENTIFIER_H_
 #define BLOCKIDENTIFIER_H_
 
+#include "identifierinterface.h"
+
 #include <QString>
 #include <QMap>
 #include <QHash>
@@ -65,13 +67,12 @@ class BlockInfo {
   bool    foliage;
 };
 
-class BlockIdentifier {
+class BlockIdentifier: public IdentifierI {
  public:
   BlockIdentifier();
   ~BlockIdentifier();
-  int addDefinitions(JSONArray *, int pack = -1);
-  void enableDefinitions(int id);
-  void disableDefinitions(int id);
+  int addDefinitions(JSONArray *, int pack = -1) override;
+  void setDefinitionsEnabled(int packId, bool enabled) override;
   BlockInfo &getBlock(int id, int data);
  private:
   void clearCache();

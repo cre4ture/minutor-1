@@ -10,6 +10,7 @@ class ChunkID {
  public:
   ChunkID(int x, int z);
   bool operator==(const ChunkID &) const;
+  bool operator<(const ChunkID&) const;
   friend uint qHash(const ChunkID &);
  protected:
   int x, z;
@@ -26,18 +27,20 @@ class ChunkCache : public QObject {
   QString getPath();
   Chunk *fetch(int x, int z);
 
+  bool isLoaded(int x, int z, Chunk*& chunkPtr_out);
+
  signals:
-  void chunkLoaded(int x, int z);
+  void chunkLoaded(bool success, int x, int z);
 
  public slots:
   void adaptCacheToWindow(int x, int y);
 
  private slots:
-  void gotChunk(int x, int z);
+  void gotChunk(bool success, int x, int z);
 
  private:
   QString path;
-  QCache<ChunkID, Chunk> cache;
+  QMap<ChunkID, Chunk*> cache;
   QMutex mutex;
   int maxcache;
 };

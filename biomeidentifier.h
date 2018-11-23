@@ -2,6 +2,8 @@
 #ifndef BIOMEIDENTIFIER_H_
 #define BIOMEIDENTIFIER_H_
 
+#include "identifierinterface.h"
+
 #include <QHash>
 #include <QList>
 #include <QString>
@@ -42,13 +44,12 @@ class BiomeInfo {
   static QColor mixColor( QColor colorizer, QColor blockcolor );
 };
 
-class BiomeIdentifier {
+class BiomeIdentifier: public IdentifierI {
  public:
   BiomeIdentifier();
   ~BiomeIdentifier();
-  int addDefinitions(JSONArray *, int pack = -1);
-  void enableDefinitions(int id);
-  void disableDefinitions(int id);
+  int addDefinitions(JSONArray *, int pack = -1) override;
+  void setDefinitionsEnabled(int id, bool enabled) override;
   BiomeInfo &getBiome(int id);
  private:
   QHash<int, QList<BiomeInfo*>> biomes;

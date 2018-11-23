@@ -12,7 +12,12 @@
 ChunkID::ChunkID(int x, int z) : x(x), z(z) {
 }
 bool ChunkID::operator==(const ChunkID &other) const {
-  return (other.x == x) && (other.z == z);
+    return (other.x == x) && (other.z == z);
+}
+
+bool ChunkID::operator<(const ChunkID &other) const
+{
+    return (other.x < x) || ((other.x == x) && (other.z < z));
 }
 uint qHash(const ChunkID &c) {
   return (c.x << 16) ^ (c.z & 0xffff);  // safe way to hash a pair of integers
@@ -33,7 +38,7 @@ ChunkCache::ChunkCache() {
   DWORDLONG available = qMin(status.ullAvailPhys, status.ullAvailVirtual);
   chunks = available / (sizeof(Chunk) + 16 * sizeof(ChunkSection));
 #endif
-  cache.setMaxCost(chunks);
+  //cache.setMaxCost(chunks);
   maxcache = 2 * chunks;  // most chunks are less than half filled with sections
 }
 
@@ -54,7 +59,8 @@ QString ChunkCache::getPath() {
   return path;
 }
 
-Chunk *ChunkCache::fetch(int x, int z) {
+Chunk *ChunkCache::fetch(int x, int z)
+{
   ChunkID id(x, z);
   mutex.lock();
   Chunk *chunk = cache[id];
@@ -70,18 +76,33 @@ Chunk *ChunkCache::fetch(int x, int z) {
   cache.insert(id, chunk);
   mutex.unlock();
   ChunkLoader *loader = new ChunkLoader(path, x, z, cache, &mutex);
-  connect(loader, SIGNAL(loaded(int, int)),
-          this, SLOT(gotChunk(int, int)));
+  connect(loader, SIGNAL(chunkUpdated(bool, int, int)),
+          this, SLOT(gotChunk(bool, int, int)));
   QThreadPool::globalInstance()->start(loader);
   return NULL;
 }
 
-void ChunkCache::gotChunk(int x, int z) {
-  emit chunkLoaded(x, z);
+bool ChunkCache::isLoaded(int x, int z, Chunk *&chunkPtr_out)
+{
+    ChunkID id(x, z);
+    mutex.lock();
+    chunkPtr_out = cache[id];
+    mutex.unlock();
+    if (chunkPtr_out != NULL) {
+      if (chunkPtr_out->loaded)
+        return true;
+    }
+
+    chunkPtr_out = nullptr;
+    return false;  // we're loading this chunk, or it's blank.
+}
+
+void ChunkCache::gotChunk(bool success, int x, int z) {
+  emit chunkLoaded(success, x, z);
 }
 
 void ChunkCache::adaptCacheToWindow(int x, int y) {
   int chunks = ((x + 15) >> 4) * ((y + 15) >> 4);  // number of chunks visible
   chunks *= 1.10;  // add 10%
-  cache.setMaxCost(qMin(chunks, maxcache));
+  //cache.setMaxCost(qMin(chunks, maxcache));
 }

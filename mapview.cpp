@@ -14,8 +14,6 @@ MapView::MapView(QWidget *parent) : QWidget(parent) {
   depth = 255;
   scale = 1;
   zoom = 1.0;
-  connect(&cache, SIGNAL(chunkLoaded(int, int)),
-          this, SLOT(chunkUpdated(int, int)));
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
 
@@ -54,6 +52,14 @@ void MapView::attach(DefinitionManager *dm) {
   this->biomes = dm->biomeIdentifier();
 }
 
+void MapView::attach(QSharedPointer<ChunkCache> chunkCache_)
+{
+    cache = chunkCache_;
+
+    connect(cache.get(), SIGNAL(chunkLoaded(int, int)),
+            this, SLOT(chunkUpdated(int, int)));
+}
+
 void MapView::setLocation(double x, double z) {
   setLocation(x, depth, z, false, true);
 }
@@ -90,8 +96,8 @@ void MapView::setDimension(QString path, int scale) {
     this->x = 0;  // and we jump to the center spawn automatically
     this->z = 0;
   }
-  cache.clear();
-  cache.setPath(path);
+  cache->clear();
+  cache->setPath(path);
   redraw();
 }
 
@@ -110,26 +116,23 @@ void MapView::chunkUpdated(int x, int z) {
 }
 
 QString MapView::getWorldPath() {
-  return cache.getPath();
+  return cache->getPath();
 }
 
 void MapView::clearCache() {
-  cache.clear();
+  cache->clear();
   redraw();
 }
 
-static int lastMouseX = -1, lastMouseY = -1;
-static bool dragging = false;
 void MapView::mousePressEvent(QMouseEvent *event) {
-  lastMouseX = event->x();
-  lastMouseY = event->y();
+  lastMousePressPosition = event->pos();
   dragging = true;
 }
 
-void MapView::mouseMoveEvent(QMouseEvent *event) {
-  if (!dragging) {
-    int centerblockx = floor(this->x);
-    int centerblockz = floor(this->z);
+MapView::TopViewPosition MapView::transformMousePos(QPoint mouse_pos)
+{
+    double centerblockx = floor(this->x);
+    double centerblockz = floor(this->z);
 
     int centerx = image.width() / 2;
     int centery = image.height() / 2;
@@ -137,22 +140,39 @@ void MapView::mouseMoveEvent(QMouseEvent *event) {
     centerx -= (this->x - centerblockx) * zoom;
     centery -= (this->z - centerblockz) * zoom;
 
-    int mx = floor(centerblockx - (centerx - event->x()) / zoom);
-    int mz = floor(centerblockz - (centery - event->y()) / zoom);
+    return TopViewPosition(
+                floor(centerblockx - (centerx - mouse_pos.x()) / zoom),
+                floor(centerblockz - (centery - mouse_pos.y()) / zoom)
+                );
+}
 
-    getToolTip(mx, mz);
+void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
+{
+    TopViewPosition worldPos =  transformMousePos(QPoint(mouse_x, mouse_y));
+
+    getToolTip(worldPos.x, worldPos.z);
+}
+
+
+void MapView::mouseMoveEvent(QMouseEvent *event) {
+  if (!dragging) {
     return;
   }
-  x += (lastMouseX-event->x()) / zoom;
-  z += (lastMouseY-event->y()) / zoom;
-  lastMouseX = event->x();
-  lastMouseY = event->y();
+  x += (lastMousePressPosition.x()-event->x()) / zoom;
+  z += (lastMousePressPosition.y()-event->y()) / zoom;
+  lastMousePressPosition = event->pos();
 
   redraw();
 }
 
-void MapView::mouseReleaseEvent(QMouseEvent * /* event */) {
+void MapView::mouseReleaseEvent(QMouseEvent * event) {
   dragging = false;
+
+  if (event->pos() == lastMousePressPosition)
+  {
+      // no movement of cursor -> assume normal click:
+      getToolTipMousePos(event->x(), event->y());
+  }
 }
 
 void MapView::mouseDoubleClickEvent(QMouseEvent *event) {
@@ -314,7 +334,7 @@ void MapView::redraw() {
   for (int cz = startz; cz < startz + blockstall; cz++) {
     for (int cx = startx; cx < startx + blockswide; cx++) {
       for (auto &type : overlayItemTypes) {
-        Chunk *chunk = cache.fetch(cx, cz);
+        Chunk *chunk = cache->fetch(cx, cz);
         if (chunk) {
           auto range = chunk->entities.equal_range(type);
           for (auto it = range.first; it != range.second; ++it) {
@@ -359,7 +379,7 @@ void MapView::drawChunk(int x, int z) {
 
   uchar *src = placeholder;
   // fetch the chunk
-  Chunk *chunk = cache.fetch(x, z);
+  Chunk *chunk = cache->fetch(x, z);
 
   if (chunk && (chunk->renderedAt != depth ||
                 chunk->renderedFlags != flags)) {
@@ -615,7 +635,7 @@ void MapView::renderChunk(Chunk *chunk) {
 void MapView::getToolTip(int x, int z) {
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
-  Chunk *chunk = cache.fetch(cx, cz);
+  Chunk *chunk = cache->fetch(cx, cz);
   int offset = (x & 0xf) + (z & 0xf) * 16;
   int id = 0, bd = 0;
 
@@ -667,14 +687,16 @@ void MapView::getToolTip(int x, int z) {
     entityStr = entities.join(", ");
   }
 
-  emit hoverTextChanged(tr("X:%1 Z:%2 - %3 - %4 (%5:%6) %7")
+  emit hoverTextChanged(tr("X:%1 Z:%2 (Nether: X:%8 Z:%9) - %3 - %4 (%5:%6) %7")
                         .arg(x)
                         .arg(z)
                         .arg(biome)
                         .arg(name)
                         .arg(id)
                         .arg(bd)
-                        .arg(entityStr));
+                        .arg(entityStr)
+                        .arg(x/8)
+                        .arg(z/8));
 }
 
 void MapView::addOverlayItem(QSharedPointer<OverlayItem> item) {
@@ -688,7 +710,7 @@ void MapView::showOverlayItemTypes(const QSet<QString>& itemTypes) {
 int MapView::getY(int x, int z) {
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
-  Chunk *chunk = cache.fetch(cx, cz);
+  Chunk *chunk = cache->fetch(cx, cz);
   return chunk ? chunk->depth[(x & 0xf) + (z & 0xf) * 16] : -1;
 }
 
@@ -696,7 +718,7 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
   QList<QSharedPointer<OverlayItem>> ret;
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
-  Chunk *chunk = cache.fetch(cx, cz);
+  Chunk *chunk = cache->fetch(cx, cz);
 
   if (chunk) {
     double invzoom = 10.0 / zoom;
@@ -728,3 +750,4 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
   }
   return ret;
 }
+

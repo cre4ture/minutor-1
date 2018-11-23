@@ -22,6 +22,8 @@ class WorldSave;
 class Properties;
 class OverlayItem;
 class JumpTo;
+class SearchEntityWidget;
+class ChunkCache;
 
 class Location {
  public:
@@ -72,6 +74,8 @@ private slots:
   void addOverlayItemType(QString type, QColor color, QString dimension = "");
   void showProperties(QVariant props);
 
+  void searchEntity();
+
  signals:
   void worldLoaded(bool isLoaded);
 
@@ -86,6 +90,7 @@ private slots:
   QString getWorldName(QDir path);
   void getWorldList();
 
+  QSharedPointer<ChunkCache> cache;
   MapView *mapview;
   LabelledSlider *depth;
   QProgressDialog *progress;
@@ -95,6 +100,7 @@ private slots:
   QMenu *viewMenu, *jumpMenu, *dimMenu;
   QMenu *helpMenu;
   QMenu *structureOverlayMenu, *entityOverlayMenu;
+  QMenu *searchMenu;
 
   QList<QAction *>worlds;
   QAction *openAct, *reloadAct, *saveAct, *exitAct;
@@ -109,6 +115,7 @@ private slots:
   QAction *jumpToAct;
   QList<QAction*> structureActions;
   QList<QAction*> entityActions;
+  QAction *searchEntityAction;
 
   // loaded world data
   QList<Location> locations;
@@ -125,6 +132,8 @@ private slots:
   QSet<QString> overlayItemTypes;
   int maxentitydistance;
   Properties * propView;
+
+  SearchEntityWidget* searchEntityForm;
 };
 
 #endif  // MINUTOR_H_

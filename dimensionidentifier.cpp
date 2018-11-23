@@ -25,17 +25,12 @@ DimensionIdentifier::~DimensionIdentifier() {
   }
 }
 
-void DimensionIdentifier::enableDefinitions(int pack) {
-  if (pack < 0) return;
-  int len = packs[pack].length();
-  for (int i = 0; i < len; i++)
-    packs[pack][i]->enabled = true;
-}
-void DimensionIdentifier::disableDefinitions(int pack) {
-  if (pack < 0) return;
-  int len = packs[pack].length();
-  for (int i = 0; i < len; i++)
-    packs[pack][i]->enabled = false;
+void DimensionIdentifier::setDefinitionsEnabled(int pack, bool enabled)
+{
+    if (pack < 0) return;
+    int len = packs[pack].length();
+    for (int i = 0; i < len; i++)
+      packs[pack][i]->enabled = enabled;
 }
 
 int DimensionIdentifier::addDefinitions(JSONArray *defs, int pack) {

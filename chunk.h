@@ -25,11 +25,14 @@ class ChunkSection {
 
 class Chunk {
  public:
+  typedef QMap<QString, QSharedPointer<OverlayItem>> EntityMap;
   Chunk();
   void load(const NBT &nbt);
   ~Chunk();
+
+  const EntityMap& getEntityMap() const { return entities; }
+
  protected:
-  typedef QMap<QString, QSharedPointer<OverlayItem>> EntityMap;
 
   quint8 biomes[256];
   int highest;
