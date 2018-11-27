@@ -731,7 +731,31 @@ void Minutor::searchEntity()
 
 void Minutor::periodicUpdate()
 {
-    mapview->updatePlayerPositions(loadPlayerInfos(currentWorld));
+    const auto playerInfos = loadPlayerInfos(currentWorld);
+    mapview->updatePlayerPositions(playerInfos);
+
+    for (auto& player: playerInfos)
+    {
+        updateChunksAroundPlayer(Location(player.currentPosition), 5);
+    }
+}
+
+enum {
+    CHUNKSIZE = 8
+};
+
+void Minutor::updateChunksAroundPlayer(const Location &pos, size_t areaRadius)
+{
+    const Location chunkCoordinates = pos / CHUNKSIZE;
+    const int chunkRadius = 1 + static_cast<int>(areaRadius) / CHUNKSIZE;
+
+    for (int dx = -chunkRadius; dx < chunkRadius; dx++)
+    {
+        for (int dz = -chunkRadius; dz < chunkRadius; dz++)
+        {
+            cache->fetch(chunkCoordinates.x, chunkCoordinates.z);
+        }
+    }
 }
 
 void Minutor::loadStructures(const QDir &dataPath) {

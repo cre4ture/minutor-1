@@ -56,8 +56,8 @@ void MapView::attach(QSharedPointer<ChunkCache> chunkCache_)
 {
     cache = chunkCache_;
 
-    connect(cache.get(), SIGNAL(chunkLoaded(int, int)),
-            this, SLOT(chunkUpdated(int, int)));
+    connect(cache.get(), SIGNAL(chunkLoaded(bool, int, int)),
+            this, SLOT(chunkUpdated(bool, int, int)));
 }
 
 void MapView::setLocation(double x, double z) {
@@ -110,7 +110,7 @@ void MapView::setFlags(int flags) {
   this->flags = flags;
 }
 
-void MapView::chunkUpdated(int x, int z) {
+void MapView::chunkUpdated(bool, int x, int z) {
   drawChunk(x, z);
   update();
 }
@@ -345,7 +345,7 @@ void MapView::redraw() {
   for (int cz = startz; cz < startz + blockstall; cz++) {
     for (int cx = startx; cx < startx + blockswide; cx++) {
       for (auto &type : overlayItemTypes) {
-        Chunk *chunk = cache->fetch(cx, cz);
+        auto chunk = cache->fetch(cx, cz);
         if (chunk) {
           auto range = chunk->entities.equal_range(type);
           for (auto it = range.first; it != range.second; ++it) {
@@ -395,11 +395,11 @@ void MapView::drawChunk(int x, int z) {
 
   uchar *src = placeholder;
   // fetch the chunk
-  Chunk *chunk = cache->fetch(x, z);
+  auto chunk = cache->fetch(x, z);
 
   if (chunk && (chunk->renderedAt != depth ||
                 chunk->renderedFlags != flags)) {
-    renderChunk(chunk);
+    renderChunk(chunk.get());
   }
 
   // this figures out where on the screen this chunk should be drawn
@@ -651,7 +651,7 @@ void MapView::renderChunk(Chunk *chunk) {
 void MapView::getToolTip(int x, int z) {
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
-  Chunk *chunk = cache->fetch(cx, cz);
+  auto chunk = cache->fetch(cx, cz);
   int offset = (x & 0xf) + (z & 0xf) * 16;
   int id = 0, bd = 0;
 
@@ -726,7 +726,7 @@ void MapView::showOverlayItemTypes(const QSet<QString>& itemTypes) {
 int MapView::getY(int x, int z) {
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
-  Chunk *chunk = cache->fetch(cx, cz);
+  auto chunk = cache->fetch(cx, cz);
   return chunk ? chunk->depth[(x & 0xf) + (z & 0xf) * 16] : -1;
 }
 
@@ -734,7 +734,7 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
   QList<QSharedPointer<OverlayItem>> ret;
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
-  Chunk *chunk = cache->fetch(cx, cz);
+  auto chunk = cache->fetch(cx, cz);
 
   if (chunk) {
     double invzoom = 10.0 / zoom;

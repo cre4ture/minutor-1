@@ -2,8 +2,11 @@
 #ifndef CHUNKLOADER_H_
 #define CHUNKLOADER_H_
 
+#include "chunkcachetypes.h"
+
 #include <QObject>
 #include <QRunnable>
+
 class Chunk;
 class ChunkID;
 class QMutex;
@@ -12,20 +15,17 @@ class ChunkLoader : public QObject, public QRunnable {
   Q_OBJECT
 
  public:
-  ChunkLoader(QString path, int x, int z, const QMap<ChunkID, Chunk*> &cache,
-              QMutex *mutex);
+  ChunkLoader(QString path, ChunkID id_);
   ~ChunkLoader();
  signals:
   void loaded(int x, int z);
-  void chunkUpdated(bool success, int x, int z);
+  void chunkUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
  protected:
   void run();
-  bool runInternal();
+  QSharedPointer<Chunk> runInternal();
  private:
   QString path;
-  int x, z;
-  const QMap<ChunkID, Chunk*> &cache;
-  QMutex *mutex;
+  ChunkID id;
 };
 
 #endif  // CHUNKLOADER_H_

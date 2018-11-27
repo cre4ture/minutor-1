@@ -2,19 +2,13 @@
 #ifndef CHUNKCACHE_H_
 #define CHUNKCACHE_H_
 
+#include "./chunk.h"
+#include "./chunkcachetypes.h"
+
 #include <QObject>
 #include <QCache>
-#include "./chunk.h"
+#include <QSharedPointer>
 
-class ChunkID {
- public:
-  ChunkID(int x, int z);
-  bool operator==(const ChunkID &) const;
-  bool operator<(const ChunkID&) const;
-  friend uint qHash(const ChunkID &);
- protected:
-  int x, z;
-};
 
 class ChunkCache : public QObject {
   Q_OBJECT
@@ -25,9 +19,9 @@ class ChunkCache : public QObject {
   void clear();
   void setPath(QString path);
   QString getPath();
-  Chunk *fetch(int x, int z);
+  QSharedPointer<Chunk> fetch(int x, int z, bool forceUpdate = false);
 
-  bool isLoaded(int x, int z, Chunk*& chunkPtr_out);
+  bool isLoaded(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
 
  signals:
   void chunkLoaded(bool success, int x, int z);
@@ -36,13 +30,23 @@ class ChunkCache : public QObject {
   void adaptCacheToWindow(int x, int y);
 
  private slots:
-  void gotChunk(bool success, int x, int z);
+  void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id);
 
  private:
   QString path;
-  QMap<ChunkID, Chunk*> cache;
+
+  enum class ChunkState {
+      Uncached,
+      Loading,
+      Cached
+  };
+
+  QMap<ChunkID, ChunkState> state;
+  ChunkCacheT cache;
   QMutex mutex;
   int maxcache;
+
+  void loadChunkAsync(ChunkID id);
 };
 
 #endif  // CHUNKCACHE_H_

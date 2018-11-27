@@ -52,7 +52,8 @@ HEADERS += \
     propertietreecreator.h \
     genericidentifier.h \
     identifierinterface.h \
-    playerinfos.h
+    playerinfos.h \
+    chunkcachetypes.h
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \

@@ -59,7 +59,7 @@ class MapView : public QWidget {
 
  public slots:
   void setDepth(int depth);
-  void chunkUpdated(int x, int z);
+  void chunkUpdated(bool, int x, int z);
   void redraw();
 
   // Clears the cache and redraws, causing all chunks to be re-loaded;

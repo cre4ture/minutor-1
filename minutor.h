@@ -32,6 +32,11 @@ class Location {
   Location(double x, double z) : x(x), z(z) {}
   Location(const QVector3D& pos3D) : x(pos3D.x()), z(pos3D.z()) {}
   double x, z;
+
+  Location operator/(int divider) const
+  {
+      return Location(x / divider, z / divider);
+  }
 };
 
 class Minutor : public QMainWindow {
@@ -85,6 +90,8 @@ private slots:
   void worldLoaded(bool isLoaded);
 
  private:
+  void updateChunksAroundPlayer(const Location& pos, size_t areaRadius);
+
   void createActions();
   void createMenus();
   void createStatusBar();

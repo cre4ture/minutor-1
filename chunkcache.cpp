@@ -3,11 +3,18 @@
 #include "./chunkcache.h"
 #include "./chunkloader.h"
 
+#include <QMetaType>
+
 #if defined(__unix__) || defined(__unix) || defined(unix)
 #include <unistd.h>
 #elif defined(_WIN32) || defined(WIN32)
 #include <windows.h>
 #endif
+
+ChunkID::ChunkID()
+    : x(0)
+    , z(0)
+{}
 
 ChunkID::ChunkID(int x, int z) : x(x), z(z) {
 }
@@ -23,7 +30,9 @@ uint qHash(const ChunkID &c) {
   return (c.x << 16) ^ (c.z & 0xffff);  // safe way to hash a pair of integers
 }
 
-ChunkCache::ChunkCache() {
+ChunkCache::ChunkCache()
+    : mutex(QMutex::Recursive)
+{
   int chunks = 10000;  // 10% more than 1920x1200 blocks
 #if defined(__unix__) || defined(__unix) || defined(unix)
 #ifdef _SC_AVPHYS_PAGES
@@ -40,6 +49,9 @@ ChunkCache::ChunkCache() {
 #endif
   //cache.setMaxCost(chunks);
   maxcache = 2 * chunks;  // most chunks are less than half filled with sections
+
+  qRegisterMetaType<QSharedPointer<Chunk> >("QSharedPointer<Chunk>");
+  qRegisterMetaType<ChunkID>("ChunkID");
 }
 
 ChunkCache::~ChunkCache() {
@@ -59,46 +71,63 @@ QString ChunkCache::getPath() {
   return path;
 }
 
-Chunk *ChunkCache::fetch(int x, int z)
+QSharedPointer<Chunk> ChunkCache::fetch(int x, int z, bool forceUpdate)
 {
   ChunkID id(x, z);
-  mutex.lock();
-  Chunk *chunk = cache[id];
-  mutex.unlock();
-  if (chunk != NULL) {
-    if (chunk->loaded)
-      return chunk;
-    return NULL;  // we're loading this chunk, or it's blank.
+
+  {
+      QMutexLocker locker(&mutex);
+      auto chunkPtr = cache[id];
+      if (chunkPtr && !forceUpdate)
+      {
+          return chunkPtr;
+      }
+      else
+      {
+          loadChunkAsync(id);
+          return nullptr;
+      }
   }
-  // launch background process to load this chunk
-  chunk = new Chunk();
-  mutex.lock();
-  cache.insert(id, chunk);
-  mutex.unlock();
-  ChunkLoader *loader = new ChunkLoader(path, x, z, cache, &mutex);
-  connect(loader, SIGNAL(chunkUpdated(bool, int, int)),
-          this, SLOT(gotChunk(bool, int, int)));
-  QThreadPool::globalInstance()->start(loader);
-  return NULL;
 }
 
-bool ChunkCache::isLoaded(int x, int z, Chunk *&chunkPtr_out)
+bool ChunkCache::isLoaded(int x, int z,  QSharedPointer<Chunk> &chunkPtr_out)
 {
     ChunkID id(x, z);
-    mutex.lock();
-    chunkPtr_out = cache[id];
-    mutex.unlock();
-    if (chunkPtr_out != NULL) {
-      if (chunkPtr_out->loaded)
-        return true;
-    }
 
-    chunkPtr_out = nullptr;
-    return false;  // we're loading this chunk, or it's blank.
+    {
+        QMutexLocker locker(&mutex);
+        chunkPtr_out = cache[id];
+        return (chunkPtr_out != nullptr);
+    }
 }
 
-void ChunkCache::gotChunk(bool success, int x, int z) {
-  emit chunkLoaded(success, x, z);
+void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
+{
+    cache[id] = chunk;
+    state[id] = ChunkState::Cached;
+
+    emit chunkLoaded(chunk != nullptr, id.getX(), id.getZ());
+}
+
+void ChunkCache::loadChunkAsync(ChunkID id)
+{
+    {
+        QMutexLocker locker(&mutex);
+
+        auto latestState = state[id];
+        if (latestState == ChunkState::Loading)
+        {
+            return; // prevent loading chunk twice
+        }
+
+        cache[id] = nullptr;
+        state[id] = ChunkState::Loading;
+    }
+
+    ChunkLoader *loader = new ChunkLoader(path, id);
+    connect(loader, SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
+            this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
+    QThreadPool::globalInstance()->start(loader);
 }
 
 void ChunkCache::adaptCacheToWindow(int x, int y) {

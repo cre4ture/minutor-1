@@ -54,7 +54,7 @@ void SearchEntityWidget::chunkLoaded(bool success, int x, int z)
 {
     if (success)
     {
-        Chunk* chunk = nullptr;
+        QSharedPointer<Chunk> chunk = nullptr;
         if (m_cache->isLoaded(x, z, chunk))
         {
             searchChunk(*chunk);
@@ -72,7 +72,7 @@ void SearchEntityWidget::chunkLoaded(bool success, int x, int z)
 
 void SearchEntityWidget::trySearchChunk(int x, int z)
 {
-    Chunk* chunk = nullptr;
+    QSharedPointer<Chunk> chunk = nullptr;
     if (m_cache->isLoaded(x, z, chunk))
     {
         searchChunk(*chunk);
