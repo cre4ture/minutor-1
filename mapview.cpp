@@ -116,7 +116,18 @@ void MapView::chunkUpdated(int x, int z) {
 }
 
 QString MapView::getWorldPath() {
-  return cache->getPath();
+    return cache->getPath();
+}
+
+void MapView::updatePlayerPositions(const QVector<PlayerInfo> &playerList)
+{
+    currentPlayers.clear();
+    for (auto info: playerList)
+    {
+        auto entity = QSharedPointer<Entity>::create(info);
+        currentPlayers.push_back(entity);
+    }
+    redraw();
 }
 
 void MapView::clearCache() {
@@ -366,6 +377,11 @@ void MapView::redraw() {
         item->draw(x1, z1, zoom, &canvas);
       }
     }
+  }
+
+  for (const auto& playerEntity: currentPlayers)
+  {
+      playerEntity->draw(x1, z1, zoom, &canvas);
   }
 
   emit(coordinatesChanged(x, depth, z));

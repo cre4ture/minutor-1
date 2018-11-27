@@ -1,15 +1,4 @@
 /** Copyright (c) 2013, Sean Kasun */
-#include <QtWidgets/QVBoxLayout>
-#include <QtWidgets/QAction>
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QMessageBox>
-#include <QtWidgets/QMenu>
-#include <QtWidgets/QMenuBar>
-#include <QtWidgets/QStatusBar>
-#include <QtWidgets/QTreeWidget>
-#include <QProgressDialog>
-#include <QDir>
-#include <QRegExp>
 #include "./minutor.h"
 #include "./mapview.h"
 #include "./labelledslider.h"
@@ -26,6 +15,20 @@
 #include "./jumpto.h"
 #include "./pngexport.h"
 #include "./searchentitywidget.h"
+#include "./playerinfos.h"
+
+#include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QAction>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QMenu>
+#include <QtWidgets/QMenuBar>
+#include <QtWidgets/QStatusBar>
+#include <QtWidgets/QTreeWidget>
+#include <QProgressDialog>
+#include <QDir>
+#include <QRegExp>
+#include <QVector3D>
 
 Minutor::Minutor()
     : cache(nullptr)
@@ -33,6 +36,7 @@ Minutor::Minutor()
     , searchEntityAction(nullptr)
     , maxentitydistance(0)
     , searchEntityForm(nullptr)
+    , periodicUpdateTimer()
 {
   cache = QSharedPointer<ChunkCache>::create();
   mapview = new MapView;
@@ -107,6 +111,10 @@ Minutor::Minutor()
   propView = new Properties(this);
 
   emit worldLoaded(false);
+
+  periodicUpdateTimer.setInterval(1000);
+  connect(&periodicUpdateTimer, SIGNAL(timeout()), this, SLOT(periodicUpdate()));
+  periodicUpdateTimer.start();
 }
 
 void Minutor::openWorld() {
@@ -205,11 +213,11 @@ void Minutor::saveFinished() {
 void Minutor::closeWorld() {
   locations.clear();
   for (int i = 0; i < players.size(); i++) {
-    jumpMenu->removeAction(players[i]);
+    jumpPlayerMenu->removeAction(players[i]);
     delete players[i];
   }
   players.clear();
-  jumpMenu->setEnabled(false);
+  jumpPlayerMenu->setEnabled(false);
   dimensions->removeDimensions(dimMenu);
   currentWorld = QString();
   emit worldLoaded(false);
@@ -504,8 +512,8 @@ void Minutor::createMenus() {
   viewMenu = menuBar()->addMenu(tr("&View"));
   viewMenu->addAction(jumpSpawnAct);
   viewMenu->addAction(jumpToAct);
-  jumpMenu = viewMenu->addMenu(tr("&Jump to Player"));
-  jumpMenu->setEnabled(false);
+  jumpPlayerMenu = viewMenu->addMenu(tr("&Jump to Player"));
+  jumpPlayerMenu->setEnabled(false);
   dimMenu = viewMenu->addMenu(tr("&Dimension"));
   dimMenu->setEnabled(false);
   viewMenu->addSeparator();
@@ -598,52 +606,28 @@ void Minutor::loadWorld(QDir path) {
   locations.append(Location(data->at("SpawnX")->toDouble(),
                             data->at("SpawnZ")->toDouble()));
   // show saved players
-  if (path.cd("playerdata") || path.cd("players")) {
-    QDirIterator it(path);
-    bool hasPlayers = false;
-    while (it.hasNext()) {
-      it.next();
-      if (it.fileInfo().isFile()) {
-        hasPlayers = true;
-        NBT player(it.filePath());
-        auto pos = player.at("Pos");
-        double posX = pos->at(0)->toDouble();
-        double posZ = pos->at(2)->toDouble();
-        auto dim = player.at("Dimension");
-        if (dim && (dim->toInt() == -1)) {
-          posX *= 8;
-          posZ *= 8;
-        }
-        QString playerName = it.fileInfo().completeBaseName();
-        QRegExp id("[0-9a-z]{8,8}\\-[0-9a-z]{4,4}\\-[0-9a-z]{4,4}"
-                   "\\-[0-9a-z]{4,4}\\-[0-9a-z]{12,12}");
-        if (id.exactMatch(playerName)) {
-          playerName = QString("Player %1").arg(players.length());
-        }
-
-        QAction *p = new QAction(this);
-        p->setText(playerName);
+  auto playerInfoList = loadPlayerInfos(path);
+  for (auto player: playerInfoList)
+  {
+      QAction *p = new QAction(this);
+      p->setText(player.name);
+      p->setData(locations.count());
+      locations.append(Location(player.currentPosition));
+      connect(p, SIGNAL(triggered()),
+              this, SLOT(jumpToLocation()));
+      players.append(p);
+      if (player.hasBed) {  // player has a bed
+        p = new QAction(this);
+        p->setText(player.name+"'s Bed");
         p->setData(locations.count());
-        locations.append(Location(posX, posZ));
+        locations.append(Location(player.bedPosition));
         connect(p, SIGNAL(triggered()),
                 this, SLOT(jumpToLocation()));
         players.append(p);
-        if (player.has("SpawnX")) {  // player has a bed
-          p = new QAction(this);
-          p->setText(playerName+"'s Bed");
-          p->setData(locations.count());
-          locations.append(Location(player.at("SpawnX")->toDouble(),
-                                    player.at("SpawnZ")->toDouble()));
-          connect(p, SIGNAL(triggered()),
-                  this, SLOT(jumpToLocation()));
-          players.append(p);
-        }
       }
-    }
-    jumpMenu->addActions(players);
-    jumpMenu->setEnabled(hasPlayers);
-    path.cdUp();
   }
+  jumpPlayerMenu->addActions(players);
+  jumpPlayerMenu->setEnabled(playerInfoList.size() > 0);
 
   if (path.cd("data")) {
     loadStructures(path);
@@ -743,6 +727,11 @@ void Minutor::searchEntity()
     }
 
     searchEntityForm->showNormal();
+}
+
+void Minutor::periodicUpdate()
+{
+    mapview->updatePlayerPositions(loadPlayerInfos(currentWorld));
 }
 
 void Minutor::loadStructures(const QDir &dataPath) {

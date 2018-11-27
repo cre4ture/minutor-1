@@ -51,7 +51,8 @@ HEADERS += \
     searchentitywidget.h \
     propertietreecreator.h \
     genericidentifier.h \
-    identifierinterface.h
+    identifierinterface.h \
+    playerinfos.h
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \
@@ -80,7 +81,8 @@ SOURCES += \
     searchresultwidget.cpp \
     searchentitywidget.cpp \
     propertietreecreator.cpp \
-    genericidentifier.cpp
+    genericidentifier.cpp \
+    playerinfos.cpp
 RESOURCES = minutor.qrc
 
 win32:SOURCES += zlib/adler32.c \

@@ -3,6 +3,7 @@
 #include "./entity.h"
 #include "./entityidentifier.h"
 #include "./nbt.h"
+#include "./playerinfos.h"
 
 QSharedPointer<OverlayItem> Entity::TryParse(const Tag* tag) {
   EntityIdentifier& ei = EntityIdentifier::Instance();
@@ -69,5 +70,12 @@ void Entity::draw(double offsetX, double offsetZ, double scale,
 }
 
 Entity::Point Entity::midpoint() const {
-  return pos;
+    return pos;
+}
+
+Entity::Entity(const PlayerInfo &player)
+    : extraColor(Qt::red)
+    , pos(player.currentPosition)
+{
+
 }

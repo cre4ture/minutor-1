@@ -6,6 +6,7 @@
 #include "./overlayitem.h"
 
 class Tag;
+class PlayerInfo;
 
 class Entity: public OverlayItem {
  public:
@@ -18,6 +19,8 @@ class Entity: public OverlayItem {
   void setExtraColor(const QColor& c) {extraColor = c;}
 
   static const int RADIUS = 5;
+
+  explicit Entity(const PlayerInfo& player);
 
  protected:
   Entity() {}

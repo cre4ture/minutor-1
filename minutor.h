@@ -7,6 +7,8 @@
 #include <QVariant>
 #include <QSharedPointer>
 #include <QSet>
+#include <QVector3D>
+#include <QTimer>
 
 class QAction;
 class QActionGroup;
@@ -28,6 +30,7 @@ class ChunkCache;
 class Location {
  public:
   Location(double x, double z) : x(x), z(z) {}
+  Location(const QVector3D& pos3D) : x(pos3D.x()), z(pos3D.z()) {}
   double x, z;
 };
 
@@ -76,6 +79,8 @@ private slots:
 
   void searchEntity();
 
+  void periodicUpdate();
+
  signals:
   void worldLoaded(bool isLoaded);
 
@@ -97,7 +102,7 @@ private slots:
   bool progressAutoclose;
 
   QMenu *fileMenu, *worldMenu;
-  QMenu *viewMenu, *jumpMenu, *dimMenu;
+  QMenu *viewMenu, *jumpPlayerMenu, *dimMenu;
   QMenu *helpMenu;
   QMenu *structureOverlayMenu, *entityOverlayMenu;
   QMenu *searchMenu;
@@ -134,6 +139,8 @@ private slots:
   Properties * propView;
 
   SearchEntityWidget* searchEntityForm;
+
+  QTimer periodicUpdateTimer;
 };
 
 #endif  // MINUTOR_H_

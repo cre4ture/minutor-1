@@ -2,9 +2,14 @@
 #ifndef MAPVIEW_H_
 #define MAPVIEW_H_
 
+#include "./chunkcache.h"
+#include "./playerinfos.h"
+
 #include <QtWidgets/QWidget>
 #include <QSharedPointer>
-#include "./chunkcache.h"
+
+#include <QVector>
+
 class DefinitionManager;
 class BiomeIdentifier;
 class BlockIdentifier;
@@ -48,6 +53,8 @@ class MapView : public QWidget {
   // public for saving the png
   void renderChunk(Chunk *chunk);
   QString getWorldPath();
+
+  void updatePlayerPositions(const QVector<PlayerInfo>& playerList);
 
 
  public slots:
@@ -117,6 +124,8 @@ class MapView : public QWidget {
 
   QPoint lastMousePressPosition;
   bool dragging;
+
+  QVector<QSharedPointer<OverlayItem> > currentPlayers;
 };
 
 #endif  // MAPVIEW_H_
