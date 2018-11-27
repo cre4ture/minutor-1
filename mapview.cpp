@@ -10,6 +10,69 @@
 #include "./biomeidentifier.h"
 #include "./clamp.h"
 
+class DrawHelper
+{
+private:
+    MapView& parent;
+
+public:
+    double& zoom;
+
+    int startx;
+    int startz;
+
+    int blockswide;
+    int blockstall;
+
+    double x1;
+    double z1;
+    double x2;
+    double z2;
+
+    DrawHelper(MapView& parent_)
+        : parent(parent_)
+        , zoom(parent.zoom)
+    {
+        auto& image = parent.image;
+        auto& x = parent.x;
+        auto& z = parent.z;
+
+        double chunksize = 16 * zoom;
+
+        // first find the center block position
+        int centerchunkx = floor(x / 16);
+        int centerchunkz = floor(z / 16);
+        // and the center of the screen
+        int centerx = image.width() / 2;
+        int centery = image.height() / 2;
+        // and align for panning
+        centerx -= (x - centerchunkx * 16) * zoom;
+        centery -= (z - centerchunkz * 16) * zoom;
+        // now calculate the topleft block on the screen
+        startx = centerchunkx - floor(centerx / chunksize) - 1;
+        startz = centerchunkz - floor(centery / chunksize) - 1;
+        // and the dimensions of the screen in blocks
+        blockswide = image.width() / chunksize + 3;
+        blockstall = image.height() / chunksize + 3;
+
+
+        double halfviewwidth = image.width() / 2 / zoom;
+        double halvviewheight = image.height() / 2 / zoom;
+        x1 = x - halfviewwidth;
+        z1 = z - halvviewheight;
+        x2 = x + halfviewwidth;
+        z2 = z + halvviewheight;
+    }
+
+    void drawPlayers(QPainter& canvas)
+    {
+        for (const auto& playerEntity: parent.currentPlayers)
+        {
+            playerEntity->draw(x1, z1, zoom, &canvas);
+        }
+    }
+};
+
 MapView::MapView(QWidget *parent) : QWidget(parent) {
   depth = 255;
   scale = 1;
@@ -112,6 +175,9 @@ void MapView::setFlags(int flags) {
 
 void MapView::chunkUpdated(bool, int x, int z) {
   drawChunk(x, z);
+  DrawHelper h(*this);
+  QPainter canvas(&image);
+  h.drawPlayers(canvas);
   update();
 }
 
@@ -310,40 +376,18 @@ void MapView::redraw() {
     return;
   }
 
-  double chunksize = 16 * zoom;
+  DrawHelper h(*this);
 
-  // first find the center block position
-  int centerchunkx = floor(x / 16);
-  int centerchunkz = floor(z / 16);
-  // and the center of the screen
-  int centerx = image.width() / 2;
-  int centery = image.height() / 2;
-  // and align for panning
-  centerx -= (x - centerchunkx * 16) * zoom;
-  centery -= (z - centerchunkz * 16) * zoom;
-  // now calculate the topleft block on the screen
-  int startx = centerchunkx - floor(centerx / chunksize) - 1;
-  int startz = centerchunkz - floor(centery / chunksize) - 1;
-  // and the dimensions of the screen in blocks
-  int blockswide = image.width() / chunksize + 3;
-  int blockstall = image.height() / chunksize + 3;
-
-  for (int cz = startz; cz < startz + blockstall; cz++)
-    for (int cx = startx; cx < startx + blockswide; cx++)
+  for (int cz = h.startz; cz < h.startz + h.blockstall; cz++)
+    for (int cx = h.startx; cx < h.startx + h.blockswide; cx++)
       drawChunk(cx, cz);
 
   // add on the entity layer
   QPainter canvas(&image);
-  double halfviewwidth = image.width() / 2 / zoom;
-  double halvviewheight = image.height() / 2 / zoom;
-  double x1 = x - halfviewwidth;
-  double z1 = z - halvviewheight;
-  double x2 = x + halfviewwidth;
-  double z2 = z + halvviewheight;
 
   // draw the entities
-  for (int cz = startz; cz < startz + blockstall; cz++) {
-    for (int cx = startx; cx < startx + blockswide; cx++) {
+  for (int cz = h.startz; cz < h.startz + h.blockstall; cz++) {
+    for (int cx = h.startx; cx < h.startx + h.blockswide; cx++) {
       for (auto &type : overlayItemTypes) {
         auto chunk = cache->fetch(cx, cz);
         if (chunk) {
@@ -360,7 +404,7 @@ void MapView::redraw() {
               int highY = chunk->depth[index];
               if ( (entityY+10 >= highY) ||
                    (entityY+10 >= depth) )
-                (*it)->draw(x1, z1, zoom, &canvas);
+                (*it)->draw(h.x1, h.z1, zoom, &canvas);
             }
           }
         }
@@ -368,21 +412,17 @@ void MapView::redraw() {
     }
   }
 
-
   // draw the generated structures
   for (auto &type : overlayItemTypes) {
     for (auto &item : overlayItems[type]) {
-      if (item->intersects(OverlayItem::Point(x1 - 1, 0, z1 - 1),
-                           OverlayItem::Point(x2 + 1, depth, z2 + 1))) {
-        item->draw(x1, z1, zoom, &canvas);
+      if (item->intersects(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
+                           OverlayItem::Point(h.x2 + 1, depth, h.z2 + 1))) {
+        item->draw(h.x1, h.z1, zoom, &canvas);
       }
     }
   }
 
-  for (const auto& playerEntity: currentPlayers)
-  {
-      playerEntity->draw(x1, z1, zoom, &canvas);
-  }
+  h.drawPlayers(canvas);
 
   emit(coordinatesChanged(x, depth, z));
 

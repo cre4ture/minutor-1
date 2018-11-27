@@ -71,14 +71,14 @@ QString ChunkCache::getPath() {
   return path;
 }
 
-QSharedPointer<Chunk> ChunkCache::fetch(int x, int z, bool forceUpdate)
+QSharedPointer<Chunk> ChunkCache::fetch(int x, int z, FetchBehaviour behav)
 {
   ChunkID id(x, z);
 
   {
       QMutexLocker locker(&mutex);
       auto chunkPtr = cache[id];
-      if (chunkPtr && !forceUpdate)
+      if ((behav == FetchBehaviour::USE_CACHED) && chunkPtr)
       {
           return chunkPtr;
       }

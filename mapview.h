@@ -14,9 +14,12 @@ class DefinitionManager;
 class BiomeIdentifier;
 class BlockIdentifier;
 class OverlayItem;
+class DrawHelper;
 
 class MapView : public QWidget {
   Q_OBJECT
+
+    friend class DrawHelper;
 
  public:
   /// Values for the individual flags
@@ -126,6 +129,7 @@ class MapView : public QWidget {
   bool dragging;
 
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
+  void drawPlayers();
 };
 
 #endif  // MAPVIEW_H_

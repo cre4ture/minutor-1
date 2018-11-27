@@ -19,7 +19,14 @@ class ChunkCache : public QObject {
   void clear();
   void setPath(QString path);
   QString getPath();
-  QSharedPointer<Chunk> fetch(int x, int z, bool forceUpdate = false);
+
+  enum class FetchBehaviour
+  {
+      USE_CACHED,
+      FORCE_UPDATE
+  };
+
+  QSharedPointer<Chunk> fetch(int x, int z, FetchBehaviour behav = FetchBehaviour::USE_CACHED);
 
   bool isLoaded(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
 

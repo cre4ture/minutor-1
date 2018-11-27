@@ -25,6 +25,8 @@ void ChunkLoader::run() {
 
 QSharedPointer<Chunk> ChunkLoader::runInternal()
 {
+    //thread()->msleep(300);
+
     int rx = id.getX() >> 5;
     int rz = id.getZ() >> 5;
 
