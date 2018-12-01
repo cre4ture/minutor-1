@@ -1,0 +1,86 @@
+{
+  "name": "Vanilla",
+  "type": "career",
+  "version": "0.1",
+  "data": [
+    {
+      "name": "Farmer",
+      "profession": 0,
+      "career": 1,
+      "id": 1
+    },
+    {
+        "name": "Fisherman",
+        "profession": 0,
+        "career": 2,
+        "id": 2
+    },
+    {
+        "name": "Shepherd",
+        "profession": 0,
+        "career": 3,
+        "id": 3
+    },
+    {
+        "name": "Fletcher",
+        "profession": 0,
+        "career": 4,
+            "id": 4
+    },
+    {
+        "name": "Librarian",
+        "profession": 1,
+        "career": 1,
+            "id": 101
+    },
+    {
+        "name": "Cartographer",
+        "profession": 1,
+        "career": 2,
+            "id": 102
+    },
+    {
+        "name": "Cleric",
+        "profession": 2,
+        "career": 1,
+            "id": 201
+    },
+    {
+        "name": "Armorer",
+        "profession": 3,
+        "career": 1,
+            "id": 301
+    },
+    {
+        "name": "Weapon Smith",
+        "profession": 3,
+        "career": 2,
+        "id": 302
+    },
+    {
+        "name": "Tool Smith",
+        "profession": 3,
+        "career": 3,
+        "id": 303
+    },
+    {
+        "name": "Butcher",
+        "profession": 4,
+        "career": 1,
+            "id": 401
+    },
+    {
+        "name": "Leatherworker",
+        "profession": 4,
+        "career": 2,
+            "id": 402
+    },
+    {
+        "name": "Nitwit",
+        "profession": 5,
+        "career": 1,
+            "id": 501
+    }
+  ],
+  "update": ""
+}
