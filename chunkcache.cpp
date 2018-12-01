@@ -77,10 +77,10 @@ QSharedPointer<Chunk> ChunkCache::fetch(int x, int z, FetchBehaviour behav)
 
   {
       QMutexLocker locker(&mutex);
-      auto chunkPtr = cache[id];
-      if ((behav == FetchBehaviour::USE_CACHED) && chunkPtr)
+      auto chunkState = state[id];
+      if ((behav == FetchBehaviour::USE_CACHED) && (chunkState == ChunkState::Cached))
       {
-          return chunkPtr;
+          return cache[id];
       }
       else
       {

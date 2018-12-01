@@ -1,14 +1,18 @@
 /** Copyright (c) 2013, Sean Kasun */
-#include <QPainter>
-#include <QResizeEvent>
-#include <QMessageBox>
-#include <assert.h>
 
 #include "./mapview.h"
 #include "./definitionmanager.h"
 #include "./blockidentifier.h"
 #include "./biomeidentifier.h"
 #include "./clamp.h"
+#include "./chunkrenderer.h"
+
+#include <QObject>
+#include <QRunnable>
+#include <QPainter>
+#include <QResizeEvent>
+#include <QMessageBox>
+#include <assert.h>
 
 class DrawHelper
 {
@@ -193,7 +197,10 @@ void MapView::updatePlayerPositions(const QVector<PlayerInfo> &playerList)
         auto entity = QSharedPointer<Entity>::create(info);
         currentPlayers.push_back(entity);
     }
-    redraw();
+
+    DrawHelper h(*this);
+    QPainter canvas(&image);
+    h.drawPlayers(canvas);
 }
 
 void MapView::clearCache() {
@@ -221,6 +228,44 @@ MapView::TopViewPosition MapView::transformMousePos(QPoint mouse_pos)
                 floor(centerblockx - (centerx - mouse_pos.x()) / zoom),
                 floor(centerblockz - (centery - mouse_pos.y()) / zoom)
                 );
+}
+
+void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
+{
+    ChunkID id(chunk->chunkX, chunk->chunkZ);
+
+    {
+        QMutexLocker locker(&m_renderStatesMutex);
+
+        auto state = renderStates[id];
+
+        if (state == RENDERING)
+        {
+            return; // already busy with this chunk
+        }
+
+        renderStates[id] = RENDERING;
+    }
+
+    ChunkRenderer *loader = new ChunkRenderer(chunk, *this);
+    connect(loader, SIGNAL(chunkRenderingCompleted(QSharedPointer<Chunk>)),
+            this, SLOT(renderingDone(const QSharedPointer<Chunk>&)));
+    QThreadPool::globalInstance()->start(loader);
+}
+
+void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
+{
+    ChunkID id(chunk->chunkX, chunk->chunkZ);
+    {
+        QMutexLocker locker(&m_renderStatesMutex);
+        renderStates[id] = NONE;
+    }
+
+    drawChunk(chunk->chunkX, chunk->chunkZ);
+
+    DrawHelper h(*this);
+    QPainter canvas(&image);
+    h.drawPlayers(canvas);
 }
 
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
@@ -439,7 +484,8 @@ void MapView::drawChunk(int x, int z) {
 
   if (chunk && (chunk->renderedAt != depth ||
                 chunk->renderedFlags != flags)) {
-    renderChunk(chunk.get());
+    renderChunkAsync(chunk);
+    return;
   }
 
   // this figures out where on the screen this chunk should be drawn
@@ -498,7 +544,34 @@ void MapView::drawChunk(int x, int z) {
   }
 }
 
-void MapView::renderChunk(Chunk *chunk) {
+ChunkRenderer::ChunkRenderer(const QSharedPointer<Chunk> &chunk, MapView &parent_)
+    : m_chunk(chunk)
+    , parent(parent_)
+{}
+
+ChunkRenderer::~ChunkRenderer()
+{}
+
+void ChunkRenderer::run()
+{
+    renderChunk(m_chunk.get());
+    emit chunkRenderingCompleted(m_chunk);
+}
+
+void ChunkRenderer::renderChunk(Chunk *chunk)
+{
+    int depth;
+    int flags;
+
+    {
+        QReadLocker locker(&parent.m_readWriteLock);
+
+        depth = parent.depth;
+        flags = parent.flags;
+    }
+
+    auto& blocks = parent.blocks;
+
   int offset = 0;
   uchar *bits = chunk->image;
   uchar *depthbits = chunk->depth;
@@ -509,7 +582,7 @@ void MapView::renderChunk(Chunk *chunk) {
       uchar r = 0, g = 0, b = 0;
       double alpha = 0.0;
       // get Biome
-      auto &biome = biomes->getBiome(chunk->biomes[offset]);
+      auto &biome = parent.biomes->getBiome(chunk->biomes[offset]);
       int top = depth;
       if (top > chunk->highest)
         top = chunk->highest;
@@ -538,7 +611,7 @@ void MapView::renderChunk(Chunk *chunk) {
         if (section1)
           light = section1->getLight(offset, y+1);
         int light1 = light;
-        if (!(flags & flgLighting))
+        if (!(flags & MapView::flgLighting))
           light = 13;
         if (alpha == 0.0 && lasty != -1) {
           if (lasty < y)
@@ -568,7 +641,7 @@ void MapView::renderChunk(Chunk *chunk) {
         quint32 colb = std::clamp( int(light_factor*blockcolor.blue()),  0, 255 );
 
         // process flags
-        if (flags & flgDepthShading) {
+        if (flags & MapView::flgDepthShading) {
           // Use a table to define depth-relative shade:
           static const quint32 shadeTable[] = {
             0, 12, 18, 22, 24, 26, 28, 29, 30, 31, 32};
@@ -579,7 +652,7 @@ void MapView::renderChunk(Chunk *chunk) {
           colg = colg - qMin(shade, colg);
           colb = colb - qMin(shade, colb);
         }
-        if (flags & flgMobSpawn) {
+        if (flags & MapView::flgMobSpawn) {
           // get block info from 1 and 2 above and 1 below
           quint16 blid1(0), blid2(0), blidB(0);  // default to air
           int data1(0), data2(0), dataB(0);  // default variant
@@ -629,7 +702,7 @@ void MapView::renderChunk(Chunk *chunk) {
             colb = (colb + 256) / 2;
           }
         }
-        if (flags & flgBiomeColors) {
+        if (flags & MapView::flgBiomeColors) {
           colr = biome.colors[light].red();
           colg = biome.colors[light].green();
           colb = biome.colors[light].blue();
@@ -656,10 +729,10 @@ void MapView::renderChunk(Chunk *chunk) {
         if (block.alpha == 1.0 || alpha > 0.9)
           break;
       }
-      if (flags & flgCaveMode) {
+      if (flags & MapView::flgCaveMode) {
         float cave_factor = 1.0;
         int cave_test = 0;
-        for (int y=highest-1; (y >= 0) && (cave_test < CAVE_DEPTH); y--, cave_test++) {  // top->down
+        for (int y=highest-1; (y >= 0) && (cave_test < MapView::CAVE_DEPTH); y--, cave_test++) {  // top->down
           // get section
           ChunkSection *section = chunk->sections[y >> 4];
           if (!section) continue;
@@ -668,7 +741,7 @@ void MapView::renderChunk(Chunk *chunk) {
           // get BlockInfo from block value
           BlockInfo &block = blocks->getBlock(section->getBlock(offset, y), data);
           if (block.transparent) {
-            cave_factor -= caveshade[cave_test];
+            cave_factor -= parent.caveshade[cave_test];
           }
         }
         cave_factor = std::max(cave_factor,0.25f);

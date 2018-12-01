@@ -5,5 +5,7 @@
         <file>definitions/vanilla_dims.json</file>
         <file>definitions/vanilla_entity.json</file>
         <file>definitions/vanilla_enchantments.json</file>
+        <file>definitions/vanilla_career.json</file>
+        <file>definitions/vanilla_profession.json</file>
     </qresource>
 </RCC>

@@ -2,7 +2,7 @@
 #include "ui_searchentitywidget.h"
 
 #include "./chunkcache.h"
-#include "./genericidentifier.h"
+#include "./careeridentifier.h"
 
 #include <QVariant>
 #include <QTreeWidgetItem>
@@ -10,12 +10,12 @@
 static const QString prefixToBeRemoved = "minecraft:";
 
 SearchEntityWidget::SearchEntityWidget(QSharedPointer<ChunkCache> cache,
-                                       QSharedPointer<GenericIdentifier> enchantmentDefintions,
+                                       EntityDefitionsConfig definitions,
                                        QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::SearchEntityWidget)
   , m_cache(cache)
-  , m_enchantmentDefintions(enchantmentDefintions)
+  , m_definitions(definitions)
 {
     ui->setupUi(this);
 
@@ -93,8 +93,8 @@ void SearchEntityWidget::searchChunk(Chunk& chunk)
     for(const auto& e: map)
     {
         EntityEvaluator evaluator(
-                    EntityEvaluatorConfig(*ui->resultList,
-                                          m_enchantmentDefintions,
+                    EntityEvaluatorConfig(m_definitions,
+                                          *ui->resultList,
                                           ui->le_searchText->text(),
                                           e)
                     );
@@ -143,7 +143,10 @@ void EntityEvaluator::searchTreeNode(const QString prefix, const QTreeWidgetItem
     auto valueText = node.text(1);
     QString offers = getOffers().join("|");
    // bool found = keyText.contains("sell.id") && valueText.contains(m_config.searchText); // enchanted_book
-    bool found = offers.contains(m_config.searchText);
+    //bool found = offers.contains(m_config.searchText);
+    //bool found = isVillager() && getCareerName() == "Cleric";
+    //bool found = getTypeId().contains("chicken");
+    bool found = isVillager() && getCareerName() == "Farmer";
     if (found)
     {
         SearchResultItem result;
@@ -221,7 +224,7 @@ QString EntityEvaluator::describeReceipeItem(const QTreeWidgetItem &itemNode) co
                 if (enchantmendIdNode)
                 {
                     int id = enchantmendIdNode->text(1).toInt();
-                    QString name = m_config.enchantmentDefintions->getDescriptor(id).name;
+                    QString name = m_config.definitions.enchantmentDefintions->getDescriptor(id).name;
                     value += name + " (" + enchantmendIdNode->text(1) + ")";
                 }
                 auto* enchantmendLevelNode = getNodeFromPath("lvl", *enchantmentNode);
@@ -266,4 +269,55 @@ const QTreeWidgetItem *EntityEvaluator::getNodeFromPath(QStringList::iterator it
     }
 
     return nullptr;
+}
+
+const QString EntityEvaluator::getNodeValueFromPath(const QString path, const QTreeWidgetItem &searchRoot, QString defaultValue)
+{
+    auto* node = getNodeFromPath(path, searchRoot);
+    if (node)
+    {
+        return node->text(1);
+    }
+
+    return defaultValue;
+}
+
+QString EntityEvaluator::getTypeId() const
+{
+    auto* itemIdNode = getNodeFromPath("id", *m_rootNode);
+    if (itemIdNode)
+    {
+        return itemIdNode->text(1);
+    }
+
+    return "-";
+}
+
+bool EntityEvaluator::isVillager() const
+{
+    auto id = getTypeId();
+    return (id == "minecraft:villager");
+}
+
+QString EntityEvaluator::getCareerName() const
+{
+    QString profession = getNodeValueFromPath("Profession", *m_rootNode, "-1");
+    QString career = getNodeValueFromPath("Career", *m_rootNode, "-1");
+
+    int iProfession = profession.toInt();
+    int iCareer = career.toInt();
+
+    if (iProfession >= 0 && iCareer >= 0)
+    {
+        int id = createCareerId(iProfession, iCareer);
+        auto desc = m_config.definitions.careerDefinitions->getDescriptor(id);
+        return desc.name;
+    }
+
+    return "-";
+}
+
+void SearchEntityWidget::on_resultList_jumpTo(const QVector3D &pos)
+{
+    emit jumpTo(pos);
 }

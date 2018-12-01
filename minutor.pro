@@ -53,7 +53,9 @@ HEADERS += \
     genericidentifier.h \
     identifierinterface.h \
     playerinfos.h \
-    chunkcachetypes.h
+    chunkcachetypes.h \
+    chunkrenderer.h \
+    careeridentifier.h
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \
@@ -83,7 +85,8 @@ SOURCES += \
     searchentitywidget.cpp \
     propertietreecreator.cpp \
     genericidentifier.cpp \
-    playerinfos.cpp
+    playerinfos.cpp \
+    chunkrenderer.cpp
 RESOURCES = minutor.qrc
 
 win32:SOURCES += zlib/adler32.c \

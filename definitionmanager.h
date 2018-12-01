@@ -27,12 +27,23 @@ struct Definition {
   QString version;
   QString path;
   QString update;
-  enum Type {Block, Biome, Dimension, Entity, Pack, Enchantment};
+  enum Type {
+      First,
+      Block = First,
+      Biome,
+      Dimension,
+      Entity,
+      Enchantment,
+      Profession,
+      Career,
+      Last = Career,
+      Pack
+  };
   Type type;
   int id;
   bool enabled;
   // for packs only
-  int blockid, biomeid, dimensionid, entityid, enchantmentid;
+  std::map<Type, int> packSubDefId;
 };
 
 class DefinitionManager : public QWidget {
@@ -49,6 +60,7 @@ class DefinitionManager : public QWidget {
   BiomeIdentifier *biomeIdentifier();
   DimensionIdentifier *dimensionIdentifer();
   QSharedPointer<GenericIdentifier> enchantmentIdentifier();
+  QSharedPointer<GenericIdentifier> careerIdentifier();
   void autoUpdate();
 
  signals:
@@ -73,6 +85,8 @@ class DefinitionManager : public QWidget {
   void installJson(QString path, bool overwrite = true, bool install = true);
   void installZip(QString path, bool overwrite = true, bool install = true);
   void loadDefinition(QString path);
+  void loadDefinition_json(QString path);
+  void loadDefinition_zipped(QString path);
   void loadDefinition(JSONData *, int pack = -1);
   void removeDefinition(QString path);
   void refresh();
@@ -82,10 +96,26 @@ class DefinitionManager : public QWidget {
   DimensionIdentifier *dimensionManager;  // todo: migrate to reference to singleton
   EntityIdentifier &entityManager;
   QSharedPointer<GenericIdentifier> enchantmentManager;
+  QSharedPointer<GenericIdentifier> professionManager;
+  QSharedPointer<GenericIdentifier> careerManager;
   QString selected;
   QList<QVariant> sorted;
 
   QMap<Definition::Type, IdentifierI*> m_managers;
+
+  struct ManagerTypePair
+  {
+      ManagerTypePair()
+          : manager(nullptr)
+          , type(Definition::Block)
+      {}
+
+      IdentifierI* manager;
+      Definition::Type type;
+  };
+
+  ManagerTypePair getManagerFromString(const QString typeString);
+  QString convertDefinitionTypeToString(const Definition::Type type) const;
 
   bool isUpdating;
   QList<DefinitionUpdater *> updateQueue;

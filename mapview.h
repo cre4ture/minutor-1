@@ -15,11 +15,13 @@ class BiomeIdentifier;
 class BlockIdentifier;
 class OverlayItem;
 class DrawHelper;
+class ChunkRenderer;
 
 class MapView : public QWidget {
   Q_OBJECT
 
     friend class DrawHelper;
+    friend class ChunkRenderer;
 
  public:
   /// Values for the individual flags
@@ -54,7 +56,7 @@ class MapView : public QWidget {
   void showOverlayItemTypes(const QSet<QString>& itemTypes);
 
   // public for saving the png
-  void renderChunk(Chunk *chunk);
+  //void renderChunk(Chunk *chunk);
   QString getWorldPath();
 
   void updatePlayerPositions(const QVector<PlayerInfo>& playerList);
@@ -110,6 +112,8 @@ class MapView : public QWidget {
   static const int CAVE_DEPTH = 16;  // maximum depth caves are searched in cave mode
   float caveshade[CAVE_DEPTH];
 
+  QReadWriteLock m_readWriteLock;
+
   int depth;
   double x, z;
   int scale;
@@ -129,7 +133,20 @@ class MapView : public QWidget {
   bool dragging;
 
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
-  void drawPlayers();
+
+  enum ChunkRenderState
+  {
+      NONE,
+      RENDERING,
+  };
+
+  QMutex m_renderStatesMutex;
+  QMap<ChunkID, ChunkRenderState> renderStates;
+
+  void renderChunkAsync(const QSharedPointer<Chunk>& chunk);
+
+private slots:
+    void renderingDone(const QSharedPointer<Chunk>& chunk);
 };
 
 #endif  // MAPVIEW_H_

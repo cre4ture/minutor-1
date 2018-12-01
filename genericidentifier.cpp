@@ -25,7 +25,8 @@ int GenericIdentifier::addDefinitions(JSONArray *defs, int pack)
     int len = defs->length();
     for (int i = 0; i < len; i++) {
       JSONObject *b = dynamic_cast<JSONObject *>(defs->at(i));
-      int id = static_cast<int>(b->at("id")->asNumber());
+      auto idTag = b->at("id");
+      int id = static_cast<int>(idTag->asNumber());
 
       GenericDescriptor *biome = new GenericDescriptor();
       biome->enabled = true;

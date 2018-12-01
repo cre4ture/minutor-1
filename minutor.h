@@ -83,6 +83,7 @@ private slots:
   void showProperties(QVariant props);
 
   void searchEntity();
+  void triggerJumpToEntity(QVector3D pos);
 
   void periodicUpdate();
 

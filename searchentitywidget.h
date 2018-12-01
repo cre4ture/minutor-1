@@ -15,20 +15,32 @@ class Chunk;
 class SearchResultWidget;
 class GenericIdentifier;
 
+struct EntityDefitionsConfig
+{
+    EntityDefitionsConfig(const QSharedPointer<GenericIdentifier>& enchantmentDefintions_,
+                          const QSharedPointer<GenericIdentifier>& careerDefinitions_)
+        : enchantmentDefintions(enchantmentDefintions_)
+        , careerDefinitions(careerDefinitions_)
+    {}
+
+    QSharedPointer<GenericIdentifier> enchantmentDefintions;
+    QSharedPointer<GenericIdentifier> careerDefinitions;
+};
+
 struct EntityEvaluatorConfig
 {
-    EntityEvaluatorConfig(SearchResultWidget& resultSink_,
-                          QSharedPointer<GenericIdentifier> enchantmentDefintions_,
+    EntityEvaluatorConfig(const EntityDefitionsConfig& definitions_,
+                          SearchResultWidget& resultSink_,
                           const QString& searchText_,
                           QSharedPointer<OverlayItem> entity_)
-        : resultSink(resultSink_)
-        , enchantmentDefintions(enchantmentDefintions_)
+        : definitions(definitions_)
+        , resultSink(resultSink_)
         , searchText(searchText_)
         , entity(entity_)
     {}
 
+    EntityDefitionsConfig definitions;
     SearchResultWidget& resultSink;
-    QSharedPointer<GenericIdentifier> enchantmentDefintions;
     QString searchText;
     QSharedPointer<OverlayItem> entity;
 };
@@ -42,6 +54,12 @@ public:
 
     static const QTreeWidgetItem *getNodeFromPath(const QString path, const QTreeWidgetItem &searchRoot);
     static const QTreeWidgetItem *getNodeFromPath(QStringList::iterator start, QStringList::iterator end, const QTreeWidgetItem &searchRoot);
+
+    static const QString getNodeValueFromPath(const QString path, const QTreeWidgetItem &searchRoot, QString defaultValue);
+
+    QString getTypeId() const;
+    bool isVillager() const;
+    QString getCareerName() const;
 
 private:
     EntityEvaluatorConfig m_config;
@@ -61,19 +79,24 @@ class SearchEntityWidget : public QWidget
 
 public:
     explicit SearchEntityWidget(QSharedPointer<ChunkCache> cache,
-                                QSharedPointer<GenericIdentifier> enchantmentDefintions,
+                                EntityDefitionsConfig definitions,
                                 QWidget *parent = nullptr);
     ~SearchEntityWidget();
+
+signals:
+    void jumpTo(QVector3D pos);
 
 private slots:
     void on_pb_search_clicked();
 
     void chunkLoaded(bool success, int x, int z);
 
+    void on_resultList_jumpTo(const QVector3D &);
+
 private:
     Ui::SearchEntityWidget *ui;
     QSharedPointer<ChunkCache> m_cache;
-    QSharedPointer<GenericIdentifier> m_enchantmentDefintions;
+    EntityDefitionsConfig m_definitions;
 
     void trySearchChunk(int x, int z);
 

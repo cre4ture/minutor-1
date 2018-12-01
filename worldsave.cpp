@@ -298,7 +298,7 @@ void WorldSave::drawChunk(uchar *scanlines, int stride, int x, Chunk *chunk) {
     attenuation *= 0.9f;
 
   // render chunk with current settings
-  map->renderChunk(chunk);
+  // TODO map->renderChunk(chunk);
   // we can't memcpy each scanline because it's in BGRA format.
   int offset = x * 16 * 4 + 1;
   int ioffset = 0;

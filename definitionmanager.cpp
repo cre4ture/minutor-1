@@ -21,6 +21,28 @@
 #include "./zipreader.h"
 #include "./definitionupdater.h"
 
+#include <boost/bimap.hpp>
+
+template <typename L, typename R>
+boost::bimap<L, R> makeBimap(std::initializer_list<typename boost::bimap<L, R>::value_type> list)
+{
+    return boost::bimap<L, R>(list.begin(), list.end());
+}
+
+static const boost::bimap<QString, Definition::Type> s_defintionLookupBi = makeBimap<QString, Definition::Type>(
+{
+    {"block", Definition::Block},
+    {"biome", Definition::Biome},
+    {"dimension", Definition::Dimension},
+    {"entity", Definition::Entity},
+    {"enchantment", Definition::Enchantment},
+    {"profession", Definition::Profession},
+    {"career", Definition::Career},
+    {"pack", Definition::Pack},
+});
+
+
+
 DefinitionManager::DefinitionManager(QWidget *parent) :
     QWidget(parent),
     isUpdating(false),
@@ -81,6 +103,12 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   enchantmentManager = QSharedPointer<GenericIdentifier>::create();
   m_managers[Definition::Enchantment] = enchantmentManager.get();
 
+  professionManager = QSharedPointer<GenericIdentifier>::create();
+  m_managers[Definition::Profession] = professionManager.get();
+
+  careerManager = QSharedPointer<GenericIdentifier>::create();
+  m_managers[Definition::Career] = careerManager.get();
+
   QSettings settings;
   sorted = settings.value("packs").toList();
 
@@ -128,12 +156,15 @@ QSharedPointer<GenericIdentifier> DefinitionManager::enchantmentIdentifier()
     return enchantmentManager;
 }
 
+QSharedPointer<GenericIdentifier> DefinitionManager::careerIdentifier()
+{
+    return careerManager;
+}
+
 void DefinitionManager::refresh() {
   table->clearContents();
   table->setRowCount(0);
-  QStringList types;
-  types << tr("block") << tr("biome") << tr("dimension")
-        << tr("entity") << tr("pack") << tr("enchantment");
+
   for (int i = 0; i < sorted.length(); i++) {
     Definition &def = definitions[sorted[i].toString()];
     int row = table->rowCount();
@@ -146,11 +177,44 @@ void DefinitionManager::refresh() {
     ver->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     ver->setData(Qt::UserRole, def.path);
     table->setItem(row, 1, ver);
-    QTableWidgetItem *type = new QTableWidgetItem(types[def.type]);
+    QTableWidgetItem *type = new QTableWidgetItem(convertDefinitionTypeToString(def.type));
     type->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     type->setData(Qt::UserRole, def.path);
     table->setItem(row, 2, type);
   }
+}
+
+DefinitionManager::ManagerTypePair DefinitionManager::getManagerFromString(const QString typeString)
+{
+    ManagerTypePair result;
+
+    auto it = s_defintionLookupBi.left.find(typeString);
+    if (it == s_defintionLookupBi.left.end())
+    {
+        return result;
+    }
+
+    result.type = it->get_right();
+    auto itm = m_managers.find(result.type);
+    if (itm == m_managers.end())
+    {
+        return result;
+    }
+
+    result.manager = *itm;
+
+    return result;
+}
+
+QString DefinitionManager::convertDefinitionTypeToString(const Definition::Type type) const
+{
+    auto it = s_defintionLookupBi.right.find(type);
+    if (it == s_defintionLookupBi.right.end())
+    {
+        return "invalid";
+    }
+
+    return it->get_left();
 }
 
 void DefinitionManager::selectedPack(QTableWidgetItem *item,
@@ -174,20 +238,18 @@ void DefinitionManager::toggledPack(bool onoff) {
 
 void DefinitionManager::setManagerEnabled(const Definition& def, bool onoff)
 {
-    switch (def.type) {
-      case Definition::Pack:
-        blockManager->setDefinitionsEnabled(def.blockid, onoff);
-        biomeManager->setDefinitionsEnabled(def.biomeid, onoff);
-        dimensionManager->setDefinitionsEnabled(def.dimensionid, onoff);
-        entityManager.setDefinitionsEnabled(def.entityid, onoff);
-        enchantmentManager->setDefinitionsEnabled(def.enchantmentid, onoff);
-        break;
-    default:
+    if (def.type == Definition::Pack)
+    {
+        for (auto pair: def.packSubDefId)
         {
-            IdentifierI* manager = m_managers[def.type];
-            manager->setDefinitionsEnabled(def.id, onoff);
+            auto manager = m_managers[pair.first];
+            manager->setDefinitionsEnabled(pair.second, onoff);
         }
-        break;
+    }
+    else
+    {
+        IdentifierI* manager = m_managers[def.type];
+        manager->setDefinitionsEnabled(def.id, onoff);
     }
 }
 
@@ -350,6 +412,14 @@ QSize DefinitionManager::sizeHint() const {
 void DefinitionManager::loadDefinition(QString path) {
   // determine if we're loading a single json or a pack
   if (path.endsWith(".json", Qt::CaseInsensitive)) {
+    loadDefinition_json(path);
+  } else {
+    loadDefinition_zipped(path);
+  }
+}
+
+void DefinitionManager::loadDefinition_json(QString path)
+{
     JSONData *def;
     QFile f(path);
     f.open(QIODevice::ReadOnly);
@@ -360,6 +430,8 @@ void DefinitionManager::loadDefinition(QString path) {
       f.close();
       return;
     }
+
+
     Definition d;
     d.name = def->at("name")->asString();
     d.version = def->at("version")->asString();
@@ -368,30 +440,23 @@ void DefinitionManager::loadDefinition(QString path) {
     QString type = def->at("type")->asString();
     QString key = d.name + type;
     d.enabled = true;  // should look this up
-    if (type == "block") {
-      d.id = blockManager->addDefinitions(
-          dynamic_cast<JSONArray*>(def->at("data")));
-      d.type = Definition::Block;
-    } else if (type == "biome") {
-      d.id = biomeManager->addDefinitions(
-          dynamic_cast<JSONArray*>(def->at("data")));
-      d.type = Definition::Biome;
-    } else if (type == "dimension") {
-      d.id = dimensionManager->addDefinitions(
-          dynamic_cast<JSONArray*>(def->at("data")));
-      d.type = Definition::Dimension;
-    } else if (type == "entity") {
-      d.id = entityManager.addDefinitions(
-          dynamic_cast<JSONArray*>(def->at("data")));
-      d.type = Definition::Entity;
-    } else if (type == "enchantment") {
-      d.id = enchantmentManager->addDefinitions(
-          dynamic_cast<JSONArray*>(def->at("data")));
-      d.type = Definition::Entity;
+
+    auto manager = getManagerFromString(type);
+    if (!manager.manager)
+    {
+        return; //failed!
     }
+
+    d.id = manager.manager->addDefinitions(
+                dynamic_cast<JSONArray*>(def->at("data")));
+    d.type = manager.type;
+
     definitions.insert(path, d);
     delete def;
-  } else {
+}
+
+void DefinitionManager::loadDefinition_zipped(QString path)
+{
     ZipReader zip(path);
     if (!zip.open())
       return;
@@ -410,10 +475,6 @@ void DefinitionManager::loadDefinition(QString path) {
     d.enabled = true;
     d.id = 0;
     d.type = Definition::Pack;
-    d.blockid = -1;
-    d.biomeid = -1;
-    d.dimensionid = -1;
-    d.entityid = -1;
     QString key = d.name+"pack";
     for (int i = 0; i < info->at("data")->length(); i++) {
       JSONData *def;
@@ -423,28 +484,28 @@ void DefinitionManager::loadDefinition(QString path) {
         continue;
       }
       QString type = def->at("type")->asString();
-      if (type == "block")
-        d.blockid = blockManager->addDefinitions(
-            dynamic_cast<JSONArray*>(def->at("data")), d.blockid);
-      else if (type == "biome")
-        d.biomeid = biomeManager->addDefinitions(
-            dynamic_cast<JSONArray*>(def->at("data")), d.biomeid);
-      else if (type == "dimension")
-        d.dimensionid = dimensionManager->addDefinitions(
-            dynamic_cast<JSONArray*>(def->at("data")), d.dimensionid);
-      else if (type == "entity")
-        d.entityid = entityManager.addDefinitions(
-            dynamic_cast<JSONArray*>(def->at("data")), d.entityid);
-      else if (type == "enchantment")
-        d.entityid = enchantmentManager->addDefinitions(
-            dynamic_cast<JSONArray*>(def->at("data")), d.enchantmentid);
+
+      auto manager = getManagerFromString(type);
+      if (manager.manager)
+      {
+          int packId = -1;
+          auto it = d.packSubDefId.find(manager.type);
+          if (it != d.packSubDefId.end())
+          {
+              packId = it->second;
+          }
+
+          d.packSubDefId[manager.type] = manager.manager->addDefinitions(
+                      dynamic_cast<JSONArray*>(def->at("data")), packId);
+      }
+
       delete def;
     }
     definitions.insert(path, d);
     delete info;
     zip.close();
-  }
 }
+
 void DefinitionManager::removeDefinition(QString path) {
   // find the definition and remove it from disk
   Definition &def = definitions[path];

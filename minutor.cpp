@@ -723,10 +723,24 @@ void Minutor::searchEntity()
 {
     if (!searchEntityForm)
     {
-        searchEntityForm = new SearchEntityWidget(cache, dm->enchantmentIdentifier());
+        searchEntityForm = new SearchEntityWidget(cache,
+                                                  EntityDefitionsConfig(
+                                                      dm->enchantmentIdentifier(),
+                                                      dm->careerIdentifier()
+                                                      )
+                                                  );
+
+        connect(searchEntityForm, SIGNAL(jumpTo(QVector3D)),
+                this, SLOT(triggerJumpToEntity(QVector3D))
+                );
     }
 
     searchEntityForm->showNormal();
+}
+
+void Minutor::triggerJumpToEntity(QVector3D pos)
+{
+    mapview->setLocation(pos.x(), pos.z());
 }
 
 void Minutor::periodicUpdate()

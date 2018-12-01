@@ -2,12 +2,14 @@
 #ifndef CHUNK_H_
 #define CHUNK_H_
 
+#include "./nbt.h"
+#include "./entity.h"
+
 #include <QtCore>
 #include <QVector>
 
-#include "./nbt.h"
-#include "./entity.h"
 class BlockIdentifier;
+class ChunkRenderer;
 
 class ChunkSection {
  public:
@@ -46,6 +48,7 @@ class Chunk {
   int chunkX;
   int chunkZ;
   friend class MapView;
+  friend class ChunkRenderer;
   friend class ChunkCache;
   friend class WorldSave;
 };

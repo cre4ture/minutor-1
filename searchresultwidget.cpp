@@ -3,6 +3,8 @@
 
 #include "properties.h"
 
+Q_DECLARE_METATYPE(SearchResultItem);
+
 SearchResultWidget::SearchResultWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SearchResultWidget)
@@ -27,7 +29,7 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
             ;
 
     auto item = new QTreeWidgetItem();
-    item->setData(0, Qt::UserRole, result.properties);
+    item->setData(0, Qt::UserRole, QVariant::fromValue(result));
     item->setText(0, text);
     item->setText(1, result.buys);
     item->setText(2, result.sells);
@@ -42,7 +44,18 @@ void SearchResultWidget::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, 
         m_properties = QSharedPointer<Properties>::create();
     }
 
-    auto props = item->data(0, Qt::UserRole);
+    auto props = item->data(0, Qt::UserRole).value<SearchResultItem>().properties;
     m_properties->DisplayProperties(props);
     m_properties->showNormal();
+}
+
+void SearchResultWidget::on_treeWidget_itemSelectionChanged()
+{
+    auto list = ui->treeWidget->selectedItems();
+    if (list.size() > 0)
+    {
+        auto item = list[0];
+        auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
+        emit jumpTo(data.pos);
+    }
 }

@@ -33,8 +33,15 @@ public:
 
     void clearResults();
     void addResult(const SearchResultItem &result);
+
+signals:
+    void jumpTo(QVector3D pos);
+
 protected slots:
     void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
+private slots:
+    void on_treeWidget_itemSelectionChanged();
+
 private:
     Ui::SearchResultWidget *ui;
 
