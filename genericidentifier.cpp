@@ -60,3 +60,8 @@ GenericDescriptor &GenericIdentifier::getDescriptor(int id)
         return *list[i];
     return s_unknown;
 }
+
+QList<int> GenericIdentifier::getKnownIds() const
+{
+    return biomes.keys();
+}

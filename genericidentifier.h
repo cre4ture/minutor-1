@@ -34,6 +34,7 @@ class GenericIdentifier: public IdentifierI
   virtual int addDefinitions(JSONArray *defs, int pack = -1) override;
   virtual void setDefinitionsEnabled(int pack, bool enabled) override;
   GenericDescriptor &getDescriptor(int id);
+  QList<int> getKnownIds() const;
  private:
   QHash<int, QList<GenericDescriptor*>> biomes;
   QList<QList<GenericDescriptor*> > packs;
