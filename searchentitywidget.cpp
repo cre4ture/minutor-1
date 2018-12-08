@@ -21,6 +21,12 @@ SearchEntityWidget::SearchEntityWidget(QSharedPointer<ChunkCache> cache,
 
     connect(m_cache.get(), SIGNAL(chunkLoaded(bool,int,int)),
             this, SLOT(chunkLoaded(bool,int,int)));
+
+    for (const auto& id: m_definitions.careerDefinitions->getKnownIds())
+    {
+        auto desc = m_definitions.careerDefinitions->getDescriptor(id);
+        ui->cb_villager_type->addItem(desc.name);
+    }
 }
 
 SearchEntityWidget::~SearchEntityWidget()
@@ -95,12 +101,55 @@ void SearchEntityWidget::searchChunk(Chunk& chunk)
         EntityEvaluator evaluator(
                     EntityEvaluatorConfig(m_definitions,
                                           *ui->resultList,
-                                          ui->le_searchText->text(),
-                                          e)
+                                          "",
+                                          e,
+                                          std::bind(&SearchEntityWidget::evaluateEntity, this, std::placeholders::_1)
+                                          )
                     );
     }
 
     ui->progressBar->setValue(ui->progressBar->value() + 1);
+}
+
+bool SearchEntityWidget::evaluateEntity(EntityEvaluator &entity)
+{
+    bool result = true;
+
+    if (ui->check_villager_type->isChecked())
+    {
+        QString searchFor = ui->cb_villager_type->currentText();
+        QString career = entity.getCareerName();
+        result = result && (career.compare(searchFor, Qt::CaseInsensitive) == 0);
+    }
+
+    if (ui->check_buys->isChecked())
+    {
+        result = result && findBuyOrSell(entity, ui->cb_buys->currentText(), 0);
+    }
+
+    if (ui->check_sells->isChecked())
+    {
+        result = result && findBuyOrSell(entity, ui->cb_sells->currentText(), 1);
+    }
+
+    return result;
+}
+
+bool SearchEntityWidget::findBuyOrSell(EntityEvaluator &entity, QString searchText, int index)
+{
+    bool foundBuy = false;
+    auto offers = entity.getOffers();
+    for (const auto& offer: offers)
+    {
+        auto splitOffer = offer.split("=>");
+        foundBuy = (splitOffer.count() > index) && splitOffer[index].contains(searchText);
+        if (foundBuy)
+        {
+            break;
+        }
+    }
+
+    return foundBuy;
 }
 
 
@@ -110,7 +159,13 @@ EntityEvaluator::EntityEvaluator(const EntityEvaluatorConfig& config)
 {
     m_creator.CreateTree(m_rootNode.get(), m_config.entity->properties());
 
-    searchProperties();
+    //searchProperties();
+
+    bool found = m_config.evalFunction(*this);
+    if (found)
+    {
+        addResult();
+    }
 }
 
 QList<QString> EntityEvaluator::getOffers() const
@@ -123,10 +178,23 @@ QList<QString> EntityEvaluator::getOffers() const
         return result;
     }
 
+    {
+        QString receipeDesc = describeReceipe(*node);
+        if (receipeDesc.size() > 0)
+        {
+            result.append(receipeDesc);
+            return result; // single receipe only!
+        }
+    }
+
     for (int i = 0; i < node->childCount(); i++)
     {
         auto& currentReceipNode = *node->child(i);
-        result.append(describeReceipe(currentReceipNode));
+        QString receipeDesc = describeReceipe(currentReceipNode);
+        if (receipeDesc.size() > 0)
+        {
+            result.append(receipeDesc);
+        }
     }
 
     return result;
@@ -141,22 +209,16 @@ void EntityEvaluator::searchTreeNode(const QString prefix, const QTreeWidgetItem
 {
     auto keyText = prefix + node.text(0);
     auto valueText = node.text(1);
-    QString offers = getOffers().join("|");
-   // bool found = keyText.contains("sell.id") && valueText.contains(m_config.searchText); // enchanted_book
+    //bool found = keyText.contains("sell.id") && valueText.contains(m_config.searchText); // enchanted_book
     //bool found = offers.contains(m_config.searchText);
     //bool found = isVillager() && getCareerName() == "Cleric";
     //bool found = getTypeId().contains("chicken");
-    bool found = isVillager() && getCareerName() == "Farmer";
+    //bool found = isVillager() && getCareerName() == "Farmer";
+    //bool found = isVillager();
+    bool found = m_config.evalFunction(*this);
     if (found)
     {
-        SearchResultItem result;
-        result.properties = m_config.entity->properties();
-        result.name = m_creator.GetSummary("[0]", m_config.entity->properties());
-        result.pos.setX(m_config.entity->midpoint().x);
-        result.pos.setY(m_config.entity->midpoint().y);
-        result.pos.setZ(m_config.entity->midpoint().z);
-        result.sells = offers;
-        m_config.resultSink.addResult(result);
+        addResult();
     }
     else
     {
@@ -238,6 +300,19 @@ QString EntityEvaluator::describeReceipeItem(const QTreeWidgetItem &itemNode) co
     }
 
     return value;
+}
+
+void EntityEvaluator::addResult()
+{
+    SearchResultItem result;
+    result.properties = m_config.entity->properties();
+    result.name = m_creator.GetSummary("[0]", m_config.entity->properties());
+    result.pos.setX(m_config.entity->midpoint().x);
+    result.pos.setY(m_config.entity->midpoint().y);
+    result.pos.setZ(m_config.entity->midpoint().z);
+    QString offers = getOffers().join("|");
+    result.sells = offers;
+    m_config.resultSink.addResult(result);
 }
 
 const QTreeWidgetItem *EntityEvaluator::getNodeFromPath(const QString path, const QTreeWidgetItem &searchRoot)

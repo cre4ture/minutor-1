@@ -27,22 +27,29 @@ struct EntityDefitionsConfig
     QSharedPointer<GenericIdentifier> careerDefinitions;
 };
 
+class EntityEvaluator;
+
 struct EntityEvaluatorConfig
 {
+    typedef std::function<bool(EntityEvaluator&)> SearchFunctionT;
+
     EntityEvaluatorConfig(const EntityDefitionsConfig& definitions_,
                           SearchResultWidget& resultSink_,
                           const QString& searchText_,
-                          QSharedPointer<OverlayItem> entity_)
+                          QSharedPointer<OverlayItem> entity_,
+                          SearchFunctionT evalFunction_)
         : definitions(definitions_)
         , resultSink(resultSink_)
         , searchText(searchText_)
         , entity(entity_)
+        , evalFunction(evalFunction_)
     {}
 
     EntityDefitionsConfig definitions;
     SearchResultWidget& resultSink;
     QString searchText;
     QSharedPointer<OverlayItem> entity;
+    std::function<bool(EntityEvaluator&)> evalFunction;
 };
 
 class EntityEvaluator
@@ -71,6 +78,8 @@ private:
 
     QString describeReceipe(const QTreeWidgetItem& node) const;
     QString describeReceipeItem(const QTreeWidgetItem& node) const;
+
+    void addResult();
 };
 
 class SearchEntityWidget : public QWidget
@@ -101,6 +110,9 @@ private:
     void trySearchChunk(int x, int z);
 
     void searchChunk(Chunk &chunk);
+
+    bool evaluateEntity(EntityEvaluator& entity);
+    bool findBuyOrSell(EntityEvaluator& entity, QString searchText, int index);
 };
 
 #endif // SEARCHENTITYWIDGET_H
