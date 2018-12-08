@@ -60,6 +60,7 @@ ChunkCache::~ChunkCache() {
 void ChunkCache::clear() {
   QThreadPool::globalInstance()->waitForDone();
   mutex.lock();
+  state.clear();
   cache.clear();
   mutex.unlock();
 }
