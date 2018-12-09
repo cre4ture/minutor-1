@@ -22,19 +22,46 @@ void SearchResultWidget::clearResults()
     ui->treeWidget->clear();
 }
 
+class MyTreeWidgetItem : public QTreeWidgetItem {
+  public:
+  MyTreeWidgetItem(QTreeWidget* parent):QTreeWidgetItem(parent){}
+  private:
+  bool operator<(const QTreeWidgetItem &other)const {
+     int column = treeWidget()->sortColumn();
+     switch (column)
+     {
+     case 1:
+         return text(column).toDouble() < other.text(column).toDouble();
+     default:
+         return QTreeWidgetItem::operator<(other);
+     }
+  }
+};
+
 void SearchResultWidget::addResult(const SearchResultItem &result)
 {
     auto text = QString("%1")
             .arg(result.name)
             ;
 
-    auto item = new QTreeWidgetItem();
+    auto item = new MyTreeWidgetItem(nullptr);
     item->setData(0, Qt::UserRole, QVariant::fromValue(result));
-    item->setText(0, text);
-    item->setText(1, result.buys);
-    item->setText(2, result.sells);
+
+    QVector3D distance = m_pointOfInterest - result.pos;
+    float airDistance = distance.length();
+
+    int c = 0;
+    item->setText(c++, text);
+    item->setText(c++, QString::number(std::roundf(airDistance)));
+    item->setText(c++, result.buys);
+    item->setText(c++, result.sells);
 
     ui->treeWidget->addTopLevelItem(item);
+}
+
+void SearchResultWidget::setPointOfInterest(const QVector3D &centerPoint)
+{
+    m_pointOfInterest = centerPoint;
 }
 
 void SearchResultWidget::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)

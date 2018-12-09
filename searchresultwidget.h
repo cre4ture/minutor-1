@@ -34,6 +34,8 @@ public:
     void clearResults();
     void addResult(const SearchResultItem &result);
 
+    void setPointOfInterest(const QVector3D& centerPoint);
+
 signals:
     void jumpTo(QVector3D pos);
 
@@ -46,6 +48,7 @@ private:
     Ui::SearchResultWidget *ui;
 
     QSharedPointer<Properties> m_properties;
+    QVector3D m_pointOfInterest;
 };
 
 #endif // SEARCHRESULTWIDGET_H

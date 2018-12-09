@@ -723,12 +723,13 @@ void Minutor::searchEntity()
 {
     if (!searchEntityForm)
     {
-        searchEntityForm = new SearchEntityWidget(cache,
+        searchEntityForm = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
                                                   EntityDefitionsConfig(
                                                       dm->enchantmentIdentifier(),
                                                       dm->careerIdentifier()
-                                                      )
-                                                  );
+                                                      ),
+                                                  [this](){ return mapview->getLocation()->getPos3D(); }
+        ));
 
         connect(searchEntityForm, SIGNAL(jumpTo(QVector3D)),
                 this, SLOT(triggerJumpToEntity(QVector3D))
