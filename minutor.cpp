@@ -16,6 +16,7 @@
 #include "./pngexport.h"
 #include "./searchentitywidget.h"
 #include "./playerinfos.h"
+#include "searchentitypluginwidget.h"
 
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QAction>
@@ -186,7 +187,7 @@ void Minutor::savePNG(QString filename, bool autoclose,
                                   regionChecker, chunkChecker,
                                   w_top, w_left, w_bottom, w_right);
     progress = new QProgressDialog();
-    progress->setCancelButton(NULL);
+    progress->setCancelButton(nullptr);
     progress->setMaximum(100);
     progress->show();
     connect(ws, SIGNAL(progress(QString, double)),
@@ -723,12 +724,13 @@ void Minutor::searchEntity()
 {
     if (!searchEntityForm)
     {
+        auto searchPlugin = QSharedPointer<SearchEntityPluginWidget>::create(SearchEntityPluginWidgetConfigT(EntityDefitionsConfig(
+                                                                                                                 dm->enchantmentIdentifier(),
+                                                                                                                 dm->careerIdentifier()
+                                                                                                                 )));
         searchEntityForm = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
-                                                  EntityDefitionsConfig(
-                                                      dm->enchantmentIdentifier(),
-                                                      dm->careerIdentifier()
-                                                      ),
-                                                  [this](){ return mapview->getLocation()->getPos3D(); }
+                                                  [this](){ return mapview->getLocation()->getPos3D(); },
+                                                  searchPlugin
         ));
 
         connect(searchEntityForm, SIGNAL(jumpTo(QVector3D)),

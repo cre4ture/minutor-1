@@ -4,6 +4,7 @@
 #include "propertietreecreator.h"
 #include "overlayitem.h"
 #include "entityevaluator.h"
+#include "searchplugininterface.h"
 
 #include <QWidget>
 
@@ -21,18 +22,21 @@ struct SearchEntityWidgetInputC
     typedef std::function<QVector3D()> PositionProviderT;
 
     SearchEntityWidgetInputC(QSharedPointer<ChunkCache> cache_,
-                             EntityDefitionsConfig definitions_,
+//                             EntityDefitionsConfig definitions_,
                              PositionProviderT posOfInterestProvider_,
+                             QSharedPointer<SearchPluginI> searchPlugin_,
                              QWidget *parent_ = nullptr)
         : cache(cache_)
-        , definitions(definitions_)
+//        , definitions(definitions_)
         , posOfInterestProvider(posOfInterestProvider_)
+        , searchPlugin(searchPlugin_)
         , parent(parent_)
     {}
 
     QSharedPointer<ChunkCache> cache;
-    EntityDefitionsConfig definitions;
+//    EntityDefitionsConfig definitions;
     PositionProviderT posOfInterestProvider;
+    QSharedPointer<SearchPluginI> searchPlugin;
     QWidget *parent;
 };
 
@@ -61,9 +65,6 @@ private:
     void trySearchChunk(int x, int z);
 
     void searchChunk(Chunk &chunk);
-
-    bool evaluateEntity(EntityEvaluator& entity);
-    bool findBuyOrSell(EntityEvaluator& entity, QString searchText, int index);
 };
 
 #endif // SEARCHENTITYWIDGET_H

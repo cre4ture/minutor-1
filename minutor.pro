@@ -56,7 +56,10 @@ HEADERS += \
     chunkcachetypes.h \
     chunkrenderer.h \
     careeridentifier.h \
-    entityevaluator.h
+    entityevaluator.h \
+    searchentitypluginwidget.h \
+    searchplugininterface.h \
+    searchblockpluginwidget.h
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \
@@ -88,7 +91,9 @@ SOURCES += \
     genericidentifier.cpp \
     playerinfos.cpp \
     chunkrenderer.cpp \
-    entityevaluator.cpp
+    entityevaluator.cpp \
+    searchentitypluginwidget.cpp \
+    searchblockpluginwidget.cpp
 RESOURCES = minutor.qrc
 
 win32:SOURCES += zlib/adler32.c \
@@ -120,6 +125,8 @@ FORMS += \
     jumpto.ui \
     pngexport.ui \
     searchresultwidget.ui \
-    searchentitywidget.ui
+    searchentitywidget.ui \
+    searchentitypluginwidget.ui \
+    searchblockpluginwidget.ui
 
 DISTFILES +=

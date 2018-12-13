@@ -14,6 +14,9 @@
 #include <QMessageBox>
 #include <assert.h>
 
+const double g_zoomMin = 0.25;
+const double g_zoomMax = 20.0;
+
 class DrawHelper
 {
 private:
@@ -115,7 +118,7 @@ void MapView::attach(DefinitionManager *dm) {
   this->dm = dm;
   connect(dm, SIGNAL(packsChanged()),
           this, SLOT(redraw()));
-  this->blocks = dm->blockIdentifier();
+  this->blockDefinitions = dm->blockIdentifier();
   this->biomes = dm->biomeIdentifier();
 }
 
@@ -329,8 +332,8 @@ void MapView::wheelEvent(QWheelEvent *event) {
     emit demandDepthChange(event->delta() / 120);
   } else {  // change zoom
     zoom += floor(event->delta() / 90.0);
-    if (zoom < 1.0) zoom = 1.0;
-    if (zoom > 20.0) zoom = 20.0;
+    if (zoom < g_zoomMin) zoom = g_zoomMin;
+    if (zoom > g_zoomMax) zoom = g_zoomMax;
     redraw();
   }
 }
@@ -376,13 +379,13 @@ void MapView::keyPressEvent(QKeyEvent *event) {
     case Qt::Key_PageUp:
     case Qt::Key_Q:
       zoom++;
-      if (zoom > 20.0) zoom = 20.0;
+      if (zoom > g_zoomMax) zoom = g_zoomMax;
       redraw();
       break;
     case Qt::Key_PageDown:
     case Qt::Key_E:
       zoom--;
-      if (zoom < 1.0) zoom = 1.0;
+      if (zoom < g_zoomMin) zoom = g_zoomMin;
       redraw();
       break;
     case Qt::Key_Home:
@@ -570,7 +573,7 @@ void ChunkRenderer::renderChunk(Chunk *chunk)
         flags = parent.flags;
     }
 
-    auto& blocks = parent.blocks;
+    auto& blocks = parent.blockDefinitions;
 
   int offset = 0;
   uchar *bits = chunk->image;
@@ -785,12 +788,11 @@ void MapView::getToolTip(int x, int z) {
       int yoffset = (y & 0xf) << 8;
       int data = section->data[(offset + yoffset) / 2];
       if (x & 1) data >>= 4;
-      auto &block = blocks->getBlock(section->blocks[offset + yoffset],
-                                     data & 0xf);
-      if (block.alpha == 0.0) continue;
-      // found block
-      name = block.getName();
       id = section->blocks[offset + yoffset];
+      auto &blockInfo = blockDefinitions->getBlock(id, data & 0xf);
+      if (blockInfo.alpha == 0.0) continue;
+      // found block
+      name = blockInfo.getName();
       bd = data & 0xf;
       break;
     }
