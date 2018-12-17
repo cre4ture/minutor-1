@@ -53,6 +53,7 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
     int c = 0;
     item->setText(c++, text);
     item->setText(c++, QString::number(std::roundf(airDistance)));
+    item->setText(c++, QString("%1,%2,%3").arg(result.pos.x()).arg(result.pos.y()).arg(result.pos.z()));
     item->setText(c++, result.buys);
     item->setText(c++, result.sells);
 

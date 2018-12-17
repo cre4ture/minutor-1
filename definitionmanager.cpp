@@ -94,8 +94,8 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   dimensionManager = new DimensionIdentifier;
   m_managers[Definition::Dimension] = dimensionManager;
 
-  blockManager = new BlockIdentifier;
-  m_managers[Definition::Block] = blockManager;
+  blockManager = QSharedPointer<BlockIdentifier>::create();
+  m_managers[Definition::Block] = blockManager.get();
 
   biomeManager = new BiomeIdentifier;
   m_managers[Definition::Biome] = biomeManager;
@@ -137,11 +137,10 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
 
 DefinitionManager::~DefinitionManager() {
   delete dimensionManager;
-  delete blockManager;
   delete biomeManager;
 }
 
-BlockIdentifier *DefinitionManager::blockIdentifier() {
+QSharedPointer<BlockIdentifier> DefinitionManager::blockIdentifier() {
   return blockManager;
 }
 BiomeIdentifier *DefinitionManager::biomeIdentifier() {

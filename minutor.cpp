@@ -17,6 +17,7 @@
 #include "./searchentitywidget.h"
 #include "./playerinfos.h"
 #include "searchentitypluginwidget.h"
+#include "searchblockpluginwidget.h"
 
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QAction>
@@ -35,8 +36,10 @@ Minutor::Minutor()
     : cache(nullptr)
     , searchMenu(nullptr)
     , searchEntityAction(nullptr)
+    , searchBlockAction(nullptr)
     , maxentitydistance(0)
     , searchEntityForm(nullptr)
+    , searchBlockForm(nullptr)
     , periodicUpdateTimer()
 {
   cache = QSharedPointer<ChunkCache>::create();
@@ -435,6 +438,9 @@ void Minutor::createActions() {
 
   searchEntityAction = new QAction(tr("Search entity"), this);
   connect(searchEntityAction, SIGNAL(triggered()), this, SLOT(searchEntity()));
+
+  searchBlockAction = new QAction(tr("Search block"), this);
+  connect(searchBlockAction, SIGNAL(triggered()), this, SLOT(searchBlock()));
 }
 
 // actionName will be modified, a "&" is added
@@ -538,6 +544,7 @@ void Minutor::createMenus() {
   // [Search]
   searchMenu = menuBar()->addMenu(tr("&Search"));
   searchMenu->addAction(searchEntityAction);
+  searchMenu->addAction(searchBlockAction);
 
   // [Help]
   helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -718,6 +725,24 @@ void Minutor::showProperties(QVariant props) {
     propView->DisplayProperties(props);
     propView->show();
   }
+}
+
+void Minutor::searchBlock()
+{
+    if (!searchBlockForm)
+    {
+        auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(dm->blockIdentifier()));
+        searchBlockForm = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
+                                                  [this](){ return mapview->getLocation()->getPos3D(); },
+                                                  searchPlugin
+        ));
+
+        connect(searchBlockForm, SIGNAL(jumpTo(QVector3D)),
+                this, SLOT(triggerJumpToEntity(QVector3D))
+                );
+    }
+
+    searchBlockForm->showNormal();
 }
 
 void Minutor::searchEntity()

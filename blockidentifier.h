@@ -74,6 +74,7 @@ class BlockIdentifier: public IdentifierI {
   int addDefinitions(JSONArray *, int pack = -1) override;
   void setDefinitionsEnabled(int packId, bool enabled) override;
   BlockInfo &getBlock(int id, int data);
+  QList<quint32> getKnownIds() const;
  private:
   void clearCache();
   void parseDefinition(JSONObject *block, BlockInfo *parent, int pack);

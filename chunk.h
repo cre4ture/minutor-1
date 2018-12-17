@@ -25,6 +25,17 @@ class ChunkSection {
   quint8  light[2048];
 };
 
+struct Block
+{
+    Block()
+        : id(0)
+        , bd(0)
+    {}
+
+    quint32 id;
+    quint32 bd; // blockdata?
+};
+
 class Chunk {
  public:
   typedef QMap<QString, QSharedPointer<OverlayItem>> EntityMap;
@@ -33,6 +44,11 @@ class Chunk {
   ~Chunk();
 
   const EntityMap& getEntityMap() const { return entities; }
+
+  Block getBlockData(int x, int y, int z) const;
+
+  int getChunkX() const { return chunkX; }
+  int getChunkZ() const { return chunkZ; }
 
  protected:
 

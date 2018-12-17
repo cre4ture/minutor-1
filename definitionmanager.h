@@ -56,7 +56,7 @@ class DefinitionManager : public QWidget {
   QSize minimumSizeHint() const;
   QSize sizeHint() const;
 
-  BlockIdentifier *blockIdentifier();
+  QSharedPointer<BlockIdentifier> blockIdentifier();
   BiomeIdentifier *biomeIdentifier();
   DimensionIdentifier *dimensionIdentifer();
   QSharedPointer<GenericIdentifier> enchantmentIdentifier();
@@ -92,7 +92,7 @@ class DefinitionManager : public QWidget {
   void refresh();
   QHash<QString, Definition> definitions;
   BiomeIdentifier *biomeManager;  // todo: migrate to reference to singleton
-  BlockIdentifier *blockManager;  // todo: migrate to reference to singleton
+  QSharedPointer<BlockIdentifier> blockManager;  // todo: migrate to reference to singleton
   DimensionIdentifier *dimensionManager;  // todo: migrate to reference to singleton
   EntityIdentifier &entityManager;
   QSharedPointer<GenericIdentifier> enchantmentManager;

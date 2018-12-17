@@ -45,7 +45,7 @@ class MapView : public QWidget {
 
   } BlockLocation;
 
-  explicit MapView(QWidget *parent = 0);
+  explicit MapView(QWidget *parent = nullptr);
 
   QSize minimumSizeHint() const;
   QSize sizeHint() const;
@@ -128,7 +128,7 @@ class MapView : public QWidget {
   QSharedPointer<ChunkCache> cache;
   QImage image;
   DefinitionManager *dm;
-  BlockIdentifier *blockDefinitions;
+  QSharedPointer<BlockIdentifier> blockDefinitions;
   BiomeIdentifier *biomes;
   uchar placeholder[16 * 16 * 4];  // no chunk found placeholder
   QSet<QString> overlayItemTypes;

@@ -33,6 +33,8 @@ enum
 
 void SearchEntityWidget::on_pb_search_clicked()
 {
+    m_searchedBlockCoordinates.clear();
+
     ui->resultList->clearResults();
     ui->resultList->setPointOfInterest(m_input.posOfInterestProvider());
 
@@ -87,6 +89,16 @@ void SearchEntityWidget::trySearchChunk(int x, int z)
 
 void SearchEntityWidget::searchChunk(Chunk& chunk)
 {
+    ChunkID id(chunk.getChunkX(), chunk.getChunkZ());
+
+    auto it = m_searchedBlockCoordinates.find(id);
+    if (it != m_searchedBlockCoordinates.end())
+    {
+        return; // already searched!
+    }
+
+    m_searchedBlockCoordinates.insert(id);
+
     m_input.searchPlugin->searchChunk(*ui->resultList, chunk);
 
     ui->progressBar->setValue(ui->progressBar->value() + 1);

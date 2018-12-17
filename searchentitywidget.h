@@ -5,8 +5,10 @@
 #include "overlayitem.h"
 #include "entityevaluator.h"
 #include "searchplugininterface.h"
+#include "chunkcachetypes.h"
 
 #include <QWidget>
+#include <set>
 
 namespace Ui {
 class SearchEntityWidget;
@@ -61,6 +63,7 @@ private slots:
 private:
     Ui::SearchEntityWidget *ui;
     SearchEntityWidgetInputC m_input;
+    std::set<ChunkID> m_searchedBlockCoordinates;
 
     void trySearchChunk(int x, int z);
 

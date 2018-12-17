@@ -125,6 +125,11 @@ BlockInfo &BlockIdentifier::getBlock(int id, int data) {
   return unknownBlock;
 }
 
+QList<quint32> BlockIdentifier::getKnownIds() const
+{
+    return blocks.keys();
+}
+
 void BlockIdentifier::setDefinitionsEnabled(int pack, bool enabled)
 {
     if (pack < 0) return;

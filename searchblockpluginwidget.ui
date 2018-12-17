@@ -24,7 +24,21 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QComboBox" name="cb_blockId">
+      <widget class="QSpinBox" name="sb_id">
+       <property name="maximum">
+        <number>999999999</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QCheckBox" name="check_Name">
+       <property name="text">
+        <string>blockName:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="cb_Name">
        <property name="editable">
         <bool>true</bool>
        </property>

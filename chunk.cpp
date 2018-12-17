@@ -68,30 +68,50 @@ Chunk::~Chunk() {
     for (int i = 0; i < 16; i++)
       if (sections[i]) {
         delete sections[i];
-        sections[i] = NULL;
+        sections[i] = nullptr;
       }
   }
 }
 
+Block Chunk::getBlockData(int x, int y, int z) const
+{
+    Block result;
+
+    int offset = (x & 0xf) + (z & 0xf) * 16;
+
+    int sec = y >> 4;
+    const ChunkSection * const section = sections[sec];
+    if (!section) {
+        return result;
+    }
+    int yoffset = (y & 0xf) << 8;
+    int data = section->data[(offset + yoffset) / 2];
+    if (x & 1) data >>= 4;
+    result.id = section->blocks[offset + yoffset];
+    result.bd = data & 0xf;
+
+    return result;
+}
+
 
 quint16 ChunkSection::getBlock(int x, int y, int z) {
-  int xoffset = x;
-  int yoffset = (y & 0x0f) << 8;
-  int zoffset = z << 4;
-  return blocks[xoffset + yoffset + zoffset];
+    int xoffset = x;
+    int yoffset = (y & 0x0f) << 8;
+    int zoffset = z << 4;
+    return blocks[xoffset + yoffset + zoffset];
 }
 
 quint16 ChunkSection::getBlock(int offset, int y) {
-  int yoffset = (y & 0x0f) << 8;
-  return blocks[offset + yoffset];
+    int yoffset = (y & 0x0f) << 8;
+    return blocks[offset + yoffset];
 }
 
 quint8 ChunkSection::getData(int x, int y, int z) {
-  int xoffset = x;
-  int yoffset = (y & 0x0f) << 8;
-  int zoffset = z << 4;
-  int value = data[(xoffset + yoffset + zoffset) / 2];
-  if (x & 1) value >>= 4;
+    int xoffset = x;
+    int yoffset = (y & 0x0f) << 8;
+    int zoffset = z << 4;
+    int value = data[(xoffset + yoffset + zoffset) / 2];
+    if (x & 1) value >>= 4;
   return value & 0x0f;
 }
 

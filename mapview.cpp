@@ -25,14 +25,14 @@ private:
 public:
     double& zoom;
 
-    int startx;
-    int startz;
+    int startx; // first chunk left
+    int startz; // first chunk top
 
-    int blockswide;
-    int blockstall;
+    int blockswide; // width in chunks
+    int blockstall; // height in chunks
 
-    double x1;
-    double z1;
+    double x1; // first coordinate left
+    double z1; // first coordinate top
     double x2;
     double z2;
 
@@ -470,6 +470,22 @@ void MapView::redraw() {
     }
   }
 
+  const int maxViewWidth = 64 * 16; // (radius 32 chunks)
+
+  const double firstGridLineX = ceil(h.x1 / maxViewWidth) * maxViewWidth;
+  for (double x = firstGridLineX; x < h.x2; x += maxViewWidth)
+  {
+      const int line_x = round((x - h.x1) * zoom);
+      canvas.drawLine(line_x, 0, line_x, image.height());
+  }
+
+  const double firstGridLineZ = ceil(h.z1 / maxViewWidth) * maxViewWidth;
+  for (double z = firstGridLineZ; z < h.z2; z += maxViewWidth)
+  {
+      const int line_z = round((z - h.z1) * zoom);
+      canvas.drawLine(0, line_z, image.width(), line_z);
+  }
+
   h.drawPlayers(canvas);
 
   emit(coordinatesChanged(x, depth, z));
@@ -573,7 +589,7 @@ void ChunkRenderer::renderChunk(Chunk *chunk)
         flags = parent.flags;
     }
 
-    auto& blocks = parent.blockDefinitions;
+    auto& blocksDefinitions = parent.blockDefinitions;
 
   int offset = 0;
   uchar *bits = chunk->image;
@@ -602,7 +618,7 @@ void ChunkRenderer::renderChunk(Chunk *chunk)
         int data = section->getData(offset, y);
 
         // get BlockInfo from block value
-        BlockInfo &block = blocks->getBlock(section->getBlock(offset, y),
+        BlockInfo &block = blocksDefinitions->getBlock(section->getBlock(offset, y),
                                             data);
         if (block.alpha == 0.0) continue;
 
@@ -677,10 +693,10 @@ void ChunkRenderer::renderChunk(Chunk *chunk)
             blidB = sectionB->getBlock(offset, y-1);
             dataB = sectionB->getData(offset, y-1);
           }
-          BlockInfo &block2 = blocks->getBlock(blid2, data2);
-          BlockInfo &block1 = blocks->getBlock(blid1, data1);
+          BlockInfo &block2 = blocksDefinitions->getBlock(blid2, data2);
+          BlockInfo &block1 = blocksDefinitions->getBlock(blid1, data1);
           BlockInfo &block0 = block;
-          BlockInfo &blockB = blocks->getBlock(blidB, dataB);
+          BlockInfo &blockB = blocksDefinitions->getBlock(blidB, dataB);
           int light0 = section->getLight(offset, y);
 
           // spawn check #1: on top of solid block
@@ -742,7 +758,7 @@ void ChunkRenderer::renderChunk(Chunk *chunk)
           // get data value
           int data = section->getData(offset, y);
           // get BlockInfo from block value
-          BlockInfo &block = blocks->getBlock(section->getBlock(offset, y), data);
+          BlockInfo &block = blocksDefinitions->getBlock(section->getBlock(offset, y), data);
           if (block.transparent) {
             cave_factor -= parent.caveshade[cave_test];
           }
@@ -768,8 +784,7 @@ void MapView::getToolTip(int x, int z) {
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
   auto chunk = cache->fetch(cx, cz);
-  int offset = (x & 0xf) + (z & 0xf) * 16;
-  int id = 0, bd = 0;
+  Block block;
 
   QString name = "Unknown";
   QString biome = "Unknown Biome";
@@ -780,20 +795,20 @@ void MapView::getToolTip(int x, int z) {
     int y = 0;
     for (y = top; y >= 0; y--) {
       int sec = y >> 4;
-      ChunkSection *section = chunk->sections[sec];
-      if (!section) {
-        y = (sec << 4) - 1;  // skip entire section
-        continue;
+      {
+          ChunkSection *section = chunk->sections[sec];
+          if (!section) {
+            y = (sec << 4) - 1;  // skip entire section
+            continue;
+          }
       }
-      int yoffset = (y & 0xf) << 8;
-      int data = section->data[(offset + yoffset) / 2];
-      if (x & 1) data >>= 4;
-      id = section->blocks[offset + yoffset];
-      auto &blockInfo = blockDefinitions->getBlock(id, data & 0xf);
+
+      block = chunk->getBlockData(x,y,z);
+
+      auto &blockInfo = blockDefinitions->getBlock(block.id, block.bd);
       if (blockInfo.alpha == 0.0) continue;
       // found block
       name = blockInfo.getName();
-      bd = data & 0xf;
       break;
     }
     auto &bi = biomes->getBiome(chunk->biomes[(x & 0xf) + (z & 0xf) * 16]);
@@ -823,8 +838,8 @@ void MapView::getToolTip(int x, int z) {
                         .arg(z)
                         .arg(biome)
                         .arg(name)
-                        .arg(id)
-                        .arg(bd)
+                        .arg(block.id)
+                        .arg(block.bd)
                         .arg(entityStr)
                         .arg(x/8)
                         .arg(z/8));

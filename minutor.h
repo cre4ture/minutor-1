@@ -82,12 +82,13 @@ private slots:
   void addOverlayItemType(QString type, QColor color, QString dimension = "");
   void showProperties(QVariant props);
 
+  void searchBlock();
   void searchEntity();
   void triggerJumpToEntity(QVector3D pos);
 
   void periodicUpdate();
 
- signals:
+signals:
   void worldLoaded(bool isLoaded);
 
  private:
@@ -129,6 +130,7 @@ private slots:
   QList<QAction*> structureActions;
   QList<QAction*> entityActions;
   QAction *searchEntityAction;
+  QAction *searchBlockAction;
 
   // loaded world data
   QList<Location> locations;
@@ -147,6 +149,7 @@ private slots:
   Properties * propView;
 
   SearchEntityWidget* searchEntityForm;
+  SearchEntityWidget* searchBlockForm;
 
   QTimer periodicUpdateTimer;
 };

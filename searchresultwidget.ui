@@ -31,6 +31,11 @@
      </column>
      <column>
       <property name="text">
+       <string>Coordinates</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
        <string>Buys</string>
       </property>
      </column>
