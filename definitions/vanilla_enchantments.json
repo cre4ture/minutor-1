@@ -1,7 +1,7 @@
 {
   "name": "Vanilla",
   "type": "enchantment",
-  "version": "1.0",
+  "version": "1.3",
   "data": [
         {
           "id": 0,
@@ -64,6 +64,18 @@
           "name-de": ""
         },
         {
+          "id": 10,
+          "tag": "minecraft:binding_curse",
+          "name": "Binding Curse",
+          "name-de": "Fluch der Bindung"
+        },
+        {
+           "id": 16,
+           "tag": "minecraft:sharpness",
+           "name": "Sharpness",
+           "name-de": "Schärfe"
+         },
+         {
            "id": 17,
            "tag": "minecraft:smite",
            "name": "Smite",
@@ -92,6 +104,12 @@
            "tag": "minecraft:looting",
            "name": "Looting",
            "name-de": ""
+         },
+         {
+           "id": 22,
+           "tag": "minecraft:sweeping",
+           "name": "Sweeping",
+           "name-de": "Schwungkraft"
          },
          {
            "id": 32,
@@ -158,7 +176,13 @@
            "tag": "minecraft:mending",
            "name": "Mending (1.9)",
            "name-de": "Reparatur"
-         }
+         },
+        {
+          "id": 71,
+          "tag": "minecraft:vanishing_curse",
+          "name": "Vanishing Curse",
+          "name-de": "Fluch des Verschwindens"
+        }
        ],
   "update": ""
 }
