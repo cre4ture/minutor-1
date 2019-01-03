@@ -104,6 +104,8 @@ bool ChunkCache::isLoaded(int x, int z,  QSharedPointer<Chunk> &chunkPtr_out)
 
 void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 {
+    QMutexLocker locker(&mutex);
+
     cache[id] = chunk;
     state[id] = ChunkState::Cached;
 

@@ -30,6 +30,17 @@ class ChunkCache : public QObject {
 
   bool isLoaded(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
 
+  class Locker
+  {
+  public:
+      Locker(ChunkCache& parent)
+          : m_locker(&parent.mutex)
+      {}
+
+  private:
+      QMutexLocker m_locker;
+  };
+
  signals:
   void chunkLoaded(bool success, int x, int z);
 

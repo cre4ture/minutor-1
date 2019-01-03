@@ -123,7 +123,12 @@ class MapView : public QWidget {
   int depth;
   double x, z;
   int scale;
-  double zoom;
+
+  double zoom_internal;
+
+  double getZoom() const;
+  void adjustZoom(double rate);
+
   int flags;
   QSharedPointer<ChunkCache> cache;
   QImage image;
