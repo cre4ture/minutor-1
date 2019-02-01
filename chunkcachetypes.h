@@ -21,6 +21,6 @@ class ChunkID {
 
 class Chunk;
 
-typedef QMap<ChunkID, QSharedPointer<Chunk> > ChunkCacheT;
+//typedef QMap<ChunkID, QSharedPointer<Chunk> > ChunkCacheT;
 
 #endif // CHUNKCACHETYPES_H

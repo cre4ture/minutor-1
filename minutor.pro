@@ -59,7 +59,8 @@ HEADERS += \
     entityevaluator.h \
     searchentitypluginwidget.h \
     searchplugininterface.h \
-    searchblockpluginwidget.h
+    searchblockpluginwidget.h \
+    threadsafequeue.hpp
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \

@@ -32,6 +32,7 @@ uint qHash(const ChunkID &c) {
 
 ChunkCache::ChunkCache()
     : mutex(QMutex::Recursive)
+    , m_loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create())
 {
   int chunks = 10000;  // 10% more than 1920x1200 blocks
 #if defined(__unix__) || defined(__unix) || defined(unix)
@@ -52,6 +53,9 @@ ChunkCache::ChunkCache()
 
   qRegisterMetaType<QSharedPointer<Chunk> >("QSharedPointer<Chunk>");
   qRegisterMetaType<ChunkID>("ChunkID");
+
+  connect(m_loaderPool.get(), SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
+          this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
 }
 
 ChunkCache::~ChunkCache() {
@@ -60,8 +64,7 @@ ChunkCache::~ChunkCache() {
 void ChunkCache::clear() {
   QThreadPool::globalInstance()->waitForDone();
   mutex.lock();
-  state.clear();
-  cache.clear();
+  cachemap.clear();
   mutex.unlock();
 }
 
@@ -78,10 +81,10 @@ QSharedPointer<Chunk> ChunkCache::fetch(int x, int z, FetchBehaviour behav)
 
   {
       QMutexLocker locker(&mutex);
-      auto chunkState = state[id];
-      if ((behav == FetchBehaviour::USE_CACHED) && (chunkState == ChunkState::Cached))
+      const auto& chunkInfo = cachemap[id];
+      if ((behav == FetchBehaviour::USE_CACHED) && (chunkInfo.state[ChunkState::Cached]))
       {
-          return cache[id];
+          return chunkInfo.chunk;
       }
       else
       {
@@ -97,7 +100,7 @@ bool ChunkCache::isLoaded(int x, int z,  QSharedPointer<Chunk> &chunkPtr_out)
 
     {
         QMutexLocker locker(&mutex);
-        chunkPtr_out = cache[id];
+        chunkPtr_out = cachemap[id].chunk;
         return (chunkPtr_out != nullptr);
     }
 }
@@ -106,8 +109,10 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 {
     QMutexLocker locker(&mutex);
 
-    cache[id] = chunk;
-    state[id] = ChunkState::Cached;
+    auto& chunkInfo = cachemap[id];
+    chunkInfo.chunk = chunk;
+    chunkInfo.state << ChunkState::Cached;
+    chunkInfo.state.unset(ChunkState::Loading);
 
     emit chunkLoaded(chunk != nullptr, id.getX(), id.getZ());
 }
@@ -117,20 +122,17 @@ void ChunkCache::loadChunkAsync(ChunkID id)
     {
         QMutexLocker locker(&mutex);
 
-        auto latestState = state[id];
-        if (latestState == ChunkState::Loading)
+        auto& chunkInfo = cachemap[id];
+
+        if (chunkInfo.state[ChunkState::Loading])
         {
             return; // prevent loading chunk twice
         }
 
-        cache[id] = nullptr;
-        state[id] = ChunkState::Loading;
+        chunkInfo.state << ChunkState::Loading;
     }
 
-    ChunkLoader *loader = new ChunkLoader(path, id);
-    connect(loader, SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
-            this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
-    QThreadPool::globalInstance()->start(loader);
+    m_loaderPool->enqueueChunkLoading(path, id);
 }
 
 void ChunkCache::adaptCacheToWindow(int x, int y) {
