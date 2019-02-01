@@ -78,6 +78,8 @@ public:
     DrawHelper2(DrawHelper h_, MapView& parent)
                 : h(h_)
                 , canvas(&parent.image)
+                , canvas_entities(&parent.image_entities)
+                , canvas_players(&parent.image_players)
                 , m_parent(parent)
     {}
 
@@ -89,7 +91,7 @@ public:
     {
         for (const auto& playerEntity: m_parent.currentPlayers)
         {
-            playerEntity->draw(h.x1, h.z1, h.zoom, &canvas);
+            playerEntity->draw(h.x1, h.z1, h.zoom, &canvas_players);
         }
     }
 
@@ -98,6 +100,8 @@ public:
 private:
     DrawHelper& h;
     QPainter canvas;
+    QPainter canvas_entities;
+    QPainter canvas_players;
     MapView& m_parent;
 };
 
@@ -439,12 +443,16 @@ void MapView::keyPressEvent(QKeyEvent *event) {
 
 void MapView::resizeEvent(QResizeEvent *event) {
   image = QImage(event->size(), QImage::Format_RGB32);
+  image_entities = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
+  image_players = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
   redraw();
 }
 
 void MapView::paintEvent(QPaintEvent * /* event */) {
   QPainter p(this);
   p.drawImage(QPoint(0, 0), image);
+  p.drawImage(QPoint(0, 0), image_entities);
+  p.drawImage(QPoint(0, 0), image_players);
   p.end();
 }
 
@@ -465,7 +473,7 @@ void DrawHelper2::drawChunkEntities(const Chunk& chunk)
             int highY = chunk.depth[index];
             if ( (entityY+10 >= highY) ||
                  (entityY+10 >= m_parent.depth) )
-              (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas);
+              (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas_entities);
           }
         }
     }
@@ -482,6 +490,9 @@ void MapView::redraw() {
     update();
     return;
   }
+
+  image_entities.fill(0);
+  image_players.fill(0);
 
   ChunkCache::Locker locker(*cache);
 

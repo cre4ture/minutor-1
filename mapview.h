@@ -134,6 +134,8 @@ class MapView : public QWidget {
   int flags;
   QSharedPointer<ChunkCache> cache;
   QImage image;
+  QImage image_entities;
+  QImage image_players;
   DefinitionManager *dm;
   QSharedPointer<BlockIdentifier> blockDefinitions;
   BiomeIdentifier *biomes;
