@@ -424,6 +424,29 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
+void MapView::drawChunkEntities(const Chunk& chunk, const DrawHelper& h, QPainter& canvas)
+{
+    for (const auto &type : overlayItemTypes) {
+
+        auto range = chunk.entities.equal_range(type);
+        for (auto it = range.first; it != range.second; ++it) {
+          // don't show entities above our depth
+          int entityY = (*it)->midpoint().y;
+          // everything below the current block,
+          // but also inside the current block
+          if (entityY < depth + 1) {
+            int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
+            int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
+            int index = entityX + (entityZ << 4);
+            int highY = chunk.depth[index];
+            if ( (entityY+10 >= highY) ||
+                 (entityY+10 >= depth) )
+              (*it)->draw(h.x1, h.z1, getZoom(), &canvas);
+          }
+        }
+    }
+}
+
 void MapView::redraw() {
   if (!this->isEnabled()) {
     // blank
@@ -450,27 +473,10 @@ void MapView::redraw() {
   // draw the entities
   for (int cz = h.startz; cz < h.startz + h.blockstall; cz++) {
     for (int cx = h.startx; cx < h.startx + h.blockswide; cx++) {
-      for (auto &type : overlayItemTypes) {
         auto chunk = cache->fetch(cx, cz);
         if (chunk) {
-          auto range = chunk->entities.equal_range(type);
-          for (auto it = range.first; it != range.second; ++it) {
-            // don't show entities above our depth
-            int entityY = (*it)->midpoint().y;
-            // everything below the current block,
-            // but also inside the current block
-            if (entityY < depth + 1) {
-              int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
-              int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
-              int index = entityX + (entityZ << 4);
-              int highY = chunk->depth[index];
-              if ( (entityY+10 >= highY) ||
-                   (entityY+10 >= depth) )
-                (*it)->draw(h.x1, h.z1, getZoom(), &canvas);
-            }
-          }
+          drawChunkEntities(*chunk, h, canvas);
         }
-      }
     }
   }
 
@@ -508,18 +514,18 @@ void MapView::redraw() {
 }
 
 void MapView::drawChunk(int x, int z) {
-  if (!this->isEnabled())
-    return;
+    if (!this->isEnabled())
+      return;
 
-  uchar *bits_src = placeholder;
-  // fetch the chunk
-  auto chunk = cache->fetch(x, z);
+    uchar *bits_src = placeholder;
+    // fetch the chunk
+    auto chunk = cache->fetch(x, z);
 
-  if (chunk && (chunk->renderedAt != depth ||
-                chunk->renderedFlags != flags)) {
-    renderChunkAsync(chunk);
-    return;
-  }
+    if (chunk && (chunk->renderedAt != depth ||
+                  chunk->renderedFlags != flags)) {
+      renderChunkAsync(chunk);
+      return;
+    }
 
   DrawHelper h(*this);
 
@@ -542,7 +548,7 @@ void MapView::drawChunk(int x, int z) {
   centerx += (x - centerchunkx) * chunksize;
   centery += (z - centerchunkz) * chunksize;
 
-  uchar* srcImageData = chunk ? chunk->image : placeholder;
+  const uchar* srcImageData = chunk ? chunk->image : placeholder;
   QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
 
   QRect targetRect(centerx, centery, chunksize, chunksize);

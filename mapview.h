@@ -156,6 +156,7 @@ class MapView : public QWidget {
 
   void renderChunkAsync(const QSharedPointer<Chunk>& chunk);
 
+  void drawChunkEntities(const Chunk& chunk, const DrawHelper& h, QPainter& canvas);
 private slots:
     void renderingDone(const QSharedPointer<Chunk>& chunk);
 };
