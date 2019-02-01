@@ -10,6 +10,7 @@
 
 class BlockIdentifier;
 class ChunkRenderer;
+class DrawHelper2;
 
 class ChunkSection {
  public:
@@ -67,6 +68,7 @@ class Chunk {
   friend class ChunkRenderer;
   friend class ChunkCache;
   friend class WorldSave;
+  friend class DrawHelper2;
 };
 
 #endif  // CHUNK_H_

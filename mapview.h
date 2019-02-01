@@ -15,6 +15,7 @@ class BiomeIdentifier;
 class BlockIdentifier;
 class OverlayItem;
 class DrawHelper;
+class DrawHelper2;
 class ChunkRenderer;
 
 class MapView : public QWidget {
@@ -22,6 +23,7 @@ class MapView : public QWidget {
 
     friend class DrawHelper;
     friend class ChunkRenderer;
+    friend class DrawHelper2;
 
  public:
   /// Values for the individual flags
@@ -96,7 +98,7 @@ class MapView : public QWidget {
   void paintEvent(QPaintEvent *event);
 
  private:
-  void drawChunk(int x, int z);
+  void drawChunk(int x, int z, DrawHelper2 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   int getY(int x, int z);
@@ -156,8 +158,6 @@ class MapView : public QWidget {
 
   void renderChunkAsync(const QSharedPointer<Chunk>& chunk);
 
-  void drawChunkEntities(const Chunk& chunk, const DrawHelper& h, QPainter& canvas);
-  void drawChunk_Map(int x, int z, const QSharedPointer<Chunk> &chunk);
 private slots:
     void renderingDone(const QSharedPointer<Chunk>& chunk);
 };

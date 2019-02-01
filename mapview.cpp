@@ -70,14 +70,35 @@ public:
         x2 = x + halfviewwidth;
         z2 = z + halvviewheight;
     }
+};
 
-    void drawPlayers(QPainter& canvas)
+class DrawHelper2
+{
+public:
+    DrawHelper2(DrawHelper h_, MapView& parent)
+                : h(h_)
+                , canvas(&parent.image)
+                , m_parent(parent)
+    {}
+
+    void drawChunkEntities(const Chunk &chunk);
+
+    void drawChunk_Map(int x, int z, const QSharedPointer<Chunk> &chunk);
+
+    void drawPlayers()
     {
-        for (const auto& playerEntity: parent.currentPlayers)
+        for (const auto& playerEntity: m_parent.currentPlayers)
         {
-            playerEntity->draw(x1, z1, zoom, &canvas);
+            playerEntity->draw(h.x1, h.z1, h.zoom, &canvas);
         }
     }
+
+    QPainter& getCanvas() { return canvas; }
+
+private:
+    DrawHelper& h;
+    QPainter canvas;
+    MapView& m_parent;
 };
 
 MapView::MapView(QWidget *parent)
@@ -182,12 +203,14 @@ void MapView::setFlags(int flags) {
   this->flags = flags;
 }
 
-void MapView::chunkUpdated(bool, int x, int z) {
-  drawChunk(x, z);
-  DrawHelper h(*this);
-  QPainter canvas(&image);
-  h.drawPlayers(canvas);
-  update();
+void MapView::chunkUpdated(bool, int x, int z)
+{
+    DrawHelper h(*this);
+    DrawHelper2 h2(h, *this);
+
+    drawChunk(x, z, h2);
+    h2.drawPlayers();
+    update();
 }
 
 QString MapView::getWorldPath() {
@@ -204,8 +227,8 @@ void MapView::updatePlayerPositions(const QVector<PlayerInfo> &playerList)
     }
 
     DrawHelper h(*this);
-    QPainter canvas(&image);
-    h.drawPlayers(canvas);
+    DrawHelper2 h2(h, *this);
+    h2.drawPlayers();
 }
 
 void MapView::clearCache() {
@@ -280,11 +303,12 @@ void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
         renderStates[id] = NONE;
     }
 
-    drawChunk(chunk->chunkX, chunk->chunkZ);
-
     DrawHelper h(*this);
-    QPainter canvas(&image);
-    h.drawPlayers(canvas);
+    DrawHelper2 h2(h, *this);
+
+    drawChunk(chunk->chunkX, chunk->chunkZ, h2);
+
+    h2.drawPlayers();
 }
 
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
@@ -424,9 +448,9 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
-void MapView::drawChunkEntities(const Chunk& chunk, const DrawHelper& h, QPainter& canvas)
+void DrawHelper2::drawChunkEntities(const Chunk& chunk)
 {
-    for (const auto &type : overlayItemTypes) {
+    for (const auto &type : m_parent.overlayItemTypes) {
 
         auto range = chunk.entities.equal_range(type);
         for (auto it = range.first; it != range.second; ++it) {
@@ -434,14 +458,14 @@ void MapView::drawChunkEntities(const Chunk& chunk, const DrawHelper& h, QPainte
           int entityY = (*it)->midpoint().y;
           // everything below the current block,
           // but also inside the current block
-          if (entityY < depth + 1) {
+          if (entityY < m_parent.depth + 1) {
             int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
             int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
             int index = entityX + (entityZ << 4);
             int highY = chunk.depth[index];
             if ( (entityY+10 >= highY) ||
-                 (entityY+10 >= depth) )
-              (*it)->draw(h.x1, h.z1, getZoom(), &canvas);
+                 (entityY+10 >= m_parent.depth) )
+              (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas);
           }
         }
     }
@@ -462,30 +486,20 @@ void MapView::redraw() {
   ChunkCache::Locker locker(*cache);
 
   DrawHelper h(*this);
+  DrawHelper2 h2(h, *this);
 
   for (int cz = h.startz; cz < h.startz + h.blockstall; cz++)
     for (int cx = h.startx; cx < h.startx + h.blockswide; cx++)
-      drawChunk(cx, cz);
+      drawChunk(cx, cz, h2);
 
   // add on the entity layer
-  QPainter canvas(&image);
-
-  // draw the entities
-  for (int cz = h.startz; cz < h.startz + h.blockstall; cz++) {
-    for (int cx = h.startx; cx < h.startx + h.blockswide; cx++) {
-        auto chunk = cache->fetch(cx, cz);
-        if (chunk) {
-          drawChunkEntities(*chunk, h, canvas);
-        }
-    }
-  }
 
   // draw the generated structures
   for (auto &type : overlayItemTypes) {
     for (auto &item : overlayItems[type]) {
       if (item->intersects(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
                            OverlayItem::Point(h.x2 + 1, depth, h.z2 + 1))) {
-        item->draw(h.x1, h.z1, getZoom(), &canvas);
+        item->draw(h.x1, h.z1, getZoom(), &h2.getCanvas());
       }
     }
   }
@@ -496,24 +510,24 @@ void MapView::redraw() {
   for (double x = firstGridLineX; x < h.x2; x += maxViewWidth)
   {
       const int line_x = round((x - h.x1) * getZoom());
-      canvas.drawLine(line_x, 0, line_x, image.height());
+      h2.getCanvas().drawLine(line_x, 0, line_x, image.height());
   }
 
   const double firstGridLineZ = ceil(h.z1 / maxViewWidth) * maxViewWidth;
   for (double z = firstGridLineZ; z < h.z2; z += maxViewWidth)
   {
       const int line_z = round((z - h.z1) * getZoom());
-      canvas.drawLine(0, line_z, image.width(), line_z);
+      h2.getCanvas().drawLine(0, line_z, image.width(), line_z);
   }
 
-  h.drawPlayers(canvas);
+  h2.drawPlayers();
 
   emit(coordinatesChanged(x, depth, z));
 
   update();
 }
 
-void MapView::drawChunk(int x, int z) {
+void MapView::drawChunk(int x, int z, DrawHelper2& h) {
     if (!this->isEnabled())
       return;
 
@@ -526,38 +540,40 @@ void MapView::drawChunk(int x, int z) {
       return;
     }
 
-    drawChunk_Map(x, z, chunk);
+    h.drawChunk_Map(x, z, chunk);
+
+    if (chunk)
+    {
+        h.drawChunkEntities(*chunk);
+    }
 }
 
-void MapView::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk) {
-
-  DrawHelper h(*this);
+void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk) {
 
   const int chunkSizeOrig = 16;
 
   // this figures out where on the screen this chunk should be drawn
 
   // first find the center chunk
-  int centerchunkx = floor(this->x / chunkSizeOrig);
-  int centerchunkz = floor(this->z / chunkSizeOrig);
+  int centerchunkx = floor(m_parent.x / chunkSizeOrig);
+  int centerchunkz = floor(m_parent.z / chunkSizeOrig);
   // and the center chunk screen coordinates
-  int centerx = image.width() / 2;
-  int centery = image.height() / 2;
+  int centerx = m_parent.image.width() / 2;
+  int centery = m_parent.image.height() / 2;
   // which need to be shifted to account for panning inside that chunk
-  centerx -= (this->x - centerchunkx * chunkSizeOrig) * getZoom();
-  centery -= (this->z - centerchunkz * chunkSizeOrig) * getZoom();
+  centerx -= (m_parent.x - centerchunkx * chunkSizeOrig) * m_parent.getZoom();
+  centery -= (m_parent.z - centerchunkz * chunkSizeOrig) * m_parent.getZoom();
   // centerx,y now points to the top left corner of the center chunk
   // so now calculate our x,y in relation
-  double chunksize = chunkSizeOrig * getZoom();
+  double chunksize = chunkSizeOrig * m_parent.getZoom();
   centerx += (x - centerchunkx) * chunksize;
   centery += (z - centerchunkz) * chunksize;
 
-  const uchar* srcImageData = chunk ? chunk->image : placeholder;
+  const uchar* srcImageData = chunk ? chunk->image : m_parent.placeholder;
   QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
 
   QRect targetRect(centerx, centery, chunksize, chunksize);
 
-  QPainter canvas(&image);
   canvas.drawImage(targetRect, srcImage);
 }
 
