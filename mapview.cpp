@@ -517,7 +517,6 @@ void MapView::drawChunk(int x, int z) {
     if (!this->isEnabled())
       return;
 
-    uchar *bits_src = placeholder;
     // fetch the chunk
     auto chunk = cache->fetch(x, z);
 
@@ -526,6 +525,11 @@ void MapView::drawChunk(int x, int z) {
       renderChunkAsync(chunk);
       return;
     }
+
+    drawChunk_Map(x, z, chunk);
+}
+
+void MapView::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk) {
 
   DrawHelper h(*this);
 
