@@ -140,49 +140,27 @@ const QVariant Tag::getData() const {
   return QVariant();
 }
 
-Tag_Byte::Tag_Byte(TagDataStream *s) {
-  data = s->r8();
-}
+Tag_Byte::Tag_Byte(TagDataStream *s)
+    : TagBigEndian_t(s)
+{}
+
 int Tag_Byte::toInt() const {
   return data;
 }
 
-const QString Tag_Byte::toString() const {
-  return QString::number(data);
-}
-
-const QVariant Tag_Byte::getData() const {
-  return data;
-}
-
-Tag_Short::Tag_Short(TagDataStream *s) {
-  data = s->r16();
-}
+Tag_Short::Tag_Short(TagDataStream *s)
+    : TagBigEndian_t(s)
+{}
 
 int Tag_Short::toInt() const {
   return data;
 }
 
-const QString Tag_Short::toString() const {
-  return QString::number(data);
-}
+Tag_Int::Tag_Int(TagDataStream *s)
+    : TagBigEndian_t(s)
+{}
 
-const QVariant Tag_Short::getData() const {
-  return data;
-}
-
-Tag_Int::Tag_Int(TagDataStream *s) {
-  data = s->r32();
-}
 qint32 Tag_Int::toInt() const {
-  return data;
-}
-
-const QString Tag_Int::toString() const {
-  return QString::number(data);
-}
-
-const QVariant Tag_Int::getData() const {
   return data;
 }
 
@@ -190,9 +168,9 @@ double Tag_Int::toDouble() const {
   return static_cast<double>(data);
 }
 
-Tag_Long::Tag_Long(TagDataStream *s) {
-  data = s->r64();
-}
+Tag_Long::Tag_Long(TagDataStream *s)
+    : TagBigEndian_t(s)
+{}
 
 double Tag_Long::toDouble() const {
   return static_cast<double>(data);
@@ -202,46 +180,20 @@ qint32 Tag_Long::toInt() const {
   return static_cast<qint32>(data);
 }
 
-const QString Tag_Long::toString() const {
-  return QString::number(data);
-}
+Tag_Float::Tag_Float(TagDataStream *s)
+    : TagBigEndian_t(s)
+{}
 
-const QVariant Tag_Long::getData() const {
-  return data;
-}
-
-Tag_Float::Tag_Float(TagDataStream *s) {
-  union {qint32 d; float f;} fl;
-  fl.d = s->r32();
-  data = fl.f;
-}
 double Tag_Float::toDouble() const {
   return data;
 }
 
-const QString Tag_Float::toString() const {
-  return QString::number(data);
-}
+Tag_Double::Tag_Double(TagDataStream *s)
+    : TagBigEndian_t(s)
+{}
 
-const QVariant Tag_Float::getData() const {
-  return data;
-}
-
-Tag_Double::Tag_Double(TagDataStream *s) {
-  union {qint64 d; double f;} fl;
-  fl.d = s->r64();
-  data = fl.f;
-}
 double Tag_Double::toDouble() const {
   return data;
-}
-
-const QVariant Tag_Double::getData() const {
-  return data;
-}
-
-const QString Tag_Double::toString() const {
-  return QString::number(data);
 }
 
 Tag_Byte_Array::Tag_Byte_Array(TagDataStream *s) {
@@ -437,33 +389,19 @@ TagDataStream::TagDataStream(const char *data, int len) {
   pos = 0;
 }
 
-quint8 TagDataStream::r8() {
-  return data[pos++];
-}
-quint16 TagDataStream::r16() {
-  quint16 r = data[pos++] << 8;
-  r |= data[pos++];
-  return r;
-}
-quint32 TagDataStream::r32() {
-  quint32 r = data[pos++] << 24;
-  r |= data[pos++] << 16;
-  r |= data[pos++] << 8;
-  r |= data[pos++];
-  return r;
-}
-quint64 TagDataStream::r64() {
-  quint64 r = (quint64)r32() << 32;
-  r |= r32();
-  return r;
-}
-quint8 *TagDataStream::r(int len) {
+quint8 *TagDataStream::r(size_t len) {
   // you need to free anything read with this
   quint8 *r = new quint8[len];
-  memcpy(r, data + pos, len);
-  pos += len;
+  rBuffer(r, len);
   return r;
 }
+
+void TagDataStream::rBuffer(quint8 *buffer, size_t len)
+{
+    memcpy(buffer, data + pos, len);
+    pos += len;
+}
+
 QString TagDataStream::utf8(int len) {
   int old = pos;
   pos += len;
