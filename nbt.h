@@ -9,6 +9,8 @@ class QByteArray;
 #include <QString>
 #include <QVariant>
 
+#include <vector>
+
 class TagDataStream {
  public:
   TagDataStream(const char *data, int len);
@@ -23,14 +25,27 @@ class TagDataStream {
   template<typename _ValueT>
   _ValueT rBigEndian_t();
 
+  template<typename _ValueT>
+  void rBigEndianArray_t(_ValueT* outarray, const size_t len);
+
   template<int _size>
   void rBigEndian_x(quint8* buffer);
+
+  template<int _size>
+  void rBigEndianArray_x(quint8* outarray, const size_t len);
+
 
   void skip(int len);
  private:
   const quint8 *data;
   int pos, len;
 };
+
+template<typename _ValueT>
+inline void TagDataStream::rBigEndianArray_t(_ValueT *data_array, const size_t len)
+{
+    rBigEndianArray_x<sizeof(_ValueT)>(reinterpret_cast<quint8*>(data_array), len);
+}
 
 template<int _size>
 inline void TagDataStream::rBigEndian_x(quint8 *buffer)
@@ -39,6 +54,20 @@ inline void TagDataStream::rBigEndian_x(quint8 *buffer)
     {
         buffer[_size-i-1] = r8();
     }
+}
+
+template<>
+inline void TagDataStream::rBigEndianArray_x<1>(quint8 *data_array, const size_t len)
+{
+    rBuffer(data_array, len);
+}
+
+template<int _size>
+inline void TagDataStream::rBigEndianArray_x(quint8 *data_array, const size_t len)
+{
+    const size_t end = len*_size;
+    for (size_t i = 0; i < end; i += _size)
+        rBigEndian_x<_size>(&data_array[i]);
 }
 
 template<typename _ValueT>
@@ -66,7 +95,20 @@ class Tag {
 };
 
 template<typename _ValueT>
-class TagBigEndian_t: public Tag
+class TagWithData_t: public Tag
+{
+public:
+    virtual const QVariant getData() const override
+    {
+        return data;
+    }
+
+protected:
+    _ValueT data;
+};
+
+template<typename _ValueT>
+class TagBigEndian_t: public TagWithData_t<_ValueT>
 {
 public:
     TagBigEndian_t(TagDataStream *s)
@@ -77,11 +119,6 @@ public:
     virtual const QString toString() const override
     {
         return QString::number(data);
-    }
-
-    virtual const QVariant getData() const override
-    {
-        return data;
     }
 
 protected:
@@ -141,31 +178,46 @@ class Tag_Double : public TagBigEndian_t<double> {
   double toDouble() const;
 };
 
-class Tag_Byte_Array : public Tag {
- public:
-  explicit Tag_Byte_Array(TagDataStream *s);
-  ~Tag_Byte_Array();
-  int length() const;
-  const quint8 *toByteArray() const;
-  virtual const QString toString() const;
-  virtual const QVariant getData() const;
- private:
-  const quint8 *data;
-  int len;
+template<typename _ValueT>
+class Tag_BigEndianArray_t : public Tag {
+public:
+    explicit Tag_BigEndianArray_t(TagDataStream *s)
+        : data_array()
+    {
+        const quint32 len = s->r32();
+        data_array.resize(len);
+        s->rBigEndianArray_t<_ValueT>(&data_array[0], len);
+    }
+
+    ~Tag_BigEndianArray_t() {}
+
+    int length() const override { return data_array.size(); }
+
+protected:
+    std::vector<_ValueT> data_array;
 };
 
-class Tag_String : public Tag {
+
+class Tag_Byte_Array : public Tag_BigEndianArray_t<quint8> {
+public:
+    explicit Tag_Byte_Array(TagDataStream *s);
+    ~Tag_Byte_Array();
+
+    const quint8 *toByteArray() const override;
+    virtual const QString toString() const override;
+    virtual const QVariant getData() const override;
+};
+
+class Tag_String : public TagWithData_t<QString> {
  public:
   explicit Tag_String(TagDataStream *s);
   const QString toString() const;
-  virtual const QVariant getData() const;
- private:
-  QString data;
 };
 
 class Tag_List : public Tag {
  public:
   explicit Tag_List(TagDataStream *s);
+  explicit Tag_List(int len, int type, TagDataStream *s);
   ~Tag_List();
   const Tag *at(int index) const;
   int length() const;
@@ -173,6 +225,8 @@ class Tag_List : public Tag {
   virtual const QVariant getData() const;
  private:
   QList<Tag *> data;
+
+  void init(const int len, const int type, TagDataStream *s);
 };
 
 class Tag_Compound : public Tag {
@@ -187,17 +241,13 @@ class Tag_Compound : public Tag {
   QHash<QString, Tag *> children;
 };
 
-class Tag_Int_Array : public Tag {
+class Tag_Int_Array : public Tag_BigEndianArray_t<qint32> {
  public:
   explicit Tag_Int_Array(TagDataStream *s);
   ~Tag_Int_Array();
-  int length() const;
   const qint32 *toIntArray() const;
   virtual const QString toString() const;
   virtual const QVariant getData() const;
- private:
-  int len;
-  qint32 *data;
 };
 
 #endif  // NBT_H_

@@ -196,27 +196,23 @@ double Tag_Double::toDouble() const {
   return data;
 }
 
-Tag_Byte_Array::Tag_Byte_Array(TagDataStream *s) {
-  len = s->r32();
-  data = s->r(len);
-}
-Tag_Byte_Array::~Tag_Byte_Array() {
-  delete[] data;
-}
-int Tag_Byte_Array::length() const {
-  return len;
-}
+Tag_Byte_Array::Tag_Byte_Array(TagDataStream *s)
+    : Tag_BigEndianArray_t(s)
+{}
+
+Tag_Byte_Array::~Tag_Byte_Array() {}
+
 const quint8 *Tag_Byte_Array::toByteArray() const {
-  return data;
+  return &data_array[0];
 }
 
 const QVariant Tag_Byte_Array::getData() const {
-  return QByteArray(reinterpret_cast<const char*>(data), len);
+  return QByteArray(reinterpret_cast<const char*>(&data_array[0]), data_array.size());
 }
 
 const QString Tag_Byte_Array::toString() const {
   try {
-    return QString::fromLatin1(reinterpret_cast<const char *>(data));
+    return QString::fromLatin1(reinterpret_cast<const char *>(&data_array[0]));
   } catch(...) {}
 
   return "<Binary data>";
@@ -230,10 +226,6 @@ const QString Tag_String::toString() const {
   return data;
 }
 
-const QVariant Tag_String::getData() const {
-  return data;
-}
-
 template <class T>
 static void setListData(QList<Tag *> *data, int len,
                         TagDataStream *s) {
@@ -241,26 +233,38 @@ static void setListData(QList<Tag *> *data, int len,
     data->append(new T(s));
 }
 
-Tag_List::Tag_List(TagDataStream *s) {
+Tag_List::Tag_List(TagDataStream *s)
+{
   quint8 type = s->r8();
   int len = s->r32();
-  if (len == 0)  // empty list, type is invalid
-    return;
 
-  switch (type) {
-    case 1: setListData<Tag_Byte>(&data, len, s); break;
-    case 2: setListData<Tag_Short>(&data, len, s); break;
-    case 3: setListData<Tag_Int>(&data, len, s); break;
-    case 4: setListData<Tag_Long>(&data, len, s); break;
-    case 5: setListData<Tag_Float>(&data, len, s); break;
-    case 6: setListData<Tag_Double>(&data, len, s); break;
-    case 7: setListData<Tag_Byte_Array>(&data, len, s); break;
-    case 8: setListData<Tag_String>(&data, len, s); break;
-    case 9: setListData<Tag_List>(&data, len, s); break;
-    case 10: setListData<Tag_Compound>(&data, len, s); break;
-    case 11: setListData<Tag_Int_Array>(&data, len, s); break;
-    default: throw "Unknown type";
-  }
+    init(len, type, s);
+}
+
+Tag_List::Tag_List(int len, int type, TagDataStream *s)
+{
+    init(len, type, s);
+}
+
+void Tag_List::init(const int len, const int type, TagDataStream *s)
+{
+    if (len == 0)  // empty list, type is invalid
+      return;
+
+    switch (type) {
+      case 1: setListData<Tag_Byte>(&data, len, s); break;
+      case 2: setListData<Tag_Short>(&data, len, s); break;
+      case 3: setListData<Tag_Int>(&data, len, s); break;
+      case 4: setListData<Tag_Long>(&data, len, s); break;
+      case 5: setListData<Tag_Float>(&data, len, s); break;
+      case 6: setListData<Tag_Double>(&data, len, s); break;
+      case 7: setListData<Tag_Byte_Array>(&data, len, s); break;
+      case 8: setListData<Tag_String>(&data, len, s); break;
+      case 9: setListData<Tag_List>(&data, len, s); break;
+      case 10: setListData<Tag_Compound>(&data, len, s); break;
+      case 11: setListData<Tag_Int_Array>(&data, len, s); break;
+      default: throw "Unknown type";
+    }
 }
 
 Tag_List::~Tag_List() {
@@ -292,6 +296,7 @@ const QVariant Tag_List::getData() const {
   }
   return lst;
 }
+
 
 Tag_Compound::Tag_Compound(TagDataStream *s) {
   quint8 type;
@@ -348,27 +353,21 @@ const QVariant Tag_Compound::getData() const {
   return map;
 }
 
-Tag_Int_Array::Tag_Int_Array(TagDataStream *s) {
-  len = s->r32();
-  data = new qint32[len];
-  for (int i = 0; i < len; i++)
-    data[i] = s->r32();
-}
-Tag_Int_Array::~Tag_Int_Array() {
-  delete[] data;
-}
+Tag_Int_Array::Tag_Int_Array(TagDataStream *s)
+    : Tag_BigEndianArray_t(s)
+{}
+
+Tag_Int_Array::~Tag_Int_Array() {}
+
 const qint32 *Tag_Int_Array::toIntArray() const {
-  return data;
-}
-int Tag_Int_Array::length() const {
-  return len;
+    return &data_array[0];
 }
 
 const QString Tag_Int_Array::toString() const {
   QStringList ret;
   ret << "[";
-  for (int i = 0; i < len; ++i) {
-    ret << QString::number(data[i]) << ",";
+  for (size_t i = 0; i < data_array.size(); ++i) {
+    ret << QString::number(data_array[i]) << ",";
   }
   ret.last() = "]";
   return ret.join("");
@@ -376,8 +375,8 @@ const QString Tag_Int_Array::toString() const {
 
 const QVariant Tag_Int_Array::getData() const {
   QList<QVariant> ret;
-  for (int i = 0; i < len; ++i) {
-    ret.push_back(data[i]);
+  for (size_t i = 0; i < data_array.size(); ++i) {
+    ret.push_back(data_array[i]);
   }
 
   return ret;
