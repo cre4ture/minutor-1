@@ -66,48 +66,18 @@ QSharedPointer<Chunk> ChunkLoader::runInternal()
     return chunk;
 }
 
-class ChunkLoaderThreadPool::ImplC
+
+void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
 {
-public:
-    ImplC(ChunkLoaderThreadPool& parent)
-        : m_parent(parent)
-    {
-        for (size_t i = 0; i < 8; i++)
-        {
-             m_futures.push_back(std::async(std::launch::async, [this]() {
-                ChunkLoaderThreadPool::JobT job;
-                while (m_queue.pop(job))
-                {
-                    ChunkLoader loader(job.first, job.second);
-                    auto chunk = loader.runInternal();
-                    m_parent.signalUpdated(chunk, job.second);
-                }
-            }));
-        }
-    }
-
-    ~ImplC()
-    {
-        m_queue.signalTerminate();
-        for (auto& future: m_futures)
-        {
-            future.get();
-        }
-    }
-
-    ChunkLoaderThreadPool& m_parent;
-    ThreadSafeQueue<JobT> m_queue;
-    std::list<std::future<void> > m_futures;
-};
-
-ChunkLoaderThreadPool::ChunkLoaderThreadPool()
-    : m_impl(QSharedPointer<ImplC>::create(*this))
-    , m_queue(m_impl->m_queue)
-{
-
+    m_queue.push([this, path, id](){
+        ChunkLoader loader(path, id);
+        auto chunk = loader.runInternal();
+        emit chunkUpdated(chunk, id);
+    });
 }
 
 void ChunkLoaderThreadPool::signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id)
 {
     emit chunkUpdated(chunk, id);
 }
+

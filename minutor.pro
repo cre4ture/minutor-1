@@ -2,7 +2,7 @@ TEMPLATE = app
 TARGET = minutor
 DEPENDPATH += .
 INCLUDEPATH += .
-CONFIG += c++11
+CONFIG += c++14
 QT += widgets network
 QMAKE_INFO_PLIST = minutor.plist
 unix:LIBS += -lz
@@ -60,7 +60,8 @@ HEADERS += \
     searchentitypluginwidget.h \
     searchplugininterface.h \
     searchblockpluginwidget.h \
-    threadsafequeue.hpp
+    threadsafequeue.hpp \
+    asynctaskprocessorbase.hpp
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \
@@ -94,7 +95,8 @@ SOURCES += \
     chunkrenderer.cpp \
     entityevaluator.cpp \
     searchentitypluginwidget.cpp \
-    searchblockpluginwidget.cpp
+    searchblockpluginwidget.cpp \
+    asynctaskprocessorbase.cpp
 RESOURCES = minutor.qrc
 
 win32:SOURCES += zlib/adler32.c \

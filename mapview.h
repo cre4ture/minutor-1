@@ -9,6 +9,7 @@
 #include <QSharedPointer>
 
 #include <QVector>
+#include <set>
 
 class DefinitionManager;
 class BiomeIdentifier;
@@ -17,6 +18,7 @@ class OverlayItem;
 class DrawHelper;
 class DrawHelper2;
 class ChunkRenderer;
+class AsyncTaskProcessorBase;
 
 class MapView : public QWidget {
   Q_OBJECT
@@ -72,7 +74,7 @@ class MapView : public QWidget {
 
  public slots:
   void setDepth(int depth);
-  void chunkUpdated(bool, int x, int z);
+  void chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z);
   void redraw();
 
   // Clears the cache and redraws, causing all chunks to be re-loaded;
@@ -86,6 +88,7 @@ class MapView : public QWidget {
   void showProperties(QVariant properties);
   void addOverlayItemType(QString type, QColor color);
   void coordinatesChanged(int x, int y, int z);
+  void chunkRenderingCompleted(QSharedPointer<Chunk> chunk);
 
  protected:
   void mousePressEvent(QMouseEvent *event);
@@ -98,7 +101,10 @@ class MapView : public QWidget {
   void paintEvent(QPaintEvent *event);
 
  private:
-  void drawChunk(int x, int z, DrawHelper2 &h);
+  class AsyncRenderLock;
+  void drawChunk(int x, int z, DrawHelper2 &h, ChunkCache::Locker &locked_cache);
+  void drawChunk2(int x, int z, const QSharedPointer<Chunk>& chunk, DrawHelper2 &h);
+  void drawChunk3(int x, int z, const QSharedPointer<Chunk>& chunk, DrawHelper2 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   int getY(int x, int z);
@@ -132,10 +138,13 @@ class MapView : public QWidget {
   void adjustZoom(double rate);
 
   int flags;
+  QTimer updateTimer;
   QSharedPointer<ChunkCache> cache;
   QImage image;
   QImage image_entities;
   QImage image_players;
+  std::set<ChunkID> chunksToLoad;
+  std::set<ChunkID> chunksToRedraw;
   DefinitionManager *dm;
   QSharedPointer<BlockIdentifier> blockDefinitions;
   BiomeIdentifier *biomes;
@@ -158,10 +167,29 @@ class MapView : public QWidget {
   QMutex m_renderStatesMutex;
   QMap<ChunkID, ChunkRenderState> renderStates;
 
-  void renderChunkAsync(const QSharedPointer<Chunk>& chunk);
+  QSharedPointer<AsyncTaskProcessorBase> m_asyncRendererPool;
+
+  class AsyncRenderLock
+  {
+  public:
+      AsyncRenderLock(MapView& parent_)
+          : m_locker(&parent_.m_renderStatesMutex)
+          , m_parent(parent_)
+      {}
+
+      void renderChunkAsync(const QSharedPointer<Chunk> &chunk);
+
+  private:
+      QMutexLocker m_locker;
+      MapView& m_parent;
+  };
+
+  void emit_chunkRenderingCompleted(const QSharedPointer<Chunk>& chunk);
 
 private slots:
     void renderingDone(const QSharedPointer<Chunk>& chunk);
+
+    void regularUpdate();
 };
 
 #endif  // MAPVIEW_H_

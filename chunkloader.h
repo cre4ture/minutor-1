@@ -4,6 +4,7 @@
 
 #include "chunkcachetypes.h"
 #include "threadsafequeue.hpp"
+#include "asynctaskprocessorbase.hpp"
 
 #include <QObject>
 #include <QRunnable>
@@ -12,29 +13,17 @@ class Chunk;
 class ChunkID;
 class QMutex;
 
-class ChunkLoaderThreadPool : public QObject
+class ChunkLoaderThreadPool : public QObject, public AsyncTaskProcessorBase
 {
     Q_OBJECT
 
 public:
-    ChunkLoaderThreadPool();
-
-    typedef std::pair<QString, ChunkID> JobT;
-
-    void enqueueChunkLoading(QString path, ChunkID id)
-    {
-        m_queue.push(JobT(path, id));
-    }
+    void enqueueChunkLoading(QString path, ChunkID id);
 
 signals:
     void chunkUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 
 private:
-    class ImplC;
-
-    QSharedPointer<ImplC> m_impl;
-    ThreadSafeQueue<JobT>& m_queue;
-
     void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 };
 

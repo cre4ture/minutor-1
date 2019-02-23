@@ -4,6 +4,7 @@
 #include "./chunkloader.h"
 
 #include <QMetaType>
+#include <iostream>
 
 #if defined(__unix__) || defined(__unix) || defined(unix)
 #include <unistd.h>
@@ -75,31 +76,35 @@ QString ChunkCache::getPath() {
   return path;
 }
 
-QSharedPointer<Chunk> ChunkCache::fetch(int x, int z, FetchBehaviour behav)
+bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, int x, int z, FetchBehaviour behav)
 {
   ChunkID id(x, z);
 
   {
-      QMutexLocker locker(&mutex);
       const auto& chunkInfo = cachemap[id];
-      if ((behav == FetchBehaviour::USE_CACHED) && (chunkInfo.state[ChunkState::Cached]))
+      const bool cached = chunkInfo.state[ChunkState::Cached];
+
+      if ( (behav == FetchBehaviour::FORCE_UPDATE) ||
+           (
+               (behav == FetchBehaviour::USE_CACHED_OR_UDPATE) && (!cached)
+           )
+        )
       {
-          return chunkInfo.chunk;
+          loadChunkAsync_unprotected(id);
+          chunk_out = nullptr;
+          return false;
       }
-      else
-      {
-          loadChunkAsync(id);
-          return nullptr;
-      }
+
+      chunk_out = chunkInfo.chunk;
+      return cached;
   }
 }
 
-bool ChunkCache::isLoaded(int x, int z,  QSharedPointer<Chunk> &chunkPtr_out)
+bool ChunkCache::isLoaded_unprotected(int x, int z,  QSharedPointer<Chunk> &chunkPtr_out)
 {
     ChunkID id(x, z);
 
     {
-        QMutexLocker locker(&mutex);
         chunkPtr_out = cachemap[id].chunk;
         return (chunkPtr_out != nullptr);
     }
@@ -114,14 +119,14 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
     chunkInfo.state << ChunkState::Cached;
     chunkInfo.state.unset(ChunkState::Loading);
 
-    emit chunkLoaded(chunk != nullptr, id.getX(), id.getZ());
+    emit chunkLoaded(chunk, id.getX(), id.getZ());
+
+    //std::cout << "cached chunks: " << cachemap.size() << std::endl;
 }
 
-void ChunkCache::loadChunkAsync(ChunkID id)
+void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
 {
     {
-        QMutexLocker locker(&mutex);
-
         auto& chunkInfo = cachemap[id];
 
         if (chunkInfo.state[ChunkState::Loading])

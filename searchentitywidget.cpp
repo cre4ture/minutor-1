@@ -13,8 +13,8 @@ SearchEntityWidget::SearchEntityWidget(const SearchEntityWidgetInputC& input)
 {
     ui->setupUi(this);
 
-    connect(m_input.cache.get(), SIGNAL(chunkLoaded(bool,int,int)),
-            this, SLOT(chunkLoaded(bool,int,int)));
+    connect(m_input.cache.get(), SIGNAL(chunkLoaded(const QSharedPointer<Chunk>&,int,int)),
+            this, SLOT(chunkLoaded(const QSharedPointer<Chunk>&,int,int)));
 
     ui->plugin_context->setLayout(new QHBoxLayout(ui->plugin_context));
     ui->plugin_context->layout()->addWidget(&m_input.searchPlugin->getWidget());
@@ -51,19 +51,11 @@ void SearchEntityWidget::on_pb_search_clicked()
     }
 }
 
-void SearchEntityWidget::chunkLoaded(bool success, int x, int z)
+void SearchEntityWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-    if (success)
+    if (chunk)
     {
-        QSharedPointer<Chunk> chunk = nullptr;
-        if (m_input.cache->isLoaded(x, z, chunk))
-        {
-            searchChunk(*chunk);
-        }
-        else
-        {
-            ui->progressBar->setValue(ui->progressBar->value() + 1);
-        }
+        searchChunk(*chunk);
     }
     else
     {
@@ -74,13 +66,15 @@ void SearchEntityWidget::chunkLoaded(bool success, int x, int z)
 void SearchEntityWidget::trySearchChunk(int x, int z)
 {
     QSharedPointer<Chunk> chunk = nullptr;
-    if (m_input.cache->isLoaded(x, z, chunk))
+    ChunkCache::Locker locked_cache(*m_input.cache);
+
+    if (locked_cache.isLoaded(x, z, chunk))
     {
         searchChunk(*chunk);
         return;
     }
 
-    chunk = m_input.cache->fetch(x, z);
+    locked_cache.fetch(chunk, x, z);
     if (chunk != nullptr)
     {
         searchChunk(*chunk);

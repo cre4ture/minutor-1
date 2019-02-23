@@ -16,6 +16,8 @@ class ChunkRenderer: public QObject, public QRunnable {
 
     ~ChunkRenderer() override;
 
+    static void renderChunk(MapView& parent, Chunk *chunk);
+
    signals:
     void chunkRenderingCompleted(QSharedPointer<Chunk> chunk);
 
@@ -25,9 +27,8 @@ class ChunkRenderer: public QObject, public QRunnable {
 
    private:
     QSharedPointer<Chunk> m_chunk;
-    MapView& parent;
+    MapView& m_parent;
 
-    void renderChunk(Chunk *chunk);
 };
 
 #endif // CHUNKRENDERER_H

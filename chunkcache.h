@@ -63,26 +63,35 @@ class ChunkCache : public QObject {
   enum class FetchBehaviour
   {
       USE_CACHED,
+      USE_CACHED_OR_UDPATE,
       FORCE_UPDATE
   };
-
-  QSharedPointer<Chunk> fetch(int x, int z, FetchBehaviour behav = FetchBehaviour::USE_CACHED);
-
-  bool isLoaded(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
 
   class Locker
   {
   public:
       Locker(ChunkCache& parent)
-          : m_locker(&parent.mutex)
+          : m_parent(parent)
+          , m_locker(&parent.mutex)
       {}
 
+      bool isLoaded(int x, int z, QSharedPointer<Chunk> &chunkPtr_out)
+      {
+          return m_parent.isLoaded_unprotected(x,z,chunkPtr_out);
+      }
+
+      bool fetch(QSharedPointer<Chunk>& chunk_out, int x, int z, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE)
+      {
+          return m_parent.fetch_unprotected(chunk_out, x, z, behav);
+      }
+
   private:
+      ChunkCache& m_parent;
       QMutexLocker m_locker;
   };
 
  signals:
-  void chunkLoaded(bool success, int x, int z);
+  void chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z);
 
  public slots:
   void adaptCacheToWindow(int x, int y);
@@ -109,7 +118,12 @@ class ChunkCache : public QObject {
   int maxcache;
   QSharedPointer<ChunkLoaderThreadPool> m_loaderPool;
 
-  void loadChunkAsync(ChunkID id);
+  void loadChunkAsync_unprotected(ChunkID id);
+
+  bool isLoaded_unprotected(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
+
+  bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, int x, int z, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE);
+
 };
 
 #endif  // CHUNKCACHE_H_

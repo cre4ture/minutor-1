@@ -56,7 +56,7 @@ signals:
 private slots:
     void on_pb_search_clicked();
 
-    void chunkLoaded(bool success, int x, int z);
+    void chunkLoaded(const QSharedPointer<Chunk> &chunk, int x, int z);
 
     void on_resultList_jumpTo(const QVector3D &);
 

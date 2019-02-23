@@ -290,7 +290,6 @@ void Minutor::toggleFlags() {
     }
   }
   mapview->showOverlayItemTypes(overlayTypes);
-  mapview->redraw();
 }
 
 void Minutor::viewDimension(const DimensionInfo &dim) {
@@ -791,11 +790,14 @@ void Minutor::updateChunksAroundPlayer(const Location &pos, size_t areaRadius)
     const Location chunkCoordinates = pos / CHUNKSIZE;
     const int chunkRadius = 1 + static_cast<int>(areaRadius) / CHUNKSIZE;
 
+    ChunkCache::Locker locker(*cache);
+
     for (int dx = -chunkRadius; dx < chunkRadius; dx++)
     {
         for (int dz = -chunkRadius; dz < chunkRadius; dz++)
         {
-            cache->fetch(chunkCoordinates.x + dx, chunkCoordinates.z + dz, ChunkCache::FetchBehaviour::FORCE_UPDATE);
+            QSharedPointer<Chunk> chunk;
+            locker.fetch(chunk, chunkCoordinates.x + dx, chunkCoordinates.z + dz, ChunkCache::FetchBehaviour::FORCE_UPDATE);
         }
     }
 }
