@@ -215,7 +215,6 @@ void Minutor::saveFinished() {
 }
 
 void Minutor::closeWorld() {
-  locations.clear();
   for (int i = 0; i < players.size(); i++) {
     jumpPlayerMenu->removeAction(players[i]);
     delete players[i];
@@ -227,12 +226,26 @@ void Minutor::closeWorld() {
   emit worldLoaded(false);
 }
 
-void Minutor::jumpToLocation() {
+void Minutor::jumpToPlayerLocation() {
   QAction *action = qobject_cast<QAction*>(sender());
   if (action) {
-    Location loc = locations[action->data().toInt()];
-    mapview->setLocation(loc.x, loc.z);
+    QVector3D loc = playerInfos[action->data().toInt()].currentPosition;
+    mapview->setLocation(loc.x(), loc.z());
   }
+}
+
+void Minutor::jumpToPlayersBedLocation()
+{
+    QAction *action = qobject_cast<QAction*>(sender());
+    if (action) {
+      QVector3D loc = playerInfos[action->data().toInt()].bedPosition;
+      mapview->setLocation(loc.x(), loc.z());
+    }
+}
+
+void Minutor::jumpToSpawn()
+{
+    mapview->setLocation(spawnPoint.x(), spawnPoint.z());
 }
 
 void Minutor::jumpToXZ(int blockX, int blockZ) {
@@ -356,7 +369,7 @@ void Minutor::createActions() {
   jumpSpawnAct->setShortcut(tr("F1"));
   jumpSpawnAct->setStatusTip(tr("Jump to world spawn"));
   connect(jumpSpawnAct, SIGNAL(triggered()),
-          this,         SLOT(jumpToLocation()));
+          this,         SLOT(jumpToSpawn()));
   connect(this,         SIGNAL(worldLoaded(bool)),
           jumpSpawnAct, SLOT(setEnabled(bool)));
 
@@ -609,27 +622,24 @@ void Minutor::loadWorld(QDir path) {
   setWindowTitle(qApp->applicationName() + " - " +
                  data->at("LevelName")->toString());
   // save world spawn
-  jumpSpawnAct->setData(locations.count());
-  locations.append(Location(data->at("SpawnX")->toDouble(),
-                            data->at("SpawnZ")->toDouble()));
+  spawnPoint.setX(data->at("SpawnX")->toDouble());
+  spawnPoint.setY(data->at("SpawnY")->toDouble());
+  spawnPoint.setZ(data->at("SpawnZ")->toDouble());
+
   // show saved players
   auto playerInfoList = loadPlayerInfos(path);
   for (auto player: playerInfoList)
   {
       QAction *p = new QAction(this);
       p->setText(player.name);
-      p->setData(locations.count());
-      locations.append(Location(player.currentPosition));
       connect(p, SIGNAL(triggered()),
-              this, SLOT(jumpToLocation()));
+              this, SLOT(jumpToPlayerLocation()));
       players.append(p);
       if (player.hasBed) {  // player has a bed
         p = new QAction(this);
         p->setText(player.name+"'s Bed");
-        p->setData(locations.count());
-        locations.append(Location(player.bedPosition));
         connect(p, SIGNAL(triggered()),
-                this, SLOT(jumpToLocation()));
+                this, SLOT(jumpToPlayersBedLocation()));
         players.append(p);
       }
   }
@@ -644,7 +654,7 @@ void Minutor::loadWorld(QDir path) {
   // show dimensions
   dimensions->getDimensions(path, dimMenu, this);
   emit worldLoaded(true);
-  mapview->setLocation(locations.first().x, locations.first().z);
+  jumpToSpawn();
   toggleFlags();
 }
 
@@ -772,7 +782,7 @@ void Minutor::triggerJumpToEntity(QVector3D pos)
 
 void Minutor::periodicUpdate()
 {
-    const auto playerInfos = loadPlayerInfos(currentWorld);
+    playerInfos = loadPlayerInfos(currentWorld);
     for (auto& player: playerInfos)
     {
         updateChunksAroundPlayer(Location(player.currentPosition), 32);

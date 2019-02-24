@@ -2,6 +2,8 @@
 #ifndef MINUTOR_H_
 #define MINUTOR_H_
 
+#include "playerinfos.h"
+
 #include <QtWidgets/QMainWindow>
 #include <QDir>
 #include <QVariant>
@@ -68,7 +70,10 @@ private slots:
   void reload();
   void save();
 
-  void jumpToLocation();
+  void jumpToPlayerLocation();
+  void jumpToPlayersBedLocation();
+  void jumpToSpawn();
+
   void viewDimension(const DimensionInfo &dim);
   void toggleFlags();
 
@@ -109,6 +114,8 @@ signals:
   LabelledSlider *depth;
   QProgressDialog *progress;
   bool progressAutoclose;
+  QVector<PlayerInfo> playerInfos;
+  QVector3D spawnPoint;
 
   QMenu *fileMenu, *worldMenu;
   QMenu *viewMenu, *jumpPlayerMenu, *dimMenu;
@@ -133,7 +140,6 @@ signals:
   QAction *searchBlockAction;
 
   // loaded world data
-  QList<Location> locations;
   DefinitionManager *dm;
   Settings *settings;
   JumpTo *jumpTo;
