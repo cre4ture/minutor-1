@@ -661,6 +661,7 @@ void MapView::drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawH
                   chunk->renderedFlags != flags))
     {
         chunksToRedraw.insert(ChunkID(x, z));
+        return;
     }
 
     drawChunk3(x,z,chunk,h);
