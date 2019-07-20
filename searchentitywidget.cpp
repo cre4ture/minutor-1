@@ -2,6 +2,7 @@
 #include "ui_searchentitywidget.h"
 
 #include "./chunkcache.h"
+#include "chunkmath.hpp"
 
 #include <QVariant>
 #include <QTreeWidgetItem>
@@ -26,11 +27,6 @@ SearchEntityWidget::~SearchEntityWidget()
     delete ui;
 }
 
-enum
-{
-    CHUNK_SIZE = 16
-};
-
 void SearchEntityWidget::on_pb_search_clicked()
 {
     m_searchedBlockCoordinates.clear();
@@ -42,11 +38,13 @@ void SearchEntityWidget::on_pb_search_clicked()
     ui->progressBar->reset();
     ui->progressBar->setMaximum(radius * radius * 4);
 
+    const QVector2D poi = getChunkCoordinates(m_input.posOfInterestProvider());
+
     for (int z= -radius; z <= radius; z++)
     {
         for (int x = -radius; x <= radius; x++)
         {
-             trySearchChunk(x, z);
+            trySearchChunk(poi.x() + x, poi.y() + z);
         }
     }
 }

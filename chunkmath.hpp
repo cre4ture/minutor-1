@@ -1,0 +1,4 @@
+#ifndef CHUNKMATH_HPP
+#define CHUNKMATH_HPP
+
+#endif // CHUNKMATH_HPP

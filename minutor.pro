@@ -61,7 +61,8 @@ HEADERS += \
     searchplugininterface.h \
     searchblockpluginwidget.h \
     threadsafequeue.hpp \
-    asynctaskprocessorbase.hpp
+    asynctaskprocessorbase.hpp \
+    chunkmath.hpp
 SOURCES += \
 	  labelledslider.cpp \
     biomeidentifier.cpp \
