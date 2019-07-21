@@ -196,6 +196,27 @@ public:
 
     int length() const override { return data_array.size(); }
 
+    virtual const QString toString() const override
+    {
+        QStringList ret;
+        ret << "[";
+        for (size_t i = 0; i < data_array.size(); ++i) {
+          ret << QString::number(data_array[i]) << ",";
+        }
+        ret.last() = "]";
+        return ret.join("");
+    }
+
+    virtual const QVariant getData() const override
+    {
+        QList<QVariant> ret;
+        for (size_t i = 0; i < data_array.size(); ++i) {
+          ret.push_back(data_array[i]);
+        }
+
+        return ret;
+    }
+
 protected:
     std::vector<_ValueT> data_array;
 };
@@ -247,23 +268,13 @@ class Tag_Compound : public Tag {
 class Tag_Int_Array : public Tag_BigEndianArray_t<qint32> {
  public:
   explicit Tag_Int_Array(TagDataStream *s);
-  ~Tag_Int_Array();
   const qint32 *toIntArray() const;
-  virtual const QString toString() const;
-  virtual const QVariant getData() const;
 };
 
-class Tag_Long_Array : public Tag {
+class Tag_Long_Array : public Tag_BigEndianArray_t<qint64> {
  public:
   explicit Tag_Long_Array(TagDataStream *s);
-  ~Tag_Long_Array();
-  int length() const;
   const qint64 *toLongArray() const;
-  virtual const QString toString() const;
-  virtual const QVariant getData() const;
- private:
-  int len;
-  qint64 *data;
 };
 
 #endif  // NBT_H_

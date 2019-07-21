@@ -393,66 +393,18 @@ Tag_Int_Array::Tag_Int_Array(TagDataStream *s)
     : Tag_BigEndianArray_t(s)
 {}
 
-Tag_Int_Array::~Tag_Int_Array() {}
-
 const qint32 *Tag_Int_Array::toIntArray() const {
     return &data_array[0];
 }
 
-const QString Tag_Int_Array::toString() const {
-  QStringList ret;
-  ret << "[";
-  for (size_t i = 0; i < data_array.size(); ++i) {
-    ret << QString::number(data_array[i]) << ",";
-  }
-  ret.last() = "]";
-  return ret.join("");
-}
-
-const QVariant Tag_Int_Array::getData() const {
-  QList<QVariant> ret;
-  for (size_t i = 0; i < data_array.size(); ++i) {
-    ret.push_back(data_array[i]);
-  }
-
-  return ret;
-}
-
 // Tag_Long_Array
 
-Tag_Long_Array::Tag_Long_Array(TagDataStream *s) {
-  len = s->r32();
-  data = new qint64[len];
-  for (int i = 0; i < len; i++)
-    data[i] = s->r64();
-}
-Tag_Long_Array::~Tag_Long_Array() {
-  delete[] data;
-}
+Tag_Long_Array::Tag_Long_Array(TagDataStream *s)
+    : Tag_BigEndianArray_t(s)
+{}
+
 const qint64 *Tag_Long_Array::toLongArray() const {
-  return data;
-}
-int Tag_Long_Array::length() const {
-  return len;
-}
-
-const QString Tag_Long_Array::toString() const {
-  QStringList ret;
-  ret << "[";
-  for (int i = 0; i < len; ++i) {
-    ret << QString::number(data[i]) << ",";
-  }
-  ret.last() = "]";
-  return ret.join("");
-}
-
-const QVariant Tag_Long_Array::getData() const {
-  QList<QVariant> ret;
-  for (int i = 0; i < len; ++i) {
-    ret.push_back(data[i]);
-  }
-
-  return ret;
+  return &data_array[0];
 }
 
 // TagDataStream
