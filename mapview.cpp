@@ -184,6 +184,8 @@ MapView::MapView(QWidget *parent)
 
   depth = 255;
   scale = 1;
+  connect(&cache, SIGNAL(structureFound(QSharedPointer<GeneratedStructure>)),
+          this,   SLOT  (addStructureFromChunk(QSharedPointer<GeneratedStructure>)));
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
 
@@ -216,8 +218,6 @@ QSize MapView::sizeHint() const {
 
 void MapView::attach(DefinitionManager *dm) {
   this->dm = dm;
-  this->blockDefinitions = dm->blockIdentifier();
-  this->biomes = dm->biomeIdentifier();
 }
 
 void MapView::attach(QSharedPointer<ChunkCache> chunkCache_)
@@ -606,7 +606,7 @@ void MapView::redraw() {
 
   // add on the entity layer
 
-  // draw the generated structures
+  // draw the generated structures 
   for (auto &type : overlayItemTypes) {
     for (auto &item : overlayItems[type]) {
       if (item->intersects(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
@@ -744,7 +744,7 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
       uchar r = 0, g = 0, b = 0;
       double alpha = 0.0;
       // get Biome
-      auto &biome = parent.biomes->getBiome(chunk->biomes[offset]);
+      auto &biome = BiomeIdentifier::Instance().getBiome(chunk->biomes[offset]);
       int top = depth;
       if (top > chunk->highest)
         top = chunk->highest;
@@ -758,11 +758,10 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
         }
 
         // get data value
-        int data = section->getData(offset, y);
+        //int data = section->getData(offset, y);
 
         // get BlockInfo from block value
-        BlockInfo &block = blocksDefinitions->getBlock(section->getBlock(offset, y),
-                                            data);
+        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
         if (block.alpha == 0.0) continue;
 
         // get light value from one block above
@@ -771,7 +770,7 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
         if (y < 255)
           section1 = chunk->sections[(y+1) >> 4];
         if (section1)
-          light = section1->getLight(offset, y+1);
+          light = section1->getBlockLight(offset, y+1);
         int light1 = light;
         if (!(flags & MapView::flgLighting))
           light = 13;
@@ -816,8 +815,7 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
         }
         if (flags & MapView::flgMobSpawn) {
           // get block info from 1 and 2 above and 1 below
-          quint16 blid1(0), blid2(0), blidB(0);  // default to air
-          int data1(0), data2(0), dataB(0);  // default variant
+          uint blid1(0), blid2(0), blidB(0);  // default to legacy air (todo: better handling of block above)
           ChunkSection *section2 = NULL;
           ChunkSection *sectionB = NULL;
           if (y < 254)
@@ -825,44 +823,41 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
           if (y > 0)
             sectionB = chunk->sections[(y-1) >> 4];
           if (section1) {
-            blid1 = section1->getBlock(offset, y+1);
-            data1 = section1->getData(offset, y+1);
+            blid1 = section1->getPaletteEntry(offset, y+1).hid;
           }
           if (section2) {
-            blid2 = section2->getBlock(offset, y+2);
-            data2 = section2->getData(offset, y+2);
+            blid2 = section2->getPaletteEntry(offset, y+2).hid;
           }
           if (sectionB) {
-            blidB = sectionB->getBlock(offset, y-1);
-            dataB = sectionB->getData(offset, y-1);
+            blidB = sectionB->getPaletteEntry(offset, y-1).hid;
           }
-          BlockInfo &block2 = blocksDefinitions->getBlock(blid2, data2);
-          BlockInfo &block1 = blocksDefinitions->getBlock(blid1, data1);
+          BlockInfo &block2 = BlockIdentifier::Instance().getBlockInfo(blid2);
+          BlockInfo &block1 = BlockIdentifier::Instance().getBlockInfo(blid1);
           BlockInfo &block0 = block;
-          BlockInfo &blockB = blocksDefinitions->getBlock(blidB, dataB);
-          int light0 = section->getLight(offset, y);
+          BlockInfo &blockB = BlockIdentifier::Instance().getBlockInfo(blidB);
+          int light0 = section->getBlockLight(offset, y);
 
-          // spawn check #1: on top of solid block
-          if (block0.doesBlockHaveSolidTopSurface(data) &&
-              !block0.isBedrock() && light1 < 8 &&
-              !block1.isBlockNormalCube() && block1.spawninside &&
-              !block1.isLiquid() &&
-              !block2.isBlockNormalCube() && block2.spawninside) {
-            colr = (colr + 256) / 2;
-            colg = (colg + 0) / 2;
-            colb = (colb + 192) / 2;
-          }
-          // spawn check #2: current block is transparent,
-          // but mob can spawn through (e.g. snow)
-          if (blockB.doesBlockHaveSolidTopSurface(dataB) &&
-              !blockB.isBedrock() && light0 < 8 &&
-              !block0.isBlockNormalCube() && block0.spawninside &&
-              !block0.isLiquid() &&
-              !block1.isBlockNormalCube() && block1.spawninside) {
-            colr = (colr + 192) / 2;
-            colg = (colg + 0) / 2;
-            colb = (colb + 256) / 2;
-          }
+           // spawn check #1: on top of solid block
+           if (block0.doesBlockHaveSolidTopSurface() &&
+               !block0.isBedrock() && light1 < 8 &&
+               !block1.isBlockNormalCube() && block1.spawninside &&
+               !block1.isLiquid() &&
+               !block2.isBlockNormalCube() && block2.spawninside) {
+             colr = (colr + 256) / 2;
+             colg = (colg + 0) / 2;
+             colb = (colb + 192) / 2;
+           }
+           // spawn check #2: current block is transparent,
+           // but mob can spawn through (e.g. snow)
+           if (blockB.doesBlockHaveSolidTopSurface() &&
+               !blockB.isBedrock() && light0 < 8 &&
+               !block0.isBlockNormalCube() && block0.spawninside &&
+               !block0.isLiquid() &&
+               !block1.isBlockNormalCube() && block1.spawninside) {
+             colr = (colr + 192) / 2;
+             colg = (colg + 0) / 2;
+             colb = (colb + 256) / 2;
+           }
         }
         if (flags & MapView::flgBiomeColors) {
           colr = biome.colors[light].red();
@@ -899,9 +894,9 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
           ChunkSection *section = chunk->sections[y >> 4];
           if (!section) continue;
           // get data value
-          int data = section->getData(offset, y);
+          // int data = section->getData(offset, y);
           // get BlockInfo from block value
-          BlockInfo &block = blocksDefinitions->getBlock(section->getBlock(offset, y), data);
+          BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
           if (block.transparent) {
             cave_factor -= parent.caveshade[cave_test];
           }
@@ -931,36 +926,51 @@ void MapView::getToolTip(int x, int z) {
 
   QSharedPointer<Chunk> chunk;
   const bool chunkValid = locked_cache.fetch(chunk, cx, cz);
-  Block block;
 
-  QString name = "Unknown";
+  int y = 0;
+
+  QString name  = "Unknown";
   QString biome = "Unknown Biome";
+  QString blockstate;
+  QString blockId = "?";
   QMap<QString, int> entityIds;
 
   if (chunk) {
     int top = qMin(depth, chunk->highest);
-    int y = 0;
     for (y = top; y >= 0; y--) {
       int sec = y >> 4;
-      {
-          ChunkSection *section = chunk->sections[sec];
-          if (!section) {
-            y = (sec << 4) - 1;  // skip entire section
-            continue;
-          }
+      ChunkSection *section = chunk->sections[sec];
+      if (!section) {
+        y = (sec << 4) - 1;  // skip entire section
+        continue;
       }
 
-      block = chunk->getBlockData(x,y,z);
+      // get information about block
+      const PaletteEntry & pdata = section->getPaletteEntry(offset, y);
+      name = pdata.name;
+      // in case of fully transparent blocks (meaning air)
+      // -> we continue downwards
+      auto & block = BlockIdentifier::Instance().getBlockInfo(pdata.hid);
+      if (block.alpha == 0.0) continue;
 
-      auto &blockInfo = blockDefinitions->getBlock(block.id, block.bd);
-      if (blockInfo.alpha == 0.0) continue;
-      // found block
-      name = blockInfo.getName();
+      //block = chunk->getBlockData(x,y,z);
+
+      //auto &blockInfo = blockDefinitions->getBlock(block.id, block.bd);
+      //if (blockInfo.alpha == 0.0) continue;
+      // list all Block States
+      for (auto key : pdata.properties.keys()) {
+        blockstate += key;
+        blockstate += ":";
+        blockstate += pdata.properties[key].toString();
+        blockstate += " ";
+      }
+      blockstate.chop(1);
       break;
     }
-    auto &bi = biomes->getBiome(chunk->biomes[(x & 0xf) + (z & 0xf) * 16]);
+    auto &bi = BiomeIdentifier::Instance().getBiome(chunk->biomes[(x & 0xf) + (z & 0xf) * 16]);
     biome = bi.name;
 
+    // count Entity of each display type
     for (auto &item : getItems(x, y, z)) {
       entityIds[item->display()]++;
     }
@@ -969,8 +979,8 @@ void MapView::getToolTip(int x, int z) {
   QString entityStr;
   if (!entityIds.empty()) {
     QStringList entities;
-    QMap<QString, int>::iterator it, itEnd = entityIds.end();
-    for (it = entityIds.begin(); it != itEnd; ++it) {
+    QMap<QString, int>::const_iterator it, itEnd = entityIds.cend();
+    for (it = entityIds.cbegin(); it != itEnd; ++it) {
       if (it.value() > 1) {
         entities << it.key() + ":" + QString::number(it.value());
       } else {
@@ -980,23 +990,44 @@ void MapView::getToolTip(int x, int z) {
     entityStr = entities.join(", ");
   }
 
-  emit hoverTextChanged(tr("X:%1 Z:%2 (Nether: X:%8 Z:%9) - %3 - %4 (%5:%6) %7")
-                        .arg(x)
-                        .arg(z)
-                        .arg(biome)
-                        .arg(name)
-                        .arg(block.id)
-                        .arg(block.bd)
-                        .arg(entityStr)
-                        .arg(x/8)
-                        .arg(z/8));
+  QString hovertext = QString("X:%1 Y:%2 Z:%3 (Nether: X:%7 Z:%8) - %4 - %5 (id:%6)")
+                              .arg(x).arg(y).arg(z)
+                              .arg(biome)
+                              .arg(name)
+			      .arg(blockId)
+			      .arg(x/8)
+                              .arg(z/8);
+  if (blockstate.length() > 0)
+    hovertext += " (" + blockstate + ")";
+  if (entityStr.length() > 0)
+    hovertext += " - " + entityStr;
+  emit hoverTextChanged(hovertext);
+}
+
+void MapView::addStructureFromChunk(QSharedPointer<GeneratedStructure> structure) {
+  // update menu (if necessary)
+  emit addOverlayItemType(structure->type(), structure->color());
+  // add to list with overlays
+  addOverlayItem(structure);
 }
 
 void MapView::addOverlayItem(QSharedPointer<OverlayItem> item) {
+  // test if item is already in list
+  for (auto &it: overlayItems[item->type()]) {
+    OverlayItem::Point p1 = it  ->midpoint();
+    OverlayItem::Point p2 = item->midpoint();
+    if ( (p1.x == p2.x) && (p1.y == p2.y) && (p1.z == p2.z) )
+      return;  // skip if already present
+  }
+  // otherwise add item
   overlayItems[item->type()].push_back(item);
 }
 
-void MapView::showOverlayItemTypes(const QSet<QString>& itemTypes) {
+void MapView::clearOverlayItems() {
+  overlayItems.clear();
+}
+
+void MapView::setVisibleOverlayItemTypes(const QSet<QString>& itemTypes) {
   overlayItemTypes = itemTypes;
 }
 

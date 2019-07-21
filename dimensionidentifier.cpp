@@ -15,14 +15,25 @@ class DimensionDef {
   bool enabled;
 };
 
+
+// --------- --------- --------- ---------
+// DimensionIdentifier
+// --------- --------- --------- ---------
+
 DimensionIdentifier::DimensionIdentifier() {
   group = NULL;
 }
+
 DimensionIdentifier::~DimensionIdentifier() {
   for (int i = 0; i < packs.length(); i++) {
     for (int j = 0; j < packs[i].length(); j++)
       delete packs[i][j];
   }
+}
+
+DimensionIdentifier& DimensionIdentifier::Instance() {
+  static DimensionIdentifier singleton;
+  return singleton;
 }
 
 void DimensionIdentifier::setDefinitionsEnabled(int pack, bool enabled)
@@ -31,6 +42,9 @@ void DimensionIdentifier::setDefinitionsEnabled(int pack, bool enabled)
     int len = packs[pack].length();
     for (int i = 0; i < len; i++)
       packs[pack][i]->enabled = enabled;
+}
+
+
 }
 
 int DimensionIdentifier::addDefinitions(JSONArray *defs, int pack) {
@@ -80,6 +94,7 @@ void DimensionIdentifier::removeDimensions(QMenu *menu) {
     group = NULL;
   }
 }
+
 void DimensionIdentifier::getDimensions(QDir path, QMenu *menu,
                                         QObject *parent) {
   // first get the currently selected dimension so it doesn't change

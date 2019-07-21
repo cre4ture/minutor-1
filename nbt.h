@@ -91,6 +91,7 @@ class Tag {
   virtual double toDouble() const;
   virtual const quint8 *toByteArray() const;
   virtual const qint32 *toIntArray() const;
+  virtual const qint64 *toLongArray() const;
   virtual const QVariant getData() const;
 };
 
@@ -143,12 +144,14 @@ class Tag_Byte : public TagBigEndian_t<quint8> {
  public:
   explicit Tag_Byte(TagDataStream *s);
   int toInt() const;
+  unsigned int toUInt() const;
 };
 
 class Tag_Short : public TagBigEndian_t<qint16> {
  public:
   explicit Tag_Short(TagDataStream *s);
   int toInt() const;
+  unsigned int toUInt() const;
 };
 
 class Tag_Int : public TagBigEndian_t<qint32> {
@@ -248,6 +251,19 @@ class Tag_Int_Array : public Tag_BigEndianArray_t<qint32> {
   const qint32 *toIntArray() const;
   virtual const QString toString() const;
   virtual const QVariant getData() const;
+};
+
+class Tag_Long_Array : public Tag {
+ public:
+  explicit Tag_Long_Array(TagDataStream *s);
+  ~Tag_Long_Array();
+  int length() const;
+  const qint64 *toLongArray() const;
+  virtual const QString toString() const;
+  virtual const QVariant getData() const;
+ private:
+  int len;
+  qint64 *data;
 };
 
 #endif  // NBT_H_

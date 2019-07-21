@@ -143,15 +143,9 @@ signals:
   DefinitionManager *dm;
   Settings *settings;
   JumpTo *jumpTo;
-  DimensionIdentifier *dimensions;
   QDir currentWorld;
 
-  //           type                 x    z
-  typedef QMap<QString, QHash<QPair<int, int>,
-          QSharedPointer<OverlayItem>>> OverlayMap;
-  OverlayMap overlayItems;
   QSet<QString> overlayItemTypes;
-  int maxentitydistance;
   Properties * propView;
 
   SearchEntityWidget* searchEntityForm;

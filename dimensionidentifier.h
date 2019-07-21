@@ -29,8 +29,9 @@ class DimensionIdentifier : public QObject, public IdentifierI {
   Q_OBJECT
 
  public:
-  DimensionIdentifier();
-  ~DimensionIdentifier();
+  // singleton: access to global usable instance
+  static DimensionIdentifier &Instance();
+
   int addDefinitions(JSONArray *, int pack = -1) override;
   void setDefinitionsEnabled(int pack, bool enabled) override;
   void getDimensions(QDir path, QMenu *menu, QObject *parent);
@@ -43,6 +44,12 @@ class DimensionIdentifier : public QObject, public IdentifierI {
   void viewDimension();
 
  private:
+  // singleton: prevent access to constructor and copyconstructor
+  DimensionIdentifier();
+  ~DimensionIdentifier();
+  DimensionIdentifier(const DimensionIdentifier &);
+  DimensionIdentifier &operator=(const DimensionIdentifier &);
+
   void addDimension(QDir path, QString dir, QString name, int scale,
                     QObject *parent);
   QList<QAction *> items;

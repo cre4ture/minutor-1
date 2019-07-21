@@ -18,13 +18,15 @@ class BlockInfo {
  public:
   BlockInfo();
 
+  bool hasVariants() const;
+
   // special block attribute used during mob spawning detection
-  bool isOpaque();
-  bool isLiquid();
-  bool doesBlockHaveSolidTopSurface(int data);
-  bool isBlockNormalCube();
-  bool renderAsNormalBlock();
-  bool canProvidePower();
+  bool isOpaque() const;
+  bool isLiquid() const;
+  bool doesBlockHaveSolidTopSurface() const;
+  bool isBlockNormalCube() const;
+  bool renderAsNormalBlock() const;
+  bool canProvidePower() const;
 
   // special block type used during mob spawning detection
   bool isBedrock();
@@ -43,10 +45,13 @@ class BlockInfo {
   void setBiomeFoliage(bool value);
   const QString &getName();
 
-  int id;
+  // enabled for complete definition pack
+  bool    enabled;
+
+  // internal state
   double alpha;
-  quint8 mask;
-  bool enabled;
+  QString blockstate;
+  bool    variants;  // block_state dependant variants
   bool transparent;
   bool liquid;
   bool rendernormal;
@@ -56,11 +61,9 @@ class BlockInfo {
 
  private:
   QString name;
-  // cache special blocks used during mob spawning detection
+  // cache special block attributes used during mob spawning detection
   bool    bedrock;
   bool    hopper;
-  bool    stairs;
-  bool    halfslab;
   bool    snow;
   bool    water;
   bool    grass;
@@ -69,18 +72,25 @@ class BlockInfo {
 
 class BlockIdentifier: public IdentifierI {
  public:
-  BlockIdentifier();
-  ~BlockIdentifier();
+  // singleton: access to global usable instance
+  static BlockIdentifier &Instance();
+
   int addDefinitions(JSONArray *, int pack = -1) override;
   void setDefinitionsEnabled(int packId, bool enabled) override;
-  BlockInfo &getBlock(int id, int data);
+  BlockInfo &getBlockInfo(uint hid);
+  bool       hasBlockInfo(uint hid);
+
   QList<quint32> getKnownIds() const;
  private:
-  void clearCache();
+  // singleton: prevent access to constructor and copyconstructor
+  BlockIdentifier();
+  ~BlockIdentifier();
+  BlockIdentifier(const BlockIdentifier &);
+  BlockIdentifier &operator=(const BlockIdentifier &);
+
   void parseDefinition(JSONObject *block, BlockInfo *parent, int pack);
-  QMap<quint32, QList<BlockInfo *>> blocks;
+  QMap<uint, BlockInfo*>    blocks;
   QList<QList<BlockInfo*> > packs;
-  BlockInfo *cache[65536];
 };
 
 #endif  // BLOCKIDENTIFIER_H_

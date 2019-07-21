@@ -52,6 +52,9 @@ ChunkCache::ChunkCache()
   //cache.setMaxCost(chunks);
   maxcache = 2 * chunks;  // most chunks are less than half filled with sections
 
+
+  qRegisterMetaType<QSharedPointer<GeneratedStructure>>("QSharedPointer<GeneratedStructure>");
+
   qRegisterMetaType<QSharedPointer<Chunk> >("QSharedPointer<Chunk>");
   qRegisterMetaType<ChunkID>("ChunkID");
 
@@ -123,6 +126,9 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 
     //std::cout << "cached chunks: " << cachemap.size() << std::endl;
 }
+
+void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
+  emit structureFound(structure);
 
 void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
 {

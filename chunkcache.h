@@ -92,12 +92,14 @@ class ChunkCache : public QObject {
 
  signals:
   void chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z);
+  void structureFound(QSharedPointer<GeneratedStructure> structure);
 
  public slots:
   void adaptCacheToWindow(int x, int y);
 
  private slots:
   void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id);
+  void routeStructure(QSharedPointer<GeneratedStructure> structure);
 
  private:
   QString path;

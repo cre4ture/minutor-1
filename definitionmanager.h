@@ -16,6 +16,7 @@ class BiomeIdentifier;
 class BlockIdentifier;
 class DimensionIdentifier;
 class EntityIdentifier;
+class FlatteningConverter;
 class MapView;
 class JSONData;
 class DefinitionUpdater;
@@ -36,7 +37,8 @@ struct Definition {
       Enchantment,
       Profession,
       Career,
-      Last = Career,
+      Converter,
+      Last = Converter,
       Pack
   };
   Type type;
@@ -56,9 +58,6 @@ class DefinitionManager : public QWidget {
   QSize minimumSizeHint() const;
   QSize sizeHint() const;
 
-  QSharedPointer<BlockIdentifier> blockIdentifier();
-  BiomeIdentifier *biomeIdentifier();
-  DimensionIdentifier *dimensionIdentifer();
   QSharedPointer<GenericIdentifier> enchantmentIdentifier();
   QSharedPointer<GenericIdentifier> careerIdentifier();
   void autoUpdate();
@@ -84,6 +83,7 @@ class DefinitionManager : public QWidget {
   QList<QCheckBox *>checks;
   void installJson(QString path, bool overwrite = true, bool install = true);
   void installZip(QString path, bool overwrite = true, bool install = true);
+  void checkAndRepair();
   void loadDefinition(QString path);
   void loadDefinition_json(QString path);
   void loadDefinition_zipped(QString path);
@@ -91,10 +91,11 @@ class DefinitionManager : public QWidget {
   void removeDefinition(QString path);
   void refresh();
   QHash<QString, Definition> definitions;
-  BiomeIdentifier *biomeManager;  // todo: migrate to reference to singleton
-  QSharedPointer<BlockIdentifier> blockManager;  // todo: migrate to reference to singleton
-  DimensionIdentifier *dimensionManager;  // todo: migrate to reference to singleton
-  EntityIdentifier &entityManager;
+  BiomeIdentifier     &biomeManager;
+  BlockIdentifier     &blockManager;
+  DimensionIdentifier &dimensionManager;
+  EntityIdentifier    &entityManager;
+  FlatteningConverter &flatteningConverter;
   QSharedPointer<GenericIdentifier> enchantmentManager;
   QSharedPointer<GenericIdentifier> professionManager;
   QSharedPointer<GenericIdentifier> careerManager;

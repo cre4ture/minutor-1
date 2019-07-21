@@ -15,6 +15,7 @@
 #include "./blockidentifier.h"
 #include "./dimensionidentifier.h"
 #include "./entityidentifier.h"
+#include "./flatteningconverter.h"
 #include "./genericidentifier.h"
 #include "./mapview.h"
 #include "./json.h"
@@ -31,7 +32,7 @@ boost::bimap<L, R> makeBimap(std::initializer_list<typename boost::bimap<L, R>::
 
 static const boost::bimap<QString, Definition::Type> s_defintionLookupBi = makeBimap<QString, Definition::Type>(
 {
-    {"block", Definition::Block},
+    {"block", Definition::Block}, // after merge question: needed anymore?
     {"biome", Definition::Biome},
     {"dimension", Definition::Dimension},
     {"entity", Definition::Entity},
@@ -39,6 +40,8 @@ static const boost::bimap<QString, Definition::Type> s_defintionLookupBi = makeB
     {"profession", Definition::Profession},
     {"career", Definition::Career},
     {"pack", Definition::Pack},
+    {"converter", Definition::Converter},
+    {"flatblock", Definition::Block},
 });
 
 
@@ -46,8 +49,15 @@ static const boost::bimap<QString, Definition::Type> s_defintionLookupBi = makeB
 DefinitionManager::DefinitionManager(QWidget *parent) :
     QWidget(parent),
     isUpdating(false),
-    entityManager(EntityIdentifier::Instance())
+    dimensionManager(DimensionIdentifier::Instance()),
+    blockManager(BlockIdentifier::Instance()),
+    biomeManager(BiomeIdentifier::Instance()),
+    entityManager(EntityIdentifier::Instance()),
+    flatteningConverter(FlatteningConverter::Instance())
 {
+  m_managers[Definition::Dimension] = &dimensionManager;
+  m_managers[Definition::Block] = &blockManager;
+  m_managers[Definition::Biome] = &biomeManager;
   m_managers[Definition::Entity] = &entityManager;
 
   setWindowFlags(Qt::Window);
@@ -60,7 +70,7 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   table->setHorizontalHeaderLabels(labels);
   table->horizontalHeader()->setSectionResizeMode(
       QHeaderView::ResizeToContents);
-  table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+  table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
   table->horizontalHeader()->setHighlightSections(false);
   table->verticalHeader()->hide();
   table->setShowGrid(false);
@@ -91,15 +101,6 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   emit packSelected(false);
   setLayout(layout);
 
-  dimensionManager = new DimensionIdentifier;
-  m_managers[Definition::Dimension] = dimensionManager;
-
-  blockManager = QSharedPointer<BlockIdentifier>::create();
-  m_managers[Definition::Block] = blockManager.get();
-
-  biomeManager = new BiomeIdentifier;
-  m_managers[Definition::Biome] = biomeManager;
-
   enchantmentManager = QSharedPointer<GenericIdentifier>::create();
   m_managers[Definition::Enchantment] = enchantmentManager.get();
 
@@ -109,21 +110,12 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   careerManager = QSharedPointer<GenericIdentifier>::create();
   m_managers[Definition::Career] = careerManager.get();
 
+  // check & repair definition files
+  this->checkAndRepair();
+
+  // we load the definitions in backwards order for priority
   QSettings settings;
   sorted = settings.value("packs").toList();
-
-  // copy over built-in definitions if necessary
-  QString defdir = QStandardPaths::writableLocation(
-      QStandardPaths::DataLocation);
-  QDir dir;
-  dir.mkpath(defdir);
-  QDirIterator it(":/definitions", QDir::Files | QDir::Readable);
-  while (it.hasNext()) {
-    it.next();
-    installJson(it.filePath(), false, false);
-  }
-  settings.setValue("packs", sorted);
-  // we load the definitions backwards for priority.
   for (int i = sorted.length() - 1; i >= 0; i--)
     loadDefinition(sorted[i].toString());
 
@@ -135,19 +127,55 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   refresh();
 }
 
-DefinitionManager::~DefinitionManager() {
-  delete dimensionManager;
-  delete biomeManager;
-}
+DefinitionManager::~DefinitionManager() {}
 
-QSharedPointer<BlockIdentifier> DefinitionManager::blockIdentifier() {
-  return blockManager;
-}
-BiomeIdentifier *DefinitionManager::biomeIdentifier() {
-  return biomeManager;
-}
-DimensionIdentifier *DefinitionManager::dimensionIdentifer() {
-    return dimensionManager;
+void DefinitionManager::checkAndRepair()
+{
+  // create definition data folder on disk
+  QString destdir = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+  QDir dir;
+  dir.mkpath(destdir);
+
+  // get known definition packs from application default settings storage
+  QSettings settings;
+  QList<QVariant> known_packs = settings.value("packs").toList();
+
+  // in Minutor up to 2.2.0 we used hash without seed, which is incompatible to Qt5.12
+  // force clean old hashed files generated without an extra seed
+  // this assumes, that these hashes will never occur otherwise
+  const QStringList old_hashed_list { "1050220429", "1241760321", "1443276275", "1798448990", "2422344665" };
+  for ( const auto& old_hashed_file : old_hashed_list  ) {
+    QString old_path = destdir + "/" + old_hashed_file + ".json";
+    QFile::remove(old_path);
+    known_packs.removeOne(old_path);
+  }
+
+  // repair when definitions is on disk, but missing in settings
+  QDirIterator on_disk(destdir, QDir::Files | QDir::Readable);
+  while (on_disk.hasNext()) {
+    on_disk.next();
+    if (!known_packs.contains(on_disk.filePath())) {
+      known_packs.append(on_disk.filePath());
+    }
+  }
+
+  // repair when definition is in settings, but file is missing
+  for (const auto& def: known_packs) {
+    if (!QFile::exists(def.toString()))
+      known_packs.removeOne(def.toString());
+  }
+
+  // copy over built-in definitions if necessary
+  QDirIterator build_in(":/definitions", QDir::Files | QDir::Readable);
+  while (build_in.hasNext()) {
+    build_in.next();
+    installJson(build_in.filePath(), false, false);
+  }
+  // all changed definitions are now in sorted -> copy over
+  known_packs.append(sorted);
+
+  // store repaired list of definitions
+  settings.setValue("packs", known_packs);
 }
 
 QSharedPointer<GenericIdentifier> DefinitionManager::enchantmentIdentifier()
@@ -266,6 +294,7 @@ void DefinitionManager::addPack() {
     refresh();
   }
 }
+
 void DefinitionManager::installJson(QString path, bool overwrite,
                                     bool install) {
   QString destdir = QStandardPaths::writableLocation(
@@ -286,11 +315,37 @@ void DefinitionManager::installJson(QString path, bool overwrite,
   }
 
   QString key = def->at("name")->asString() + def->at("type")->asString();
+  QString exeversion = def->at("version")->asString();
   delete def;
-  QString dest = destdir + "/" + QString("%1").arg(qHash(key)) + ".json";
+  QString dest = destdir + "/" + QString("%1").arg(qHash(key,42)) + ".json";
+
+  // check if build in version is newer than version on disk
+  if (QFile::exists(dest)) {
+    QFile f(dest);
+    f.open(QIODevice::ReadOnly);
+    try {
+      def = JSON::parse(f.readAll());
+      f.close();
+    } catch (JSONParseException e) {
+      f.close();
+      return;
+    }
+    QString fileversion = def->at("version")->asString();
+    delete def;
+    if (exeversion.compare(fileversion, Qt::CaseInsensitive) > 0) {
+      // force overwriting outdated local copy
+      QFile::remove(dest);
+      QFile::copy(path, dest);
+      QFile::setPermissions(dest, QFile::ReadOwner|QFile::WriteOwner);
+    }
+  }
+
+  // import new definition (if file is not present)
   if (!QFile::exists(dest) || overwrite) {
-    if (QFile::exists(dest) && install)
+    if (QFile::exists(dest) && install) {
       removeDefinition(dest);
+      QFile::remove(dest);
+    }
     if (!QFile::copy(path, dest)) {
       QMessageBox::warning(this, tr("Couldn't install %1").arg(path),
                            tr("Copy error"),
@@ -304,6 +359,7 @@ void DefinitionManager::installJson(QString path, bool overwrite,
       loadDefinition(dest);
   }
 }
+
 void DefinitionManager::installZip(QString path, bool overwrite,
                                    bool install) {
   QString destdir = QStandardPaths::writableLocation(
@@ -345,7 +401,7 @@ void DefinitionManager::installZip(QString path, bool overwrite,
 
   QString key = info->at("name")->asString() + info->at("type")->asString();
   delete info;
-  QString dest = destdir + "/" + QString("%1").arg(qHash(key)) + ".zip";
+  QString dest = destdir + "/" + QString("%1").arg(qHash(key,42)) + ".zip";
   if (!QFile::exists(dest) || overwrite) {
     if (QFile::exists(dest) && install)
       removeDefinition(dest);
@@ -361,6 +417,7 @@ void DefinitionManager::installZip(QString path, bool overwrite,
       loadDefinition(dest);
   }
 }
+
 void DefinitionManager::removePack() {
   // find selected pack
   if (definitions.contains(selected)) {
@@ -421,7 +478,7 @@ void DefinitionManager::loadDefinition_json(QString path)
 {
     JSONData *def;
     QFile f(path);
-    f.open(QIODevice::ReadOnly);
+    if (!f.open(QIODevice::ReadOnly)) return;
     try {
       def = JSON::parse(f.readAll());
       f.close();
@@ -484,6 +541,12 @@ void DefinitionManager::loadDefinition_zipped(QString path)
       }
       QString type = def->at("type")->asString();
 
+      if (type == "block") { // after merge question: needed anymore?
+//        d.blockid = flatteningConverter->addDefinitions(
+//            dynamic_cast<JSONArray*>(def->at("data")), d.blockid);
+      } else 
+      {
+
       auto manager = getManagerFromString(type);
       if (manager.manager)
       {
@@ -496,6 +559,7 @@ void DefinitionManager::loadDefinition_zipped(QString path)
 
           d.packSubDefId[manager.type] = manager.manager->addDefinitions(
                       dynamic_cast<JSONArray*>(def->at("data")), packId);
+      } 
       }
 
       delete def;

@@ -47,6 +47,8 @@ HEADERS += \
     clamp.h \
     jumpto.h \
     pngexport.h \
+    flatteningconverter.h \
+    paletteentry.h \
     searchresultwidget.h \
     searchentitywidget.h \
     propertietreecreator.h \
@@ -88,6 +90,7 @@ SOURCES += \
     zipreader.cpp \
     jumpto.cpp \
     pngexport.cpp \
+    flatteningconverter.cpp \
     searchresultwidget.cpp \
     searchentitywidget.cpp \
     propertietreecreator.cpp \
