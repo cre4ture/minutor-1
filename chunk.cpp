@@ -164,7 +164,7 @@ void Chunk::loadSection1343(ChunkSection *cs, const Tag *section) {
   quint8 data[2048];
   memcpy(blocks, section->at("Blocks")->toByteArray(), 4096);
   memcpy(data,   section->at("Data")->toByteArray(),   2048);
-  memcpy(cs->blockLight, section->at("BlockLight")->toByteArray(), 2048);
+  memcpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);
 
   // convert old BlockID + data into virtual ID
   for (int i = 0; i < 4096; i++) {
@@ -256,7 +256,7 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
     delete byteData;
   } else {
     // set everything to 0 (minecraft:air)
-    memset(cs->blocks, 0, sizeof(cs->blocks));
+    memset(cs->blocks.data(), 0, sizeof(cs->blocks));
   }
 
     // copy Light data
@@ -264,7 +264,7 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
 //    memcpy(cs->skyLight, section->at("SkyLight")->toByteArray(), 2048);
 //  }
   if (section->has("BlockLight")) {
-    memcpy(cs->blockLight, section->at("BlockLight")->toByteArray(), 2048);
+    memcpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);
   }
 }
 
@@ -273,7 +273,15 @@ const PaletteEntry & ChunkSection::getPaletteEntry(int x, int y, int z) {
   int xoffset = x;
   int yoffset = (y & 0x0f) << 8;
   int zoffset = z << 4;
-  return palette[blocks[xoffset + yoffset + zoffset]];
+
+  size_t blocks_index = static_cast<size_t>(xoffset + yoffset + zoffset);
+
+  if (blocks_index >= blocks.size())
+      throw std::runtime_error("blocks_index >= blocks.size()");
+
+  int palette_index = blocks[blocks_index];
+
+  return palette[palette_index];
 }
 
 const PaletteEntry & ChunkSection::getPaletteEntry(int offset, int y) {

@@ -27,9 +27,9 @@ class ChunkSection {
   PaletteEntry *palette;
   int        paletteLength;
 
-  quint16 blocks[16*16*16];
+  std::array<quint16, 16*16*16> blocks;
 //quint8  skyLight[16*16*16/2];   // not needed in Minutor
-  quint8  blockLight[16*16*16/2];
+  std::array<quint8, 16*16*16/2> blockLight;
 };
 
 struct Block
