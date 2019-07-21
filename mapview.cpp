@@ -927,6 +927,7 @@ void MapView::getToolTip(int x, int z) {
   QSharedPointer<Chunk> chunk;
   const bool chunkValid = locked_cache.fetch(chunk, cx, cz);
 
+  int offset = (x & 0xf) + (z & 0xf) * 16;
   int y = 0;
 
   QString name  = "Unknown";
@@ -946,7 +947,7 @@ void MapView::getToolTip(int x, int z) {
       }
 
       // get information about block
-      const PaletteEntry & pdata = section->getPaletteEntry(x, y, z);
+      const PaletteEntry & pdata = section->getPaletteEntry(offset, y);
       name = pdata.name;
       // in case of fully transparent blocks (meaning air)
       // -> we continue downwards
