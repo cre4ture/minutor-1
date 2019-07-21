@@ -15,7 +15,7 @@ SearchBlockPluginWidget::SearchBlockPluginWidget(const SearchBlockPluginWidgetCo
     auto idList = m_config.blockIdentifier->getKnownIds();
     for (auto id: idList)
     {
-        auto blockInfo = m_config.blockIdentifier->getBlock(id, 0);
+        auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
         ui->cb_Name->addItem(blockInfo.getName());
     }
 }
@@ -48,7 +48,7 @@ void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk 
         auto idList = m_config.blockIdentifier->getKnownIds();
         for (auto id: idList)
         {
-            auto blockInfo = m_config.blockIdentifier->getBlock(id, 0);
+            auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
             if (blockInfo.getName().contains(searchForName, Qt::CaseInsensitive))
             {
                 searchForIds.insert(id);
@@ -71,7 +71,7 @@ void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk 
                 const auto it = searchForIds.find(bi.id);
                 if (it != searchForIds.end())
                 {
-                    auto info = m_config.blockIdentifier->getBlock(bi.id, bi.bd);
+                    auto info = m_config.blockIdentifier->getBlockInfo(bi.id);
 
                     SearchResultItem item;
                     item.name = info.getName() + " (" + QString::number(bi.id) + ")";

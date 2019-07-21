@@ -746,7 +746,7 @@ void Minutor::searchBlock()
 {
     if (!searchBlockForm)
     {
-        auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(dm->blockIdentifier()));
+        auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(BlockIdentifier::Instance()));
         searchBlockForm = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
                                                   [this](){ return mapview->getLocation()->getPos3D(); },
                                                   searchPlugin

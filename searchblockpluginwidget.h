@@ -12,12 +12,12 @@ class SearchBlockPluginWidget;
 
 struct SearchBlockPluginWidgetConfigT
 {
-    SearchBlockPluginWidgetConfigT(const QSharedPointer<BlockIdentifier>& blockIdentifier_)
-        : blockIdentifier(blockIdentifier_)
+    SearchBlockPluginWidgetConfigT(BlockIdentifier& blockIdentifier_)
+        : blockIdentifier(&blockIdentifier_)
         , parent(nullptr)
     {}
 
-    QSharedPointer<BlockIdentifier> blockIdentifier;
+    BlockIdentifier* blockIdentifier;
     QWidget *parent;
 };
 

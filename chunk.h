@@ -36,11 +36,9 @@ struct Block
 {
     Block()
         : id(0)
-        , bd(0)
     {}
 
     quint32 id;
-    quint32 bd; // blockdata?
 };
 
 class Chunk : public QObject {

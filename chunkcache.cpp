@@ -129,6 +129,7 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 
 void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
   emit structureFound(structure);
+}
 
 void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
 {

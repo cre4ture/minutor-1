@@ -184,7 +184,7 @@ MapView::MapView(QWidget *parent)
 
   depth = 255;
   scale = 1;
-  connect(&cache, SIGNAL(structureFound(QSharedPointer<GeneratedStructure>)),
+  connect(cache.get(), SIGNAL(structureFound(QSharedPointer<GeneratedStructure>)),
           this,   SLOT  (addStructureFromChunk(QSharedPointer<GeneratedStructure>)));
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
@@ -732,7 +732,7 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
         flags = parent.flags;
     }
 
-    auto& blocksDefinitions = parent.blockDefinitions;
+    //auto& blocksDefinitions = BlockIdentifier::Instance();
 
   int offset = 0;
   uchar *bits = chunk->image;
@@ -946,7 +946,7 @@ void MapView::getToolTip(int x, int z) {
       }
 
       // get information about block
-      const PaletteEntry & pdata = section->getPaletteEntry(offset, y);
+      const PaletteEntry & pdata = section->getPaletteEntry(x, y, z);
       name = pdata.name;
       // in case of fully transparent blocks (meaning air)
       // -> we continue downwards

@@ -197,11 +197,9 @@ Block Chunk::getBlockData(int x, int y, int z) const
     const ChunkSection * const section = sections[sec];
     if (!section) {
         return result;
+    }
     int yoffset = (y & 0xf) << 8;
-    int data = section->data[(offset + yoffset) / 2];
-    if (x & 1) data >>= 4;
     result.id = section->blocks[offset + yoffset];
-    result.bd = data & 0xf;
 
     return result;
 }

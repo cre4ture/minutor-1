@@ -44,9 +44,6 @@ void DimensionIdentifier::setDefinitionsEnabled(int pack, bool enabled)
       packs[pack][i]->enabled = enabled;
 }
 
-
-}
-
 int DimensionIdentifier::addDefinitions(JSONArray *defs, int pack) {
   if (pack == -1) {
     pack = packs.length();
