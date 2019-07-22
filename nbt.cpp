@@ -7,6 +7,27 @@
 #include "./nbt.h"
 #include "zlib/zlib.h"
 
+static void unzip_nbt(QByteArray& data, QByteArray& nbt)
+{
+    z_stream strm;
+    static const int CHUNK_SIZE = 8192;
+    char out[CHUNK_SIZE];
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    strm.avail_in = data.size();
+    strm.next_in = reinterpret_cast<Bytef *>(data.data());
+
+    inflateInit2(&strm, 15 + 32);
+    do {
+      strm.avail_out = CHUNK_SIZE;
+      strm.next_out = reinterpret_cast<Bytef *>(out);
+      inflate(&strm, Z_NO_FLUSH);
+      nbt.append(out, CHUNK_SIZE - strm.avail_out);
+    } while (strm.avail_out == 0);
+    inflateEnd(&strm);
+}
+
 // this handles decoding the gzipped level.dat
 NBT::NBT(const QString level) {
   root = &NBT::Null;  // just in case we die
@@ -17,23 +38,7 @@ NBT::NBT(const QString level) {
   f.close();
 
   QByteArray nbt;
-  z_stream strm;
-  static const int CHUNK_SIZE = 8192;
-  char out[CHUNK_SIZE];
-  strm.zalloc = Z_NULL;
-  strm.zfree = Z_NULL;
-  strm.opaque = Z_NULL;
-  strm.avail_in = data.size();
-  strm.next_in = reinterpret_cast<Bytef *>(data.data());
-
-  inflateInit2(&strm, 15 + 32);
-  do {
-    strm.avail_out = CHUNK_SIZE;
-    strm.next_out = reinterpret_cast<Bytef *>(out);
-    inflate(&strm, Z_NO_FLUSH);
-    nbt.append(out, CHUNK_SIZE - strm.avail_out);
-  } while (strm.avail_out == 0);
-  inflateEnd(&strm);
+  unzip_nbt(data, nbt);
 
   TagDataStream s(nbt.constData(), nbt.size());
 
