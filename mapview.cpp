@@ -761,7 +761,8 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
         //int data = section->getData(offset, y);
 
         // get BlockInfo from block value
-        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
+        const auto& paletteEntry = section->getPaletteEntry(offset, y);
+        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
         if (block.alpha == 0.0) continue;
 
         // get light value from one block above

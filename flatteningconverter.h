@@ -3,19 +3,19 @@
 #define FLATTENINGCONVERTER_H_
 
 #include "./paletteentry.h"
+#include "identifierinterface.h"
 
 class JSONArray;
 class JSONObject;
 
 
-class FlatteningConverter {
+class FlatteningConverter: public IdentifierI {
 public:
   // singleton: access to global usable instance
   static FlatteningConverter &Instance();
 
-  int addDefinitions(JSONArray *, int pack = -1);
-  void enableDefinitions(int id);
-  void disableDefinitions(int id);
+  int addDefinitions(JSONArray *, int pack = -1) override;
+  void setDefinitionsEnabled(int packId, bool enabled) override;
 //  const BlockData * getPalette();
   PaletteEntry * getPalette();
 

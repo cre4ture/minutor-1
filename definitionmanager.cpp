@@ -32,7 +32,7 @@ boost::bimap<L, R> makeBimap(std::initializer_list<typename boost::bimap<L, R>::
 
 static const boost::bimap<QString, Definition::Type> s_defintionLookupBi = makeBimap<QString, Definition::Type>(
 {
-    {"block", Definition::Block}, // after merge question: needed anymore?
+    {"block", Definition::Converter}, // after merge question: needed anymore?
     {"biome", Definition::Biome},
     {"dimension", Definition::Dimension},
     {"entity", Definition::Entity},
@@ -59,6 +59,7 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   m_managers[Definition::Block] = &blockManager;
   m_managers[Definition::Biome] = &biomeManager;
   m_managers[Definition::Entity] = &entityManager;
+  m_managers[Definition::Converter] = &flatteningConverter;
 
   setWindowFlags(Qt::Window);
   setWindowTitle(tr("Definitions"));
@@ -504,7 +505,7 @@ void DefinitionManager::loadDefinition_json(QString path)
     }
 
     d.id = manager.manager->addDefinitions(
-                dynamic_cast<JSONArray*>(def->at("data")));
+            dynamic_cast<JSONArray*>(def->at("data")));
     d.type = manager.type;
 
     definitions.insert(path, d);
@@ -541,25 +542,21 @@ void DefinitionManager::loadDefinition_zipped(QString path)
       }
       QString type = def->at("type")->asString();
 
-      if (type == "block") { // after merge question: needed anymore?
-//        d.blockid = flatteningConverter->addDefinitions(
-//            dynamic_cast<JSONArray*>(def->at("data")), d.blockid);
-      } else 
+      if (type != "block")
       {
-
-      auto manager = getManagerFromString(type);
-      if (manager.manager)
-      {
-          int packId = -1;
-          auto it = d.packSubDefId.find(manager.type);
-          if (it != d.packSubDefId.end())
+          auto manager = getManagerFromString(type);
+          if (manager.manager)
           {
-              packId = it->second;
-          }
+              int packId = -1;
+              auto it = d.packSubDefId.find(manager.type);
+              if (it != d.packSubDefId.end())
+              {
+                  packId = it->second;
+              }
 
-          d.packSubDefId[manager.type] = manager.manager->addDefinitions(
-                      dynamic_cast<JSONArray*>(def->at("data")), packId);
-      } 
+              d.packSubDefId[manager.type] = manager.manager->addDefinitions(
+                          dynamic_cast<JSONArray*>(def->at("data")), packId);
+          }
       }
 
       delete def;

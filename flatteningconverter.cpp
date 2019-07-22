@@ -23,18 +23,12 @@ PaletteEntry * FlatteningConverter::getPalette() {
   return palette;
 }
 
-void FlatteningConverter::enableDefinitions(int /*pack*/) {
-//  if (pack < 0) return;
-//  int len = packs[pack].length();
-//  for (int i = 0; i < len; i++)
-//    packs[pack][i]->enabled = true;
-}
-
-void FlatteningConverter::disableDefinitions(int /*pack*/) {
-//  if (pack < 0) return;
-//  int len = packs[pack].length();
-//  for (int i = 0; i < len; i++)
-//    packs[pack][i]->enabled = false;
+void FlatteningConverter::setDefinitionsEnabled(int packId, bool enabled)
+{
+    //  if (pack < 0) return;
+    //  int len = packs[pack].length();
+    //  for (int i = 0; i < len; i++)
+    //    packs[pack][i]->enabled = enabled;
 }
 
 int FlatteningConverter::addDefinitions(JSONArray *defs, int pack) {
