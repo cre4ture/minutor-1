@@ -38,7 +38,8 @@ class TagDataStream {
   void skip(int len);
  private:
   const quint8 *data;
-  int pos, len;
+  int pos;
+  const int len;
 };
 
 template<typename _ValueT>

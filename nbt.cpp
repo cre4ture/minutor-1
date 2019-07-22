@@ -414,11 +414,11 @@ const qint64 *Tag_Long_Array::toLongArray() const {
 
 // TagDataStream
 
-TagDataStream::TagDataStream(const char *data, int len) {
-  this->data = (const quint8 *)data;
-  this->len = len;
-  pos = 0;
-}
+TagDataStream::TagDataStream(const char *data, int len)
+    : data((const quint8 *)data)
+    , pos(0)
+    , len(len)
+{}
 
 quint8 *TagDataStream::r(size_t len) {
   // you need to free anything read with this
