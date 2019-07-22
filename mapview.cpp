@@ -955,6 +955,8 @@ void MapView::getToolTip(int x, int z) {
       auto & block = BlockIdentifier::Instance().getBlockInfo(pdata.hid);
       if (block.alpha == 0.0) continue;
 
+      blockId = QString(block.getName()) + "/" + QString::number(pdata.hid);
+
       //block = chunk->getBlockData(x,y,z);
 
       //auto &blockInfo = blockDefinitions->getBlock(block.id, block.bd);
@@ -996,8 +998,8 @@ void MapView::getToolTip(int x, int z) {
                               .arg(x).arg(y).arg(z)
                               .arg(biome)
                               .arg(name)
-			      .arg(blockId)
-			      .arg(x/8)
+                              .arg(blockId)
+                              .arg(x/8)
                               .arg(z/8);
   if (blockstate.length() > 0)
     hovertext += " (" + blockstate + ")";
