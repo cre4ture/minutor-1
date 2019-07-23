@@ -113,18 +113,17 @@ template<typename _ValueT>
 class TagBigEndian_t: public TagWithData_t<_ValueT>
 {
 public:
+    using BaseT = TagWithData_t<_ValueT>;
+
     TagBigEndian_t(TagDataStream *s)
     {
-        data = s->rBigEndian_t<_ValueT>();
+        BaseT::data = s->rBigEndian_t<_ValueT>();
     }
 
     virtual const QString toString() const override
     {
-        return QString::number(data);
+        return QString::number(BaseT::data);
     }
-
-protected:
-    _ValueT data;
 };
 
 class NBT {
