@@ -63,6 +63,7 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
 void SearchResultWidget::setPointOfInterest(const QVector3D &centerPoint)
 {
     m_pointOfInterest = centerPoint;
+    ui->lbl_location->setText(QString("Results around position: %1,%2,%3").arg(m_pointOfInterest.x()).arg(m_pointOfInterest.y()).arg(m_pointOfInterest.z()));
 }
 
 void SearchResultWidget::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)

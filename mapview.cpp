@@ -248,6 +248,12 @@ MapView::BlockLocation *MapView::getLocation()
   currentLocation.z = z;
   currentLocation.scale = scale;
 
+  int displayed_y = getY(x, z);
+  if (displayed_y >= 0)
+  {
+      currentLocation.y = displayed_y;
+  }
+
   return &currentLocation;
 }
 
