@@ -329,12 +329,13 @@ double MapView::getZoom() const
 {
     double should = zoom_internal * zoom_internal;
     int blocksize = round(16.0 * should);
-    return double(blocksize) / 16.0;
+    double locked = double(blocksize) / 16.0;
+    return locked;
 }
 
 void MapView::adjustZoom(double rate)
 {
-    zoom_internal *= (1.0 + (rate / 10.0));
+    zoom_internal *= (1.0 + (rate / 100.0));
     if (zoom_internal < g_zoomMin) zoom_internal = g_zoomMin;
     if (zoom_internal > g_zoomMax) zoom_internal = g_zoomMax;
 }
@@ -484,7 +485,7 @@ void MapView::wheelEvent(QWheelEvent *event) {
     // change depth
     emit demandDepthChange(event->delta() / 120);
   } else {  // change zoom
-    adjustZoom( floor(event->delta() / 90.0) );
+    adjustZoom( event->delta() / 90.0 );
   }
 }
 
@@ -955,7 +956,7 @@ void MapView::getToolTip(int x, int z) {
       auto & block = BlockIdentifier::Instance().getBlockInfo(pdata.hid);
       if (block.alpha == 0.0) continue;
 
-      blockId = QString(block.getName()) + "/" + QString::number(pdata.hid);
+      blockId = QString::number(pdata.hid);
 
       //block = chunk->getBlockData(x,y,z);
 
