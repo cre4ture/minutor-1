@@ -71,6 +71,7 @@ class MapView : public QWidget {
   QString getWorldPath();
 
   void updatePlayerPositions(const QVector<PlayerInfo>& playerList);
+  void updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem> > &searchResults);
 
 
  public slots:
@@ -159,6 +160,7 @@ class MapView : public QWidget {
   bool dragging;
 
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
+  QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
   enum ChunkRenderState
   {

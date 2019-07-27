@@ -21,6 +21,7 @@ class Entity: public OverlayItem {
   static const int RADIUS = 5;
 
   explicit Entity(const PlayerInfo& player);
+  explicit Entity(const QVector3D& plainInfo);
 
  protected:
   Entity() {}

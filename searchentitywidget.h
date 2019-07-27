@@ -52,6 +52,7 @@ public:
 
 signals:
     void jumpTo(QVector3D pos);
+    void highlightEntity(QSharedPointer<OverlayItem>);
 
 private slots:
     void on_pb_search_clicked();
@@ -59,6 +60,7 @@ private slots:
     void chunkLoaded(const QSharedPointer<Chunk> &chunk, int x, int z);
 
     void on_resultList_jumpTo(const QVector3D &);
+    void on_resultList_highlightEntity(QSharedPointer<OverlayItem>);
 
 private:
     Ui::SearchEntityWidget *ui;

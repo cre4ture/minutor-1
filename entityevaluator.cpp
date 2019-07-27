@@ -169,6 +169,7 @@ void EntityEvaluator::addResult()
     result.pos.setZ(m_config.entity->midpoint().z);
     QString offers = getOffers().join("|");
     result.sells = offers;
+    result.entity = m_config.entity;
     m_config.resultSink.addResult(result);
 }
 

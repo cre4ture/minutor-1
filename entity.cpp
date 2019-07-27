@@ -79,3 +79,10 @@ Entity::Entity(const PlayerInfo &player)
 {
 
 }
+
+Entity::Entity(const QVector3D &plainInfo)
+    : extraColor(QColor::fromRgb(0,255,0))
+    , pos(plainInfo)
+{
+
+}

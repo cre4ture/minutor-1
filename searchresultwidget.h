@@ -6,8 +6,10 @@
 #include <QWidget>
 #include <QVariant>
 #include <QVector3D>
+#include <QSharedPointer>
 
 class QTreeWidgetItem;
+class OverlayItem;
 
 namespace Ui {
 class SearchResultWidget;
@@ -21,6 +23,7 @@ public:
     QString buys;
     QString sells;
     QVariant properties;
+    QSharedPointer<OverlayItem> entity;
 };
 
 class SearchResultWidget : public QWidget
@@ -38,6 +41,7 @@ public:
 
 signals:
     void jumpTo(QVector3D pos);
+    void highlightEntity(QSharedPointer<OverlayItem>);
 
 protected slots:
     void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);

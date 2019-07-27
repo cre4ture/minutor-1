@@ -28,6 +28,7 @@ class OverlayItem;
 class JumpTo;
 class SearchEntityWidget;
 class ChunkCache;
+class SearchPluginI;
 
 class Location {
  public:
@@ -87,9 +88,11 @@ private slots:
   void addOverlayItemType(QString type, QColor color, QString dimension = "");
   void showProperties(QVariant props);
 
+  SearchEntityWidget* prepareSearchForm(const QSharedPointer<SearchPluginI> &searchPlugin);
   void searchBlock();
   void searchEntity();
-  void triggerJumpToEntity(QVector3D pos);
+  void triggerJumpToPosition(QVector3D pos);
+  void highlightEntity(QSharedPointer<OverlayItem> item);
 
   void periodicUpdate();
 

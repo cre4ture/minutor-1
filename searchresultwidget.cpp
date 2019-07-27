@@ -86,5 +86,6 @@ void SearchResultWidget::on_treeWidget_itemSelectionChanged()
         auto item = list[0];
         auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
         emit jumpTo(data.pos);
+        emit highlightEntity(data.entity);
     }
 }

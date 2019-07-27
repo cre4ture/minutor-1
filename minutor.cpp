@@ -742,19 +742,30 @@ void Minutor::showProperties(QVariant props) {
   }
 }
 
+SearchEntityWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin)
+{
+    SearchEntityWidget* form = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
+                                              [this](){ return mapview->getLocation()->getPos3D(); },
+                                              searchPlugin
+    ));
+
+    connect(form, SIGNAL(jumpTo(QVector3D)),
+            this, SLOT(triggerJumpToPosition(QVector3D))
+            );
+
+    connect(form, SIGNAL(highlightEntity(QSharedPointer<OverlayItem>)),
+            this, SLOT(highlightEntity(QSharedPointer<OverlayItem>))
+            );
+
+    return form;
+}
+
 void Minutor::searchBlock()
 {
     if (!searchBlockForm)
     {
         auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(BlockIdentifier::Instance()));
-        searchBlockForm = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
-                                                  [this](){ return mapview->getLocation()->getPos3D(); },
-                                                  searchPlugin
-        ));
-
-        connect(searchBlockForm, SIGNAL(jumpTo(QVector3D)),
-                this, SLOT(triggerJumpToEntity(QVector3D))
-                );
+        searchBlockForm = prepareSearchForm(searchPlugin);
     }
 
     searchBlockForm->showNormal();
@@ -768,22 +779,22 @@ void Minutor::searchEntity()
                                                                                                                  dm->enchantmentIdentifier(),
                                                                                                                  dm->careerIdentifier()
                                                                                                                  )));
-        searchEntityForm = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
-                                                  [this](){ return mapview->getLocation()->getPos3D(); },
-                                                  searchPlugin
-        ));
-
-        connect(searchEntityForm, SIGNAL(jumpTo(QVector3D)),
-                this, SLOT(triggerJumpToEntity(QVector3D))
-                );
+        searchEntityForm = prepareSearchForm(searchPlugin);
     }
 
     searchEntityForm->showNormal();
 }
 
-void Minutor::triggerJumpToEntity(QVector3D pos)
+void Minutor::triggerJumpToPosition(QVector3D pos)
 {
     mapview->setLocation(pos.x(), pos.z());
+}
+
+void Minutor::highlightEntity(QSharedPointer<OverlayItem> item)
+{
+    QVector<QSharedPointer<OverlayItem>> list;
+    list.push_back(item);
+    mapview->updateSearchResultPositions(list);
 }
 
 void Minutor::periodicUpdate()

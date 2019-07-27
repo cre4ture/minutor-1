@@ -94,6 +94,11 @@ public:
         {
             playerEntity->draw(h.x1, h.z1, h.zoom, &canvas_players);
         }
+
+        for (const auto& highlights: m_parent.currentSearchResults)
+        {
+            highlights->draw(h.x1, h.z1, h.zoom, &canvas_players);
+        }
     }
 
     QPainter& getCanvas() { return canvas; }
@@ -303,6 +308,11 @@ void MapView::updatePlayerPositions(const QVector<PlayerInfo> &playerList)
         auto entity = QSharedPointer<Entity>::create(info);
         currentPlayers.push_back(entity);
     }
+}
+
+void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem>> &searchResults)
+{
+    currentSearchResults = searchResults;
 }
 
 void MapView::clearCache() {
