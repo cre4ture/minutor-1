@@ -16,11 +16,16 @@ class JSONArray;
 
 class DimensionInfo {
  public:
-  DimensionInfo(QString path, int scale, QString name) : path(path),
-    scale(scale), name(name) {}
+  DimensionInfo(QString path, int scale, QString name, int id)
+      : path(path)
+      , scale(scale)
+      , name(name)
+      , id(id)
+  {}
   QString path;
   int scale;
   QString name;
+  int id;
 };
 
 class DimensionDef;
@@ -37,6 +42,8 @@ class DimensionIdentifier : public QObject, public IdentifierI {
   void getDimensions(QDir path, QMenu *menu, QObject *parent);
   void removeDimensions(QMenu *menu);
 
+  DimensionInfo getDimentionInfo(int dimId);
+
  signals:
   void dimensionChanged(const DimensionInfo &dim);
 
@@ -50,7 +57,7 @@ class DimensionIdentifier : public QObject, public IdentifierI {
   DimensionIdentifier(const DimensionIdentifier &);
   DimensionIdentifier &operator=(const DimensionIdentifier &);
 
-  void addDimension(QDir path, QString dir, QString name, int scale,
+  void addDimension(QDir path, QString dir, QString name, int scale, int dimId,
                     QObject *parent);
   QList<QAction *> items;
   QList<DimensionInfo> dimensions;

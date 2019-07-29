@@ -15,18 +15,19 @@ QVector<PlayerInfo> loadPlayerInfos(QDir path)
             if (it.fileInfo().isFile()) {
                 hasPlayers = true;
                 NBT player(it.filePath());
+
+                PlayerInfo info;
+
                 auto pos = player.at("Pos");
                 double posX = pos->at(0)->toDouble();
                 double posY = pos->at(1)->toDouble();
                 double posZ = pos->at(2)->toDouble();
-#if 0
+
                 auto dim = player.at("Dimension");
-                if (dim && (dim->toInt() == -1)) {
-                    posX *= 8;
-                    posY *= 8;
-                    posZ *= 8;
+                if (dim) {
+                    info.dimention = dim->toInt();
                 }
-#endif
+
                 QString playerName = it.fileInfo().completeBaseName();
                 QRegExp id("[0-9a-z]{8,8}\\-[0-9a-z]{4,4}\\-[0-9a-z]{4,4}"
                            "\\-[0-9a-z]{4,4}\\-[0-9a-z]{12,12}");
@@ -34,7 +35,6 @@ QVector<PlayerInfo> loadPlayerInfos(QDir path)
                     playerName = QString("Player %1").arg(players.length());
                 }
 
-                PlayerInfo info;
                 info.name = playerName;
                 info.currentPosition.setX(static_cast<float>(posX));
                 info.currentPosition.setY(static_cast<float>(posY));

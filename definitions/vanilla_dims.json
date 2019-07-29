@@ -1,22 +1,25 @@
 {
   "name": "Vanilla",
   "type": "dimension",
-  "version": "1.6.2",
+  "version": "1.6.4",
   "data": [
     {
       "name": "Overworld",
       "path": ".",
-      "scale": 1
+      "scale": 1,
+      "id": 0
     },
     {
       "name": "Nether",
       "path": "DIM-1",
-      "scale": 8
+      "scale": 8,
+      "id": -1
     },
     {
       "name": "End",
       "path": "DIM1",
-      "scale": 0
+      "scale": 0,
+      "id": 1
     }
   ],
   "update": "https://github.com/mrkite/minutor/raw/master/definitions/vanilla_dims.json"

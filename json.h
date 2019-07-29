@@ -18,12 +18,38 @@ class JSONData {
   virtual QString asString();
   virtual double asNumber();
   virtual bool asBool();
+
+  template<typename _ValueT>
+  _ValueT asValue();
+
+  template<typename _ValueT>
+  _ValueT getChildAsValueOrDefault_t(const QString& key, const _ValueT& defaultValue)
+  {
+     JSONData* child = at(key);
+     if (child)
+     {
+         return child->asValue<_ValueT>();
+     }
+     else
+     {
+         return defaultValue;
+     }
+  }
 };
+
+template<>
+inline bool JSONData::asValue<bool>() { return asBool(); }
+
+template<>
+inline double JSONData::asValue<double>() { return asNumber(); }
+
+template<>
+inline QString JSONData::asValue<QString>() { return asString(); }
 
 class JSONBool : public JSONData {
  public:
   explicit JSONBool(bool val);
-  bool asBool();
+  bool asBool() override;
  private:
   bool data;
 };
@@ -31,7 +57,7 @@ class JSONBool : public JSONData {
 class JSONString : public JSONData {
  public:
   explicit JSONString(QString val);
-  QString asString();
+  QString asString() override;
  private:
   QString data;
 };
@@ -39,7 +65,7 @@ class JSONString : public JSONData {
 class JSONNumber : public JSONData {
  public:
   explicit JSONNumber(double val);
-  double asNumber();
+  double asNumber() override;
  private:
   double data;
 };

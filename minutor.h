@@ -119,6 +119,7 @@ signals:
   bool progressAutoclose;
   QVector<PlayerInfo> playerInfos;
   QVector3D spawnPoint;
+  QSharedPointer<DimensionInfo> currentDimentionInfo;
 
   QMenu *fileMenu, *worldMenu;
   QMenu *viewMenu, *jumpPlayerMenu, *dimMenu;

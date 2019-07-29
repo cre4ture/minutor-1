@@ -11,6 +11,7 @@ class DimensionDef {
   QString name;
   QString path;
   int scale;
+  int id;
   bool regex;
   bool enabled;
 };
@@ -71,6 +72,7 @@ int DimensionIdentifier::addDefinitions(JSONArray *defs, int pack) {
       dim->regex = d->at("regex")->asBool();
     else
       dim->regex = false;
+    dim->id = (int)d->getChildAsValueOrDefault_t<double>("id", 0);
     definitions.append(dim);
     packs[pack].append(dim);
   }
@@ -92,6 +94,19 @@ void DimensionIdentifier::removeDimensions(QMenu *menu) {
   }
 }
 
+DimensionInfo DimensionIdentifier::getDimentionInfo(int dimId)
+{
+    for (const auto& dim: dimensions)
+    {
+        if (dim.id == dimId)
+        {
+            return dim;
+        }
+    }
+
+    return DimensionInfo("",1,"",0);
+}
+
 void DimensionIdentifier::getDimensions(QDir path, QMenu *menu,
                                         QObject *parent) {
   // first get the currently selected dimension so it doesn't change
@@ -103,24 +118,25 @@ void DimensionIdentifier::getDimensions(QDir path, QMenu *menu,
   group = new QActionGroup(parent);
 
   for (int i = 0; i < definitions.length(); i++) {
-    if (definitions[i]->enabled) {
+    auto& currentDefintion = definitions[i];
+    if (currentDefintion->enabled) {
       // check path for regex
-      if (definitions[i]->regex) {
+      if (currentDefintion->regex) {
         QDirIterator it(path.absolutePath(), QDir::Dirs);
-        QRegExp rx(definitions[i]->path);
+        QRegExp rx(currentDefintion->path);
         while (it.hasNext()) {
           it.next();
           if (rx.indexIn(it.fileName()) != -1) {
-            QString name = definitions[i]->name;
+            QString name = currentDefintion->name;
             for (int c = 0; c < rx.captureCount(); c++)
               name = name.arg(rx.cap(c + 1));
-            addDimension(path, it.fileName(), name, definitions[i]->scale,
+            addDimension(path, it.fileName(), name, currentDefintion->scale, currentDefintion->id,
                          parent);
           }
         }
       } else {
-        addDimension(path, definitions[i]->path, definitions[i]->name,
-                     definitions[i]->scale, parent);
+        addDimension(path, currentDefintion->path, currentDefintion->name,
+                     currentDefintion->scale, currentDefintion->id, parent);
       }
     }
   }
@@ -144,7 +160,7 @@ void DimensionIdentifier::getDimensions(QDir path, QMenu *menu,
 }
 
 void DimensionIdentifier::addDimension(QDir path, QString dir, QString name,
-                                       int scale, QObject *parent) {
+                                       int scale, int dimId, QObject *parent) {
   if (!path.exists(dir))
     return;
 
@@ -156,7 +172,7 @@ void DimensionIdentifier::addDimension(QDir path, QString dir, QString name,
     QAction *d = new QAction(parent);
     d->setText(name);
     d->setData(dimensions.count());
-    dimensions.append(DimensionInfo(path.absolutePath(), scale, name));
+    dimensions.append(DimensionInfo(path.absolutePath(), scale, name, dimId));
     d->setCheckable(true);
     parent->connect(d, SIGNAL(triggered()),
                     this, SLOT(viewDimension()));

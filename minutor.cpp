@@ -312,6 +312,9 @@ void Minutor::toggleFlags() {
 }
 
 void Minutor::viewDimension(const DimensionInfo &dim) {
+
+    currentDimentionInfo = QSharedPointer<DimensionInfo>::create(dim);
+
   for (auto action : structureActions) {
     QString dimension = action->data().toMap()["dimension"].toString();
     if (dimension.isEmpty() ||
@@ -802,7 +805,17 @@ void Minutor::periodicUpdate()
     playerInfos = loadPlayerInfos(currentWorld);
     for (auto& player: playerInfos)
     {
-        updateChunksAroundPlayer(Location(player.currentPosition), 32);
+        if (currentDimentionInfo->id == player.dimention)
+        {
+            updateChunksAroundPlayer(Location(player.currentPosition), 32);
+        }
+        else
+        {
+            auto dimInfo = DimensionIdentifier::Instance().getDimentionInfo(player.dimention);
+
+            double scaleChange = (double)dimInfo.scale / (double)currentDimentionInfo->scale;
+            player.currentPosition *= scaleChange;
+        }
     }
 
     mapview->updatePlayerPositions(playerInfos);
