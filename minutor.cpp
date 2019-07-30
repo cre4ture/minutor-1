@@ -223,6 +223,7 @@ void Minutor::closeWorld() {
   }
   players.clear();
   jumpPlayerMenu->setEnabled(false);
+  followPlayerMenu->setEnabled(false);
   // clear dimensions menu
   DimensionIdentifier::Instance().removeDimensions(dimMenu);
   // clear overlays
@@ -252,6 +253,31 @@ void Minutor::jumpToPlayersBedLocation()
 void Minutor::jumpToSpawn()
 {
     mapview->setLocation(spawnPoint.x(), spawnPoint.z());
+}
+
+void Minutor::followPlayer()
+{
+    QAction *action = qobject_cast<QAction*>(sender());
+    if (action)
+    {
+        if (action->isChecked())
+        {
+            for (auto& a: followPlayerMenu->actions()) // uncheck all other players
+            {
+                if (a != action)
+                {
+                    a->setChecked(false);
+                }
+            }
+
+            const auto& pinfo = playerInfos[action->data().toInt()];
+            playerToFollow = pinfo.name;
+        }
+        else
+        {
+            playerToFollow = "";
+        }
+    }
 }
 
 void Minutor::jumpToXZ(int blockX, int blockZ) {
@@ -542,6 +568,8 @@ void Minutor::createMenus() {
   viewMenu->addAction(jumpToAct);
   jumpPlayerMenu = viewMenu->addMenu(tr("&Jump to Player"));
   jumpPlayerMenu->setEnabled(false);
+  followPlayerMenu = viewMenu->addMenu(tr("Follow player"));
+  followPlayerMenu->setEnabled(false);
   dimMenu = viewMenu->addMenu(tr("&Dimension"));
   dimMenu->setEnabled(false);
   viewMenu->addSeparator();
@@ -655,6 +683,17 @@ void Minutor::loadWorld(QDir path) {
   }
   jumpPlayerMenu->addActions(players);
   jumpPlayerMenu->setEnabled(playerInfoList.size() > 0);
+
+  for (auto player: playerInfoList)
+  {
+      QAction *p = new QAction(this);
+      p->setText(player.name);
+      p->setCheckable(true);
+      connect(p, SIGNAL(triggered()),
+              this, SLOT(followPlayer()));
+      followPlayerMenu->addAction(p);
+  }
+  followPlayerMenu->setEnabled(playerInfoList.size() > 0);
 
   if (path.cd("data")) {
     loadStructures(path);
@@ -815,6 +854,11 @@ void Minutor::periodicUpdate()
 
             double scaleChange = (double)dimInfo.scale / (double)currentDimentionInfo->scale;
             player.currentPosition *= scaleChange;
+        }
+
+        if ((playerToFollow != "") && (playerToFollow == player.name))
+        {
+            mapview->setLocation(player.currentPosition.x(), player.currentPosition.y(), player.currentPosition.z(), true, false);
         }
     }
 

@@ -74,6 +74,7 @@ private slots:
   void jumpToPlayerLocation();
   void jumpToPlayersBedLocation();
   void jumpToSpawn();
+  void followPlayer();
 
   void viewDimension(const DimensionInfo &dim);
   void toggleFlags();
@@ -120,9 +121,11 @@ signals:
   QVector<PlayerInfo> playerInfos;
   QVector3D spawnPoint;
   QSharedPointer<DimensionInfo> currentDimentionInfo;
+  QString playerToFollow;
 
   QMenu *fileMenu, *worldMenu;
   QMenu *viewMenu, *jumpPlayerMenu, *dimMenu;
+  QMenu *followPlayerMenu;
   QMenu *helpMenu;
   QMenu *structureOverlayMenu, *entityOverlayMenu;
   QMenu *searchMenu;
