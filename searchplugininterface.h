@@ -11,6 +11,7 @@ class SearchPluginI
 public:
     virtual QWidget& getWidget() = 0;
 
+    virtual void initSearch() {}
     virtual void searchChunk(SearchResultWidget &resultList, Chunk &chunk) = 0;
 
     virtual ~SearchPluginI() {}

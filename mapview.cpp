@@ -97,7 +97,10 @@ public:
 
         for (const auto& highlights: m_parent.currentSearchResults)
         {
-            highlights->draw(h.x1, h.z1, h.zoom, &canvas_players);
+            if (highlights != nullptr)
+            {
+                highlights->draw(h.x1, h.z1, h.zoom, &canvas_players);
+            }
         }
     }
 
@@ -973,7 +976,7 @@ void MapView::getToolTip(int x, int z) {
       auto & block = BlockIdentifier::Instance().getBlockInfo(pdata.hid);
       if (block.alpha == 0.0) continue;
 
-      blockId = QString::number(pdata.hid);
+      blockId = QString::number(pdata.hid) + "/" + QString::number(chunk->getBlockData(x,y,z).id);
 
       //block = chunk->getBlockData(x,y,z);
 

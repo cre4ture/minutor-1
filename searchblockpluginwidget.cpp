@@ -30,16 +30,16 @@ QWidget &SearchBlockPluginWidget::getWidget()
     return *this;
 }
 
-void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk &chunk)
+void SearchBlockPluginWidget::initSearch()
 {
     const bool checkId = ui->check_blockId->isChecked();
     const bool checkName = ui->check_Name->isChecked();
 
-    std::set<quint32> searchForIds;
+    m_searchForIds.clear();
 
     if (checkId)
     {
-        searchForIds.insert(ui->sb_id->value());
+        m_searchForIds.insert(ui->sb_id->value());
     }
 
     if (checkName)
@@ -51,12 +51,15 @@ void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk 
             auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
             if (blockInfo.getName().contains(searchForName, Qt::CaseInsensitive))
             {
-                searchForIds.insert(id);
+                m_searchForIds.insert(id);
             }
         }
     }
+}
 
-    if (searchForIds.size() == 0)
+void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk &chunk)
+{
+    if (m_searchForIds.size() == 0)
     {
         return;
     }
@@ -68,8 +71,8 @@ void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk 
             for (int x = 0; x < 16; x++)
             {
                 const Block bi = chunk.getBlockData(x,y,z);
-                const auto it = searchForIds.find(bi.id);
-                if (it != searchForIds.end())
+                const auto it = m_searchForIds.find(bi.id);
+                if (it != m_searchForIds.end())
                 {
                     auto info = m_config.blockIdentifier->getBlockInfo(bi.id);
 

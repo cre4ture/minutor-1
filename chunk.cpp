@@ -199,7 +199,8 @@ Block Chunk::getBlockData(int x, int y, int z) const
         return result;
     }
     int yoffset = (y & 0xf) << 8;
-    result.id = section->blocks[offset + yoffset];
+    int internal_id = section->blocks[offset + yoffset];
+    result.id = section->palette[internal_id].hid;
 
     return result;
 }

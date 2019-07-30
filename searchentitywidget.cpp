@@ -38,6 +38,8 @@ void SearchEntityWidget::on_pb_search_clicked()
     ui->progressBar->reset();
     ui->progressBar->setMaximum(radius * radius * 4);
 
+    m_input.searchPlugin->initSearch();
+
     const QVector2D poi = getChunkCoordinates(m_input.posOfInterestProvider());
 
     for (int z= -radius; z <= radius; z++)

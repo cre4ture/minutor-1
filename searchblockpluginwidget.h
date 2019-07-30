@@ -5,6 +5,7 @@
 #include "blockidentifier.h"
 
 #include <QWidget>
+#include <set>
 
 namespace Ui {
 class SearchBlockPluginWidget;
@@ -30,11 +31,13 @@ public:
     ~SearchBlockPluginWidget();
 
     QWidget &getWidget() override;
+    void initSearch() override;
     void searchChunk(SearchResultWidget &resultList, Chunk &chunk) override;
 
 private:
     Ui::SearchBlockPluginWidget *ui;
     SearchBlockPluginWidgetConfigT m_config;
+    std::set<quint32> m_searchForIds;
 };
 
 #endif // SEARCHBLOCKPLUGINWIDGET_H
