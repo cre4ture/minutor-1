@@ -176,6 +176,7 @@ MapView::MapView(QWidget *parent)
     : QWidget(parent)
     , zoom_internal(1.0)
     , updateTimer()
+    , dragging(false)
     , m_asyncRendererPool(QSharedPointer<AsyncTaskProcessorBase>::create())
 {
     connect(this, SIGNAL(chunkRenderingCompleted(QSharedPointer<Chunk>)),
