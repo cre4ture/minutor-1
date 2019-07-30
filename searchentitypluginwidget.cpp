@@ -83,7 +83,7 @@ bool SearchEntityPluginWidget::findBuyOrSell(EntityEvaluator &entity, QString se
     for (const auto& offer: offers)
     {
         auto splitOffer = offer.split("=>");
-        foundBuy = (splitOffer.count() > index) && splitOffer[index].contains(searchText);
+        foundBuy = (splitOffer.count() > index) && splitOffer[index].contains(searchText, Qt::CaseInsensitive);
         if (foundBuy)
         {
             break;
