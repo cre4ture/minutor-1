@@ -143,7 +143,7 @@ void Minutor::open() {
 }
 
 void Minutor::reload() {
-  auto loc = *(mapview->getLocation());
+  auto loc = mapview->getLocation();
 
   loadWorld(currentWorld);
   mapview->setLocation(loc.x, loc.y, loc.z, false, true);
@@ -787,7 +787,7 @@ void Minutor::showProperties(QVariant props) {
 SearchEntityWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin)
 {
     SearchEntityWidget* form = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
-                                              [this](){ return mapview->getLocation()->getPos3D(); },
+                                              [this](){ return mapview->getLocation().getPos3D(); },
                                               searchPlugin
     ));
 

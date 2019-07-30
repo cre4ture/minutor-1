@@ -103,10 +103,10 @@ void JumpTo::on_pushButton_Jump_clicked()
 
 void JumpTo::on_pushButton_Get_clicked()
 {
-  location = mapview->getLocation();
-  ui->spinBox_Block_X->setValue(location->x);
-  ui->spinBox_Block_Y->setValue(location->y);
-  ui->spinBox_Block_Z->setValue(location->z);
+  MapView::BlockLocation location = mapview->getLocation();
+  ui->spinBox_Block_X->setValue(location.x);
+  ui->spinBox_Block_Y->setValue(location.y);
+  ui->spinBox_Block_Z->setValue(location.z);
 }
 
 void JumpTo::on_checkBox_Sync_stateChanged(int state)

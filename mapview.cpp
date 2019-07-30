@@ -247,7 +247,7 @@ void MapView::setLocation(double x, int y, double z, bool ignoreScale, bool useH
   }
 }
 
-MapView::BlockLocation *MapView::getLocation()
+MapView::BlockLocation MapView::getLocation()
 {
   currentLocation.x = x;
   currentLocation.y = depth;
@@ -260,7 +260,7 @@ MapView::BlockLocation *MapView::getLocation()
       currentLocation.y = displayed_y;
   }
 
-  return &currentLocation;
+  return currentLocation;
 }
 
 void MapView::setDimension(QString path, int scale) {
