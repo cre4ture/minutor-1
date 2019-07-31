@@ -155,9 +155,6 @@ signals:
   QSet<QString> overlayItemTypes;
   Properties * propView;
 
-  SearchEntityWidget* searchEntityForm;
-  SearchEntityWidget* searchBlockForm;
-
   QTimer periodicUpdateTimer;
 };
 

@@ -37,8 +37,6 @@ Minutor::Minutor()
     , searchMenu(nullptr)
     , searchEntityAction(nullptr)
     , searchBlockAction(nullptr)
-    , searchEntityForm(nullptr)
-    , searchBlockForm(nullptr)
     , periodicUpdateTimer()
 {
   cache = QSharedPointer<ChunkCache>::create();
@@ -804,26 +802,18 @@ SearchEntityWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPlugin
 
 void Minutor::searchBlock()
 {
-    if (!searchBlockForm)
-    {
-        auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(BlockIdentifier::Instance()));
-        searchBlockForm = prepareSearchForm(searchPlugin);
-    }
-
+    auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(BlockIdentifier::Instance()));
+    auto searchBlockForm = prepareSearchForm(searchPlugin);
     searchBlockForm->showNormal();
 }
 
 void Minutor::searchEntity()
 {
-    if (!searchEntityForm)
-    {
-        auto searchPlugin = QSharedPointer<SearchEntityPluginWidget>::create(SearchEntityPluginWidgetConfigT(EntityDefitionsConfig(
-                                                                                                                 dm->enchantmentIdentifier(),
-                                                                                                                 dm->careerIdentifier()
-                                                                                                                 )));
-        searchEntityForm = prepareSearchForm(searchPlugin);
-    }
-
+    auto searchPlugin = QSharedPointer<SearchEntityPluginWidget>::create(SearchEntityPluginWidgetConfigT(EntityDefitionsConfig(
+                                                                                                             dm->enchantmentIdentifier(),
+                                                                                                             dm->careerIdentifier()
+                                                                                                             )));
+    auto searchEntityForm = prepareSearchForm(searchPlugin);
     searchEntityForm->showNormal();
 }
 
