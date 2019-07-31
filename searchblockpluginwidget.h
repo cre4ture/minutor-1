@@ -31,7 +31,7 @@ public:
     ~SearchBlockPluginWidget();
 
     QWidget &getWidget() override;
-    void initSearch() override;
+    bool initSearch() override;
     void searchChunk(SearchResultWidget &resultList, Chunk &chunk) override;
 
 private:

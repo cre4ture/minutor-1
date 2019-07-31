@@ -30,7 +30,7 @@ QWidget &SearchBlockPluginWidget::getWidget()
     return *this;
 }
 
-void SearchBlockPluginWidget::initSearch()
+bool SearchBlockPluginWidget::initSearch()
 {
     const bool checkId = ui->check_blockId->isChecked();
     const bool checkName = ui->check_Name->isChecked();
@@ -55,6 +55,8 @@ void SearchBlockPluginWidget::initSearch()
             }
         }
     }
+
+    return m_searchForIds.size() > 0;
 }
 
 void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk &chunk)
