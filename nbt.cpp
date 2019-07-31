@@ -40,12 +40,7 @@ NBT::NBT(const QString level) {
   QByteArray nbt;
   unzip_nbt(data, nbt);
 
-  TagDataStream s(nbt.constData(), nbt.size());
-
-  if (s.r8() == 10) {  // compound
-    s.skip(s.r16());  // skip name
-    root = new Tag_Compound(&s);
-  }
+  readAll(nbt);
 }
 
 // this handles decoding a compressed() section of a region file
@@ -78,12 +73,25 @@ NBT::NBT(const uchar *chunk) {
   } while (strm.avail_out == 0);
   inflateEnd(&strm);
 
-  TagDataStream s(nbt.constData(), nbt.size());
+  readAll(nbt);
+}
 
-  if (s.r8() == 10) {  // compound
-    s.skip(s.r16());  // skip name
-    root = new Tag_Compound(&s);
-  }
+void NBT::readAll(const QByteArray& nbt)
+{
+    try {
+
+        TagDataStream s(nbt.constData(), nbt.size());
+
+        if (s.r8() == 10) {  // compound
+          s.skip(s.r16());  // skip name
+          root = new Tag_Compound(&s);
+        }
+
+    }
+    catch (const NtbStreamDecodingError& e)
+    {
+        qWarning("%s", (std::string("cought exception while parsing nbt: ") + e.what()).c_str());
+    }
 }
 
 Tag NBT::Null;
@@ -93,7 +101,7 @@ bool NBT::has(const QString key) const {
 }
 
 const Tag *NBT::at(const QString key) const {
-  return root->at(key);
+    return root->at(key);
 }
 
 NBT::~NBT() {
@@ -109,7 +117,7 @@ Tag::~Tag() {
 }
 int Tag::length() const {
   qWarning() << "Unhandled length";
-  return 0;
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 bool Tag::has(const QString) const {
   return false;
@@ -122,31 +130,31 @@ const Tag *Tag::at(int /* idx */) const {
 }
 const QString Tag::toString() const {
   qWarning() << "Unhandled toString";
-  return "";
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 qint32 Tag::toInt() const {
   qWarning() << "Unhandled toInt";
-  return 0;
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 double Tag::toDouble() const {
   qWarning() << "Unhandled toDouble";
-  return 0.0;
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 const quint8 *Tag::toByteArray() const {
   qWarning() << "Unhandled toByteArray";
-  return NULL;
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 const qint32 *Tag::toIntArray() const {
   qWarning() << "Unhandled toIntArray";
-  return NULL;
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 const qint64 *Tag::toLongArray() const {
   qWarning() << "Unhandled toLongArray";
-  return NULL;
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 const QVariant Tag::getData() const {
   qWarning() << "Unhandled getData";
-  return QVariant();
+  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
 }
 
 // Tag_Byte
@@ -356,7 +364,7 @@ Tag_Compound::Tag_Compound(TagDataStream *s) {
       case 10: child = new Tag_Compound(s); break;
       case 11: child = new Tag_Int_Array(s); break;
       case 12: child = new Tag_Long_Array(s); break;
-      default: throw "Unknown tag";
+      default: throw NtbStreamDecodingError("Unknown tag");
     }
     children[key] = child;
   }

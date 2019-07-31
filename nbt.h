@@ -11,6 +11,12 @@ class QByteArray;
 
 #include <vector>
 
+class NtbStreamDecodingError: public std::runtime_error
+{
+public:
+    using runtime_error::runtime_error;
+};
+
 class TagDataStream {
  public:
   TagDataStream(const char *data, int len);
@@ -138,6 +144,8 @@ class NBT {
   static Tag Null;
  private:
   Tag *root;
+
+  void readAll(const QByteArray &nbt);
 };
 
 class Tag_Byte : public TagBigEndian_t<quint8> {
