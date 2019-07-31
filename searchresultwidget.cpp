@@ -68,14 +68,11 @@ void SearchResultWidget::setPointOfInterest(const QVector3D &centerPoint)
 
 void SearchResultWidget::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
 {
-    if (!m_properties)
-    {
-        m_properties = QSharedPointer<Properties>::create();
-    }
+    auto properties = new Properties();
 
     auto props = item->data(0, Qt::UserRole).value<SearchResultItem>().properties;
-    m_properties->DisplayProperties(props);
-    m_properties->showNormal();
+    properties->DisplayProperties(props);
+    properties->showNormal();
 }
 
 void SearchResultWidget::on_treeWidget_itemSelectionChanged()

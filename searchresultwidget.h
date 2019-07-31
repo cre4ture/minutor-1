@@ -53,7 +53,6 @@ private slots:
 private:
     Ui::SearchResultWidget *ui;
 
-    QSharedPointer<Properties> m_properties;
     QVector3D m_pointOfInterest;
 };
 
