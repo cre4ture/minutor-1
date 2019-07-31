@@ -58,6 +58,7 @@ public:
     EntityEvaluator(const EntityEvaluatorConfig& config);
 
     QList<QString> getOffers() const;
+    QString getSpecialParams() const;
 
     static const QTreeWidgetItem *getNodeFromPath(const QString path, const QTreeWidgetItem &searchRoot);
     static const QTreeWidgetItem *getNodeFromPath(QStringList::iterator start, QStringList::iterator end, const QTreeWidgetItem &searchRoot);
@@ -67,6 +68,8 @@ public:
     QString getTypeId() const;
     bool isVillager() const;
     QString getCareerName() const;
+
+    QString getNamedAttribute(const QString& name) const;
 
 private:
     EntityEvaluatorConfig m_config;

@@ -9,6 +9,18 @@
 
 static const QString prefixToBeRemoved = "minecraft:";
 
+using SpecialParamsFunctionT = std::function<QString(const EntityEvaluator &entity)>;
+
+static std::map<QString, SpecialParamsFunctionT> special_param_extractor =
+        {
+            {"minecraft:horse", SpecialParamsFunctionT([](const EntityEvaluator &entity) -> QString {
+                 return "horse,speed/jump/health: " + entity.getNamedAttribute("generic.movementSpeed")
+                      + "/" + entity.getNamedAttribute("horse.jumpStrength")
+                      + "/" + entity.getNamedAttribute("generic.maxHealth");
+             })}
+        };
+
+
 EntityEvaluator::EntityEvaluator(const EntityEvaluatorConfig& config)
     : m_config(config)
     , m_rootNode(QSharedPointer<QTreeWidgetItem>::create())
@@ -55,6 +67,17 @@ QList<QString> EntityEvaluator::getOffers() const
     }
 
     return result;
+}
+
+QString EntityEvaluator::getSpecialParams() const
+{
+    auto it = special_param_extractor.find(getTypeId());
+    if (it != special_param_extractor.end())
+    {
+        return it->second(*this);
+    }
+
+    return "";
 }
 
 void EntityEvaluator::searchProperties()
@@ -168,6 +191,10 @@ void EntityEvaluator::addResult()
     result.pos.setY(m_config.entity->midpoint().y);
     result.pos.setZ(m_config.entity->midpoint().z);
     QString offers = getOffers().join("|");
+    if (offers == "")
+    {
+        offers = getSpecialParams();
+    }
     result.sells = offers;
     result.entity = m_config.entity;
     m_config.resultSink.addResult(result);
@@ -248,4 +275,31 @@ QString EntityEvaluator::getCareerName() const
     }
 
     return "-";
+}
+
+QString EntityEvaluator::getNamedAttribute(const QString &name) const
+{
+    auto node = getNodeFromPath("Attributes", *m_rootNode);
+
+    if (!node) return "";
+
+    for (int i = 0; i < node->childCount(); i++)
+    {
+        auto *child = node->child(i);
+        if (child)
+        {
+            auto nameNode = getNodeFromPath("Name", *child);
+            if (nameNode)
+            {
+                if (nameNode->text(1) == name)
+                {
+                    auto baseNode = getNodeFromPath("Base", *child);
+                    if (baseNode)
+                    {
+                        return baseNode->text(1);
+                    }
+                }
+            }
+        }
+    }
 }

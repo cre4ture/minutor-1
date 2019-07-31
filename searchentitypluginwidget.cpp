@@ -73,6 +73,11 @@ bool SearchEntityPluginWidget::evaluateEntity(EntityEvaluator &entity)
         result = result && (id.contains(searchFor, Qt::CaseInsensitive));
     }
 
+    if (ui->check_special_param->isChecked())
+    {
+        result = result && findSpecialParam(entity, ui->cb_special_param->currentText());
+    }
+
     return result;
 }
 
@@ -91,5 +96,11 @@ bool SearchEntityPluginWidget::findBuyOrSell(EntityEvaluator &entity, QString se
     }
 
     return foundBuy;
+}
+
+bool SearchEntityPluginWidget::findSpecialParam(EntityEvaluator &entity, QString searchText)
+{
+    QString special_params = entity.getSpecialParams();
+    return special_params.contains(searchText, Qt::CaseInsensitive);
 }
 

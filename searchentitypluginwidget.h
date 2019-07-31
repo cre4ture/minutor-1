@@ -40,6 +40,7 @@ private:
 
     bool evaluateEntity(EntityEvaluator &entity);
     bool findBuyOrSell(EntityEvaluator& entity, QString searchText, int index);
+    bool findSpecialParam(EntityEvaluator& entity, QString searchText);
 };
 
 #endif // SEARCHENTITYPLUGINWIDGET_H
