@@ -89,3 +89,8 @@ void SearchResultWidget::on_treeWidget_itemSelectionChanged()
         emit highlightEntity(data.entity);
     }
 }
+
+void SearchResultWidget::on_treeWidget_itemClicked(QTreeWidgetItem *item, int column)
+{
+    on_treeWidget_itemSelectionChanged();
+}

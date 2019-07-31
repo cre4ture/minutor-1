@@ -48,6 +48,8 @@ protected slots:
 private slots:
     void on_treeWidget_itemSelectionChanged();
 
+    void on_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
+
 private:
     Ui::SearchResultWidget *ui;
 
