@@ -72,16 +72,16 @@ void SearchEntityWidget::trySearchChunk(int x, int z)
     QSharedPointer<Chunk> chunk = nullptr;
     ChunkCache::Locker locked_cache(*m_input.cache);
 
-    if (locked_cache.isLoaded(x, z, chunk))
+    if (locked_cache.isCached(x, z, chunk)) // can return true and nullptr in case of inexistend chunk
     {
-        searchChunk(*chunk);
+        chunkLoaded(chunk, x, z);
         return;
     }
 
-    locked_cache.fetch(chunk, x, z);
-    if (chunk != nullptr)
+    if (locked_cache.fetch(chunk, x, z)) // normally schedules async loading and return false. But it can happen in rare cases that chunk has been loaded since isCached() check returned
     {
-        searchChunk(*chunk);
+        chunkLoaded(chunk, x, z);
+        return;
     }
 }
 

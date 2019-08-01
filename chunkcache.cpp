@@ -113,6 +113,17 @@ bool ChunkCache::isLoaded_unprotected(int x, int z,  QSharedPointer<Chunk> &chun
     }
 }
 
+bool ChunkCache::isCached_unprotected(int x, int z, QSharedPointer<Chunk> &chunkPtr_out)
+{
+    ChunkID id(x, z);
+
+    {
+        ChunkInfoT& info = cachemap[id];
+        chunkPtr_out = info.chunk;
+        return info.state.test(ChunkState::Cached);
+    }
+}
+
 void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 {
     QMutexLocker locker(&mutex);

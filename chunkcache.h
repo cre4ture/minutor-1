@@ -80,6 +80,11 @@ class ChunkCache : public QObject {
           return m_parent.isLoaded_unprotected(x,z,chunkPtr_out);
       }
 
+      bool isCached(int x, int z, QSharedPointer<Chunk> &chunkPtr_out)
+      {
+          return m_parent.isCached_unprotected(x,z,chunkPtr_out);
+      }
+
       bool fetch(QSharedPointer<Chunk>& chunk_out, int x, int z, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE)
       {
           return m_parent.fetch_unprotected(chunk_out, x, z, behav);
@@ -123,6 +128,8 @@ class ChunkCache : public QObject {
   void loadChunkAsync_unprotected(ChunkID id);
 
   bool isLoaded_unprotected(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
+
+  bool isCached_unprotected(int x, int z, QSharedPointer<Chunk> &chunkPtr_out);
 
   bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, int x, int z, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE);
 
