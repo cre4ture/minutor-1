@@ -109,8 +109,6 @@ Minutor::Minutor()
 
   setWindowTitle(qApp->applicationName());
 
-  propView = new Properties(this);
-
   emit worldLoaded(false);
 
   periodicUpdateTimer.setInterval(1000);
@@ -775,8 +773,10 @@ void Minutor::addOverlayItem(QSharedPointer<OverlayItem> item) {
   mapview->addOverlayItem(item);
 }
 
-void Minutor::showProperties(QVariant props) {
+void Minutor::showProperties(QVariant props)
+{
   if (!props.isNull()) {
+    Properties * propView = new Properties(this);
     propView->DisplayProperties(props);
     propView->show();
   }

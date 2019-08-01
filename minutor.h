@@ -153,7 +153,6 @@ signals:
   QDir currentWorld;
 
   QSet<QString> overlayItemTypes;
-  Properties * propView;
 
   QTimer periodicUpdateTimer;
 };
