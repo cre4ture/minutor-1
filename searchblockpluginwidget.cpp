@@ -4,6 +4,7 @@
 #include "ui_searchblockpluginwidget.h"
 
 #include <set>
+#include <algorithm>
 
 SearchBlockPluginWidget::SearchBlockPluginWidget(const SearchBlockPluginWidgetConfigT& config)
     : QWidget(config.parent)
@@ -13,10 +14,21 @@ SearchBlockPluginWidget::SearchBlockPluginWidget(const SearchBlockPluginWidgetCo
     ui->setupUi(this);
 
     auto idList = m_config.blockIdentifier->getKnownIds();
+
+    QStringList nameList;
+    nameList.reserve(idList.size());
+
     for (auto id: idList)
     {
         auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
-        ui->cb_Name->addItem(blockInfo.getName());
+        nameList.push_back(blockInfo.getName());
+    }
+
+    nameList.sort(Qt::CaseInsensitive);
+
+    for (auto name: nameList)
+    {
+        ui->cb_Name->addItem(name);
     }
 }
 
