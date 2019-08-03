@@ -23,6 +23,11 @@
    </item>
    <item>
     <widget class="QTreeWidget" name="treeWidget">
+     <property name="font">
+      <font>
+       <pointsize>6</pointsize>
+      </font>
+     </property>
      <property name="sortingEnabled">
       <bool>true</bool>
      </property>
