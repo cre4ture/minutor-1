@@ -93,6 +93,7 @@ void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk 
                     SearchResultItem item;
                     item.name = info.getName() + " (" + QString::number(bi.id) + ")";
                     item.pos = QVector3D(chunk.getChunkX() * 16 + x, y, chunk.getChunkZ() * 16 + z);
+                    item.entity = QSharedPointer<Entity>::create(item.pos);
                     resultList.addResult(item);
                 }
             }
