@@ -71,11 +71,13 @@ bool SearchBlockPluginWidget::initSearch()
     return m_searchForIds.size() > 0;
 }
 
-void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk &chunk)
+SearchPluginI::ResultListT SearchBlockPluginWidget::searchChunk(Chunk &chunk)
 {
+    SearchPluginI::ResultListT results;
+
     if (m_searchForIds.size() == 0)
     {
-        return;
+        return results;
     }
 
     for (int z = 0; z < 16; z++)
@@ -94,9 +96,11 @@ void SearchBlockPluginWidget::searchChunk(SearchResultWidget &resultList, Chunk 
                     item.name = info.getName() + " (" + QString::number(bi.id) + ")";
                     item.pos = QVector3D(chunk.getChunkX() * 16 + x, y, chunk.getChunkZ() * 16 + z);
                     item.entity = QSharedPointer<Entity>::create(item.pos);
-                    resultList.addResult(item);
+                    results.push_back(item);
                 }
             }
         }
     }
+
+    return results;
 }

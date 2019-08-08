@@ -32,7 +32,7 @@ public:
 
     QWidget &getWidget() override;
     bool initSearch() override;
-    void searchChunk(SearchResultWidget &resultList, Chunk &chunk) override;
+    SearchPluginI::ResultListT searchChunk(Chunk &chunk) override;
 
 private:
     Ui::SearchBlockPluginWidget *ui;

@@ -29,6 +29,7 @@ class JumpTo;
 class SearchEntityWidget;
 class ChunkCache;
 class SearchPluginI;
+class AsyncTaskProcessorBase;
 
 class Location {
  public:
@@ -113,6 +114,7 @@ signals:
   QString getWorldName(QDir path);
   void getWorldList();
 
+  QSharedPointer<AsyncTaskProcessorBase> threadpool;
   QSharedPointer<ChunkCache> cache;
   MapView *mapview;
   LabelledSlider *depth;

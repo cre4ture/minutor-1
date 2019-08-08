@@ -175,12 +175,12 @@ private:
     QMap<ChunkID, QImage> m_blocks;
 };
 
-MapView::MapView(QWidget *parent)
+MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidget *parent)
     : QWidget(parent)
     , zoom_internal(1.0)
     , updateTimer()
     , dragging(false)
-    , m_asyncRendererPool(QSharedPointer<AsyncTaskProcessorBase>::create())
+    , m_asyncRendererPool(threadpool)
 {
     connect(this, SIGNAL(chunkRenderingCompleted(QSharedPointer<Chunk>)),
             this, SLOT(renderingDone(const QSharedPointer<Chunk>&)));

@@ -20,6 +20,7 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
+    threadpoolqtjob.h \
     zlib/zlib.h \
     zlib/zconf.h \
 	  labelledslider.h \
@@ -85,6 +86,7 @@ SOURCES += \
     nbt.cpp \
     properties.cpp \
     settings.cpp \
+    threadpoolqtjob.cpp \
     village.cpp \
     worldsave.cpp \
     zipreader.cpp \

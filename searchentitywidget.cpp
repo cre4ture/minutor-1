@@ -3,6 +3,7 @@
 
 #include "./chunkcache.h"
 #include "chunkmath.hpp"
+#include "asynctaskprocessorbase.hpp"
 
 #include <QVariant>
 #include <QTreeWidgetItem>
@@ -11,6 +12,7 @@ SearchEntityWidget::SearchEntityWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
   , ui(new Ui::SearchEntityWidget)
   , m_input(input)
+  , m_threadPoolWrapper(m_input.threadpool, this)
 {
     ui->setupUi(this);
 
@@ -59,7 +61,7 @@ void SearchEntityWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, 
 {
     if (chunk)
     {
-        searchChunk(*chunk);
+        searchChunk(chunk);
     }
     else
     {
@@ -85,9 +87,9 @@ void SearchEntityWidget::trySearchChunk(int x, int z)
     }
 }
 
-void SearchEntityWidget::searchChunk(Chunk& chunk)
+void SearchEntityWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
 {
-    ChunkID id(chunk.getChunkX(), chunk.getChunkZ());
+    ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
     auto it = m_searchedBlockCoordinates.find(id);
     if (it != m_searchedBlockCoordinates.end())
@@ -97,9 +99,20 @@ void SearchEntityWidget::searchChunk(Chunk& chunk)
 
     m_searchedBlockCoordinates.insert(id);
 
-    m_input.searchPlugin->searchChunk(*ui->resultList, chunk);
+    m_threadPoolWrapper.enqueueJob([this, chunk]()
+    {
+        auto results = QSharedPointer<SearchPluginI::ResultListT>::create(m_input.searchPlugin->searchChunk(*chunk));
 
-    ui->progressBar->setValue(ui->progressBar->value() + 1);
+        return std::function<void()>([this, results]()
+        {
+            for (const auto& result: *results)
+            {
+                ui->resultList->addResult(result);
+            }
+
+            ui->progressBar->setValue(ui->progressBar->value() + 1);
+        });
+    });
 }
 
 void SearchEntityWidget::on_resultList_jumpTo(const QVector3D &pos)

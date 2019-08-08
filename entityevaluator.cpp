@@ -197,7 +197,7 @@ void EntityEvaluator::addResult()
     }
     result.sells = offers;
     result.entity = m_config.entity;
-    m_config.resultSink.addResult(result);
+    m_config.resultSink.push_back(result);
 }
 
 const QTreeWidgetItem *EntityEvaluator::getNodeFromPath(const QString path, const QTreeWidgetItem &searchRoot)

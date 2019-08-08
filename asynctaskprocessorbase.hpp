@@ -24,5 +24,4 @@ protected:
     ThreadSafeQueue<JobT>& m_queue;
 };
 
-
 #endif // ASYNCTASKPROCESSORBASE_HPP

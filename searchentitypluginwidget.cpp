@@ -3,6 +3,7 @@
 
 #include "./careeridentifier.h"
 #include "chunk.h"
+#include "searchresultwidget.h"
 
 SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidgetConfigT& config)
     : QWidget(config.parent)
@@ -16,6 +17,8 @@ SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidge
         auto desc = m_config.definitions.careerDefinitions->getDescriptor(id);
         ui->cb_villager_type->addItem(desc.name);
     }
+
+    //qRegisterMetaType<SearchPluginI::ResultListT>("SearchPluginI::ResultListT");
 }
 
 SearchEntityPluginWidget::~SearchEntityPluginWidget()
@@ -28,21 +31,25 @@ QWidget &SearchEntityPluginWidget::getWidget()
     return *this;
 }
 
-void SearchEntityPluginWidget::searchChunk(SearchResultWidget& resultList, Chunk &chunk)
+SearchPluginI::ResultListT SearchEntityPluginWidget::searchChunk(Chunk &chunk)
 {
+    SearchPluginI::ResultListT results;
+
     const auto& map = chunk.getEntityMap();
 
     for(const auto& e: map)
     {
         EntityEvaluator evaluator(
                     EntityEvaluatorConfig(m_config.definitions,
-                                          resultList,
+                                          results,
                                           "",
                                           e,
                                           std::bind(&SearchEntityPluginWidget::evaluateEntity, this, std::placeholders::_1)
                                           )
                     );
     }
+
+    return results;
 }
 
 bool SearchEntityPluginWidget::evaluateEntity(EntityEvaluator &entity)

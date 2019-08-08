@@ -18,6 +18,7 @@
 #include "./playerinfos.h"
 #include "searchentitypluginwidget.h"
 #include "searchblockpluginwidget.h"
+#include "asynctaskprocessorbase.hpp"
 
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QAction>
@@ -39,8 +40,9 @@ Minutor::Minutor()
     , searchBlockAction(nullptr)
     , periodicUpdateTimer()
 {
+  threadpool = QSharedPointer<AsyncTaskProcessorBase>::create();
   cache = QSharedPointer<ChunkCache>::create();
-  mapview = new MapView;
+  mapview = new MapView(threadpool);
   mapview->attach(cache);
   connect(mapview, SIGNAL(hoverTextChanged(QString)),
           statusBar(), SLOT(showMessage(QString)));
@@ -784,7 +786,7 @@ void Minutor::showProperties(QVariant props)
 
 SearchEntityWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin)
 {
-    SearchEntityWidget* form = new SearchEntityWidget(SearchEntityWidgetInputC(cache,
+    SearchEntityWidget* form = new SearchEntityWidget(SearchEntityWidgetInputC(threadpool, cache,
                                               [this](){ return mapview->getLocation().getPos3D(); },
                                               searchPlugin
     ));

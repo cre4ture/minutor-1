@@ -31,7 +31,7 @@ public:
 
     QWidget &getWidget() override;
 
-    void searchChunk(SearchResultWidget &resultList, Chunk &chunk) override;
+    SearchPluginI::ResultListT searchChunk(Chunk &chunk) override;
 
 private:
     Ui::SearchEntityPluginWidget *ui;

@@ -2,6 +2,7 @@
 #define ENTITYEVALUATOR_H
 
 #include "propertietreecreator.h"
+#include "searchplugininterface.h"
 
 #include <QSharedPointer>
 
@@ -9,7 +10,7 @@
 
 class ChunkCache;
 class Chunk;
-class SearchResultWidget;
+class SearchResultItem;
 class GenericIdentifier;
 class OverlayItem;
 
@@ -34,7 +35,7 @@ struct EntityEvaluatorConfig
     typedef std::function<bool(EntityEvaluator&)> SearchFunctionT;
 
     EntityEvaluatorConfig(const EntityDefitionsConfig& definitions_,
-                          SearchResultWidget& resultSink_,
+                          SearchPluginI::ResultListT& resultSink_,
                           const QString& searchText_,
                           QSharedPointer<OverlayItem> entity_,
                           SearchFunctionT evalFunction_)
@@ -46,7 +47,7 @@ struct EntityEvaluatorConfig
     {}
 
     EntityDefitionsConfig definitions;
-    SearchResultWidget& resultSink;
+    SearchPluginI::ResultListT& resultSink;
     QString searchText;
     QSharedPointer<OverlayItem> entity;
     std::function<bool(EntityEvaluator&)> evalFunction;
