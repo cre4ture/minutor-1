@@ -821,7 +821,7 @@ void Minutor::searchEntity()
 
 void Minutor::triggerJumpToPosition(QVector3D pos)
 {
-    mapview->setLocation(pos.x(), pos.z());
+    mapview->setLocation(pos.x(), pos.y(), pos.z(), true, false);
 }
 
 void Minutor::highlightEntity(QSharedPointer<OverlayItem> item)
