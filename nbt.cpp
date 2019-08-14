@@ -117,7 +117,7 @@ Tag::~Tag() {
 }
 int Tag::length() const {
   qWarning() << "Unhandled length";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return 0;
 }
 bool Tag::has(const QString) const {
   return false;
@@ -130,31 +130,31 @@ const Tag *Tag::at(int /* idx */) const {
 }
 const QString Tag::toString() const {
   qWarning() << "Unhandled toString";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return "";
 }
 qint32 Tag::toInt() const {
   qWarning() << "Unhandled toInt";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return 0;
 }
 double Tag::toDouble() const {
   qWarning() << "Unhandled toDouble";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return 0.0;
 }
 const quint8 *Tag::toByteArray() const {
   qWarning() << "Unhandled toByteArray";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return nullptr; // in combination with returning length of 0 by default this should be fine
 }
 const qint32 *Tag::toIntArray() const {
   qWarning() << "Unhandled toIntArray";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return nullptr; // in combination with returning length of 0 by default this should be fine
 }
 const qint64 *Tag::toLongArray() const {
   qWarning() << "Unhandled toLongArray";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return nullptr; // in combination with returning length of 0 by default this should be fine
 }
 const QVariant Tag::getData() const {
   qWarning() << "Unhandled getData";
-  throw NtbStreamDecodingError(std::string("Unhandled ") + __FUNCTION__);
+  return QVariant();
 }
 
 // Tag_Byte
@@ -308,7 +308,7 @@ void Tag_List::init(const int len, const int type, TagDataStream *s)
     case 10: setListData<Tag_Compound>(&data, len, s); break;
     case 11: setListData<Tag_Int_Array>(&data, len, s); break;
     case 12: setListData<Tag_Long_Array>(&data, len, s); break;
-    default: throw "Unknown type";
+    default: throw NtbStreamDecodingError("Unknown type");
   }
 }
 
