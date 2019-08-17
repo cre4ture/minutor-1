@@ -141,6 +141,8 @@ class NBT {
   bool has(const QString key) const;
   const Tag *at(const QString key) const;
 
+  Tag* getRoot() { return root; }
+
   static Tag Null;
  private:
   Tag *root;

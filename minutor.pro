@@ -1,4 +1,4 @@
-TEMPLATE = app
+TEMPLATE = lib
 TARGET = minutor
 DEPENDPATH += .
 INCLUDEPATH += .
@@ -80,7 +80,6 @@ SOURCES += \
     entityidentifier.cpp \
     generatedstructure.cpp \
     json.cpp \
-    main.cpp \
     mapview.cpp \
     minutor.cpp \
     nbt.cpp \
