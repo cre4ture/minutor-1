@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
         }
 
         bool ok_z = true;
-        int y = str_z.toInt(&ok_z);
+        int z = str_z.toInt(&ok_z);
 
         if (!ok_z)
         {
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
             return -1;
         }
 
-        auto chunkId = ChunkID::fromCoordinates(x,y);
+        auto chunkId = ChunkID::fromCoordinates(x,z);
 
         ChunkLoader loader(path, chunkId);
 
