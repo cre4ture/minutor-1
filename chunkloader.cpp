@@ -25,10 +25,8 @@ void ChunkLoader::run() {
     //emit chunkUpdated(newChunk, id);
 }
 
-QSharedPointer<Chunk> ChunkLoader::runInternal()
+QSharedPointer<NBT> ChunkLoader::loadNbt()
 {
-    //thread()->msleep(300);
-
     int rx = id.getX() >> 5;
     int rz = id.getZ() >> 5;
 
@@ -55,13 +53,26 @@ QSharedPointer<Chunk> ChunkLoader::runInternal()
       f.close();
       return nullptr;
     }
-    NBT nbt(raw);
 
-    auto chunk = QSharedPointer<Chunk>::create();
-    chunk->load(nbt);
+    auto nbt = QSharedPointer<NBT>::create(raw);
 
     f.unmap(raw);
     f.close();
+
+    return nbt;
+}
+
+QSharedPointer<Chunk> ChunkLoader::runInternal()
+{
+    auto nbt = loadNbt();
+
+    if (nbt == nullptr)
+    {
+        return nullptr;
+    }
+
+    auto chunk = QSharedPointer<Chunk>::create();
+    chunk->load(*nbt);
 
     return chunk;
 }

@@ -15,6 +15,11 @@ class ChunkID {
   int getX() const { return x; }
   int getZ() const { return z; }
 
+  static ChunkID fromCoordinates(int x, int z)
+  {
+      return ChunkID(x / 16, z / 16);
+  }
+
  protected:
   int x, z;
 };

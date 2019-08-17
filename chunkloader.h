@@ -12,6 +12,7 @@
 class Chunk;
 class ChunkID;
 class QMutex;
+class NBT;
 
 class ChunkLoaderThreadPool : public QObject, public AsyncTaskProcessorBase
 {
@@ -34,6 +35,8 @@ class ChunkLoader
   ~ChunkLoader();
 
   void run();
+
+  QSharedPointer<NBT> loadNbt();
 
   QSharedPointer<Chunk> runInternal();
  private:
