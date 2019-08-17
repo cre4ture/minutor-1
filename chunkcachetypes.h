@@ -17,6 +17,8 @@ class ChunkID {
 
   static ChunkID fromCoordinates(int x, int z)
   {
+      if (x < 0) x -= 16;
+      if (z < 0) z -= 16;
       return ChunkID(x / 16, z / 16);
   }
 
