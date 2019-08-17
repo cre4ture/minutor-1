@@ -11,6 +11,8 @@
 #include "./mapview.h"
 #include "zlib/zlib.h"
 
+#include "chunkrenderer.h"
+
 WorldSave::WorldSave(QString filename, MapView *map,
                      bool regionChecker, bool chunkChecker,
                      int top, int left, int bottom, int right) :
@@ -298,7 +300,7 @@ void WorldSave::drawChunk(uchar *scanlines, int stride, int x, Chunk *chunk) {
     attenuation *= 0.9f;
 
   // render chunk with current settings
-  // TODO map->renderChunk(chunk);
+  ChunkRenderer::renderChunk(*map, chunk);
   // we can't memcpy each scanline because it's in BGRA format.
   int offset = x * 16 * 4 + 1;
   int ioffset = 0;
