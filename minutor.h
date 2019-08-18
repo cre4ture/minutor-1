@@ -79,6 +79,7 @@ private slots:
 
   void viewDimension(const DimensionInfo &dim);
   void toggleFlags();
+  void listStructures();
 
   void about();
 
@@ -147,6 +148,7 @@ signals:
   QList<QAction*> entityActions;
   QAction *searchEntityAction;
   QAction *searchBlockAction;
+  QMenu *listStructuresActionsMenu;
 
   // loaded world data
   DefinitionManager *dm;

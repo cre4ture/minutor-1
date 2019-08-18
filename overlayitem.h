@@ -16,6 +16,7 @@ class OverlayItem {
     explicit Point(double x = 0, double y = 0, double z = 0):x(x), y(y), z(z) {}
     explicit Point(const QVector3D& pos3D): x(pos3D.x()), y(pos3D.y()), z(pos3D.z()) {}
     double x, y, z;
+    QVector3D toVector3D() const { return QVector3D(x,y,z); }
   };
 
   virtual bool intersects(const Point& min, const Point& max) const = 0;

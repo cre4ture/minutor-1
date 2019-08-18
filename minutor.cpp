@@ -19,6 +19,7 @@
 #include "searchentitypluginwidget.h"
 #include "searchblockpluginwidget.h"
 #include "asynctaskprocessorbase.hpp"
+#include "searchresultwidget.h"
 
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QAction>
@@ -38,6 +39,7 @@ Minutor::Minutor()
     , searchMenu(nullptr)
     , searchEntityAction(nullptr)
     , searchBlockAction(nullptr)
+    , listStructuresActionsMenu(nullptr)
     , periodicUpdateTimer()
 {
   threadpool = QSharedPointer<AsyncTaskProcessorBase>::create();
@@ -335,6 +337,43 @@ void Minutor::toggleFlags() {
   mapview->setVisibleOverlayItemTypes(overlayTypes);
 }
 
+void Minutor::listStructures()
+{
+    QAction* sendingAction = dynamic_cast<QAction*>(sender());
+    if (sendingAction)
+    {
+        QString type = sendingAction->data().toMap()["type"].toString();
+        auto list = mapview->getOverlayItems(type);
+
+        SearchResultWidget* window = new SearchResultWidget();
+        window->setPointOfInterest(mapview->getLocation().getPos3D());
+
+        for (const auto& item: list)
+        {
+            if (item)
+            {
+                SearchResultItem lineitem;
+                lineitem.pos = item->midpoint().toVector3D();
+                lineitem.entity = item;
+                lineitem.properties = item->properties();
+                lineitem.name = item->dimension() + "." + item->display();
+                window->addResult(lineitem);
+            }
+        }
+
+        connect(window, SIGNAL(jumpTo(QVector3D)),
+                this, SLOT(triggerJumpToPosition(QVector3D))
+                );
+
+        connect(window, SIGNAL(highlightEntities(QVector<QSharedPointer<OverlayItem> >)),
+                this, SLOT(highlightEntities(QVector<QSharedPointer<OverlayItem> >))
+                );
+
+        window->setWindowTitle(type);
+        window->showNormal();
+    }
+}
+
 void Minutor::viewDimension(const DimensionInfo &dim) {
 
     currentDimentionInfo = QSharedPointer<DimensionInfo>::create(dim);
@@ -486,6 +525,8 @@ void Minutor::createActions() {
 
   searchBlockAction = new QAction(tr("Search block"), this);
   connect(searchBlockAction, SIGNAL(triggered()), this, SLOT(searchBlock()));
+
+  listStructuresActionsMenu = new QMenu(tr("List structures"), this);
 }
 
 // actionName will be modified, a "&" is added
@@ -592,6 +633,7 @@ void Minutor::createMenus() {
   searchMenu = menuBar()->addMenu(tr("&Search"));
   searchMenu->addAction(searchEntityAction);
   searchMenu->addAction(searchBlockAction);
+  searchMenu->addMenu(listStructuresActionsMenu);
 
   // [Help]
   helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -751,6 +793,12 @@ void Minutor::addOverlayItemType(QString type, QColor color,
     QMap<QString, QVariant> entityData;
     entityData["type"] = type;
     entityData["dimension"] = dimension;
+
+    auto listAction = new QAction(actionName, this);
+    listAction->setData(entityData);
+    connect(listAction, SIGNAL(triggered()), this, SLOT(listStructures()));
+
+    listStructuresActionsMenu->addAction(listAction);
 
     structureActions.push_back(new QAction(pixmap, actionName, this));
     structureActions.last()->setShortcut(sequence);

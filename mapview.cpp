@@ -1053,7 +1053,18 @@ void MapView::clearOverlayItems() {
 }
 
 void MapView::setVisibleOverlayItemTypes(const QSet<QString>& itemTypes) {
-  overlayItemTypes = itemTypes;
+    overlayItemTypes = itemTypes;
+}
+
+QList<QSharedPointer<OverlayItem> > MapView::getOverlayItems(const QString &type) const
+{
+    auto it = overlayItems.find(type);
+    if (it != overlayItems.end())
+    {
+        return *it;
+    }
+
+    return QList<QSharedPointer<OverlayItem> >();
 }
 
 int MapView::getY(int x, int z) {

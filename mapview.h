@@ -65,6 +65,7 @@ class MapView : public QWidget {
   void addOverlayItem(QSharedPointer<OverlayItem> item);
   void clearOverlayItems();
   void setVisibleOverlayItemTypes(const QSet<QString>& itemTypes);
+  QList<QSharedPointer<OverlayItem>> getOverlayItems(const QString& type) const;
 
   // public for saving the png
   //void renderChunk(Chunk *chunk);
