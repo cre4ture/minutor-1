@@ -60,6 +60,11 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
     ui->treeWidget->addTopLevelItem(item);
 }
 
+void SearchResultWidget::searchDone()
+{
+    on_check_display_all_stateChanged(0);
+}
+
 void SearchResultWidget::setPointOfInterest(const QVector3D &centerPoint)
 {
     m_pointOfInterest = centerPoint;
@@ -83,11 +88,39 @@ void SearchResultWidget::on_treeWidget_itemSelectionChanged()
         auto item = list[0];
         auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
         emit jumpTo(data.pos);
-        emit highlightEntity(data.entity);
+
+        if (!ui->check_display_all->isChecked())
+        {
+            QVector<QSharedPointer<OverlayItem> > items;
+            items.push_back(data.entity);
+
+            emit highlightEntities(items);
+        }
     }
 }
 
 void SearchResultWidget::on_treeWidget_itemClicked(QTreeWidgetItem *item, int column)
 {
     on_treeWidget_itemSelectionChanged();
+}
+
+void SearchResultWidget::on_check_display_all_stateChanged(int arg1)
+{
+    QVector<QSharedPointer<OverlayItem> > items;
+
+    if (ui->check_display_all->isChecked())
+    {
+        const int count = ui->treeWidget->topLevelItemCount();
+        for (int i = 0; i < count; i++)
+        {
+            auto item = ui->treeWidget->topLevelItem(i);
+            auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
+
+            items.push_back(data.entity);
+
+            emit highlightEntities(items);
+        }
+    }
+
+    emit highlightEntities(items);
 }

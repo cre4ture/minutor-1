@@ -120,7 +120,7 @@ void SearchEntityWidget::on_resultList_jumpTo(const QVector3D &pos)
     emit jumpTo(pos);
 }
 
-void SearchEntityWidget::on_resultList_highlightEntity(QSharedPointer<OverlayItem> item)
+void SearchEntityWidget::on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> > item)
 {
-    emit highlightEntity(item);
+    emit highlightEntities(item);
 }

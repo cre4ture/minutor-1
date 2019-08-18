@@ -94,7 +94,7 @@ private slots:
   void searchBlock();
   void searchEntity();
   void triggerJumpToPosition(QVector3D pos);
-  void highlightEntity(QSharedPointer<OverlayItem> item);
+  void highlightEntities(QVector<QSharedPointer<OverlayItem> >);
 
   void periodicUpdate();
 

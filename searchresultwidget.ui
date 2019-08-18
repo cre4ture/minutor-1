@@ -15,11 +15,22 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="lbl_location">
-     <property name="text">
-      <string>TextLabel</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="lbl_location">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_update">
+       <property name="text">
+        <string>update</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QTreeWidget" name="treeWidget">
@@ -56,6 +67,13 @@
        <string>Sells</string>
       </property>
      </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="check_display_all">
+     <property name="text">
+      <string>display all</string>
+     </property>
     </widget>
    </item>
   </layout>

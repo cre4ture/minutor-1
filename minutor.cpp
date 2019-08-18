@@ -795,8 +795,8 @@ SearchEntityWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPlugin
             this, SLOT(triggerJumpToPosition(QVector3D))
             );
 
-    connect(form, SIGNAL(highlightEntity(QSharedPointer<OverlayItem>)),
-            this, SLOT(highlightEntity(QSharedPointer<OverlayItem>))
+    connect(form, SIGNAL(highlightEntities(QVector<QSharedPointer<OverlayItem> >)),
+            this, SLOT(highlightEntities(QVector<QSharedPointer<OverlayItem> >))
             );
 
     return form;
@@ -824,11 +824,9 @@ void Minutor::triggerJumpToPosition(QVector3D pos)
     mapview->setLocation(pos.x(), pos.y(), pos.z(), true, false);
 }
 
-void Minutor::highlightEntity(QSharedPointer<OverlayItem> item)
+void Minutor::highlightEntities(QVector<QSharedPointer<OverlayItem> > items)
 {
-    QVector<QSharedPointer<OverlayItem>> list;
-    list.push_back(item);
-    mapview->updateSearchResultPositions(list);
+    mapview->updateSearchResultPositions(items);
 }
 
 void Minutor::periodicUpdate()
