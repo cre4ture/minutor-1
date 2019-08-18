@@ -14,7 +14,7 @@
 #include "./village.h"
 #include "./jumpto.h"
 #include "./pngexport.h"
-#include "./searchentitywidget.h"
+#include "./searchchunkswidget.h"
 #include "./playerinfos.h"
 #include "searchentitypluginwidget.h"
 #include "searchblockpluginwidget.h"
@@ -784,9 +784,9 @@ void Minutor::showProperties(QVariant props)
   }
 }
 
-SearchEntityWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin)
+SearchChunksWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin)
 {
-    SearchEntityWidget* form = new SearchEntityWidget(SearchEntityWidgetInputC(threadpool, cache,
+    SearchChunksWidget* form = new SearchChunksWidget(SearchEntityWidgetInputC(threadpool, cache,
                                               [this](){ return mapview->getLocation().getPos3D(); },
                                               searchPlugin
     ));

@@ -48,13 +48,13 @@ struct SearchEntityWidgetInputC
     QWidget *parent;
 };
 
-class SearchEntityWidget : public QWidget
+class SearchChunksWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SearchEntityWidget(const SearchEntityWidgetInputC& input);
-    ~SearchEntityWidget();
+    explicit SearchChunksWidget(const SearchEntityWidgetInputC& input);
+    ~SearchChunksWidget();
 
 signals:
     void jumpTo(QVector3D pos);

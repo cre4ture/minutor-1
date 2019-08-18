@@ -26,7 +26,7 @@ class WorldSave;
 class Properties;
 class OverlayItem;
 class JumpTo;
-class SearchEntityWidget;
+class SearchChunksWidget;
 class ChunkCache;
 class SearchPluginI;
 class AsyncTaskProcessorBase;
@@ -90,7 +90,7 @@ private slots:
   void addOverlayItemType(QString type, QColor color, QString dimension = "");
   void showProperties(QVariant props);
 
-  SearchEntityWidget* prepareSearchForm(const QSharedPointer<SearchPluginI> &searchPlugin);
+  SearchChunksWidget* prepareSearchForm(const QSharedPointer<SearchPluginI> &searchPlugin);
   void searchBlock();
   void searchEntity();
   void triggerJumpToPosition(QVector3D pos);

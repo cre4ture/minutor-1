@@ -1,4 +1,4 @@
-#include "searchentitywidget.h"
+#include "searchchunkswidget.h"
 #include "ui_searchentitywidget.h"
 
 #include "./chunkcache.h"
@@ -8,7 +8,7 @@
 #include <QVariant>
 #include <QTreeWidgetItem>
 
-SearchEntityWidget::SearchEntityWidget(const SearchEntityWidgetInputC& input)
+SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
   , ui(new Ui::SearchEntityWidget)
   , m_input(input)
@@ -23,13 +23,13 @@ SearchEntityWidget::SearchEntityWidget(const SearchEntityWidgetInputC& input)
     ui->plugin_context->layout()->addWidget(&m_input.searchPlugin->getWidget());
 }
 
-SearchEntityWidget::~SearchEntityWidget()
+SearchChunksWidget::~SearchChunksWidget()
 {
     ui->plugin_context->layout()->removeWidget(&m_input.searchPlugin->getWidget());
     delete ui;
 }
 
-void SearchEntityWidget::on_pb_search_clicked()
+void SearchChunksWidget::on_pb_search_clicked()
 {
     m_searchedBlockCoordinates.clear();
 
@@ -57,7 +57,7 @@ void SearchEntityWidget::on_pb_search_clicked()
     }
 }
 
-void SearchEntityWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
+void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
     if (chunk)
     {
@@ -69,7 +69,7 @@ void SearchEntityWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, 
     }
 }
 
-void SearchEntityWidget::trySearchChunk(int x, int z)
+void SearchChunksWidget::trySearchChunk(int x, int z)
 {
     QSharedPointer<Chunk> chunk = nullptr;
     ChunkCache::Locker locked_cache(*m_input.cache);
@@ -87,7 +87,7 @@ void SearchEntityWidget::trySearchChunk(int x, int z)
     }
 }
 
-void SearchEntityWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
+void SearchChunksWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
 {
     ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
@@ -115,12 +115,12 @@ void SearchEntityWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
     });
 }
 
-void SearchEntityWidget::on_resultList_jumpTo(const QVector3D &pos)
+void SearchChunksWidget::on_resultList_jumpTo(const QVector3D &pos)
 {
     emit jumpTo(pos);
 }
 
-void SearchEntityWidget::on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> > item)
+void SearchChunksWidget::on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> > item)
 {
     emit highlightEntities(item);
 }

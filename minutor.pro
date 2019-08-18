@@ -20,6 +20,7 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
+    searchchunkswidget.h \
     threadpoolqtjob.h \
     zlib/zlib.h \
     zlib/zconf.h \
@@ -51,7 +52,6 @@ HEADERS += \
     flatteningconverter.h \
     paletteentry.h \
     searchresultwidget.h \
-    searchentitywidget.h \
     propertietreecreator.h \
     genericidentifier.h \
     identifierinterface.h \
@@ -84,6 +84,7 @@ SOURCES += \
     minutor.cpp \
     nbt.cpp \
     properties.cpp \
+    searchchunkswidget.cpp \
     settings.cpp \
     threadpoolqtjob.cpp \
     village.cpp \
@@ -93,7 +94,6 @@ SOURCES += \
     pngexport.cpp \
     flatteningconverter.cpp \
     searchresultwidget.cpp \
-    searchentitywidget.cpp \
     propertietreecreator.cpp \
     genericidentifier.cpp \
     playerinfos.cpp \
