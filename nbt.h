@@ -96,9 +96,9 @@ class Tag {
   virtual const QString toString() const;
   virtual qint32 toInt() const;
   virtual double toDouble() const;
-  virtual const quint8 *toByteArray() const;
-  virtual const qint32 *toIntArray() const;
-  virtual const qint64 *toLongArray() const;
+  virtual const std::vector<quint8>& toByteArray() const;
+  virtual const std::vector<qint32>& toIntArray() const;
+  virtual const std::vector<qint64>& toLongArray() const;
   virtual const QVariant getData() const;
 };
 
@@ -237,7 +237,7 @@ public:
     explicit Tag_Byte_Array(TagDataStream *s);
     ~Tag_Byte_Array();
 
-    const quint8 *toByteArray() const override;
+    const std::vector<quint8>& toByteArray() const override;
     virtual const QString toString() const override;
     virtual const QVariant getData() const override;
 };
@@ -278,13 +278,13 @@ class Tag_Compound : public Tag {
 class Tag_Int_Array : public Tag_BigEndianArray_t<qint32> {
  public:
   explicit Tag_Int_Array(TagDataStream *s);
-  const qint32 *toIntArray() const;
+  const std::vector<qint32>& toIntArray() const;
 };
 
 class Tag_Long_Array : public Tag_BigEndianArray_t<qint64> {
  public:
   explicit Tag_Long_Array(TagDataStream *s);
-  const qint64 *toLongArray() const;
+  const std::vector<qint64>& toLongArray() const;
 };
 
 #endif  // NBT_H_

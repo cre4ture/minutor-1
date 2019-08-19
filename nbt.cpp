@@ -140,17 +140,20 @@ double Tag::toDouble() const {
   qWarning() << "Unhandled toDouble";
   return 0.0;
 }
-const quint8 *Tag::toByteArray() const {
+const std::vector<quint8> &Tag::toByteArray() const {
+  static const std::vector<quint8> nullvec;
   qWarning() << "Unhandled toByteArray";
-  return nullptr; // in combination with returning length of 0 by default this should be fine
+  return nullvec; // in combination with returning length of 0 by default this should be fine
 }
-const qint32 *Tag::toIntArray() const {
+const std::vector<qint32>& Tag::toIntArray() const {
+  static const std::vector<qint32> nullvec;
   qWarning() << "Unhandled toIntArray";
-  return nullptr; // in combination with returning length of 0 by default this should be fine
+  return nullvec;
 }
-const qint64 *Tag::toLongArray() const {
+const std::vector<qint64>& Tag::toLongArray() const {
+  static const std::vector<qint64> nullvec;
   qWarning() << "Unhandled toLongArray";
-  return nullptr; // in combination with returning length of 0 by default this should be fine
+  return nullvec;
 }
 const QVariant Tag::getData() const {
   qWarning() << "Unhandled getData";
@@ -242,8 +245,8 @@ Tag_Byte_Array::Tag_Byte_Array(TagDataStream *s)
 
 Tag_Byte_Array::~Tag_Byte_Array() {}
 
-const quint8 *Tag_Byte_Array::toByteArray() const {
-  return &data_array[0];
+const std::vector<quint8> &Tag_Byte_Array::toByteArray() const {
+  return data_array;
 }
 
 const QVariant Tag_Byte_Array::getData() const {
@@ -406,8 +409,8 @@ Tag_Int_Array::Tag_Int_Array(TagDataStream *s)
     : Tag_BigEndianArray_t(s)
 {}
 
-const qint32 *Tag_Int_Array::toIntArray() const {
-    return &data_array[0];
+const std::vector<qint32> &Tag_Int_Array::toIntArray() const {
+    return data_array;
 }
 
 // Tag_Long_Array
@@ -416,8 +419,8 @@ Tag_Long_Array::Tag_Long_Array(TagDataStream *s)
     : Tag_BigEndianArray_t(s)
 {}
 
-const qint64 *Tag_Long_Array::toLongArray() const {
-  return &data_array[0];
+const std::vector<qint64> &Tag_Long_Array::toLongArray() const {
+  return data_array;
 }
 
 // TagDataStream

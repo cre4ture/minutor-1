@@ -6,6 +6,17 @@
 #include "./flatteningconverter.h"
 #include "./blockidentifier.h"
 
+template<typename _ValueT>
+inline void* safeMemCpy(void* __dest, const std::vector<_ValueT>& __src, size_t __len)
+{
+    if (__len > (sizeof(_ValueT) * __src.size()))
+    {
+        throw NtbStreamDecodingError("myMemCpy() size mismatch!");
+    }
+
+    return memcpy(__dest, &__src[0], __len);
+}
+
 quint16 getBits(const unsigned char *data, int pos, int n) {
 //  quint16 result = 0;
   int arrIndex = pos/8;
@@ -61,7 +72,7 @@ void Chunk::load(const NBT &nbt) {
     const Tag_Int_Array * biomes = dynamic_cast<const Tag_Int_Array*> (level->at("Biomes"));
     if ((version >= 1519) && biomes) {
       // raw copy Biome data
-      memcpy(this->biomes, biomes->toIntArray(), sizeof(int)*biomes->length());
+      safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*biomes->length());
     } else {
       const Tag * biomes = level->at("Biomes");
       // convert quint8 to quint32
@@ -162,9 +173,9 @@ void Chunk::loadSection1343(ChunkSection *cs, const Tag *section) {
   // copy raw data
   quint8 blocks[4096];
   quint8 data[2048];
-  memcpy(blocks, section->at("Blocks")->toByteArray(), 4096);
-  memcpy(data,   section->at("Data")->toByteArray(),   2048);
-  memcpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);
+  safeMemCpy(blocks, section->at("Blocks")->toByteArray(), 4096);
+  safeMemCpy(data,   section->at("Data")->toByteArray(),   2048);
+  safeMemCpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);
 
   // convert old BlockID + data into virtual ID
   for (int i = 0; i < 4096; i++) {
@@ -248,7 +259,7 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
     auto raw = section->at("BlockStates")->toLongArray();
     int blockStatesLength = section->at("BlockStates")->length();
     unsigned char *byteData = new unsigned char[8*blockStatesLength];
-    memcpy(byteData, raw, 8*blockStatesLength);
+    safeMemCpy(byteData, raw, 8*blockStatesLength);
     std::reverse(byteData, byteData+(8*blockStatesLength));
     int bitSize = (blockStatesLength)*64/4096;
     for (int i = 0; i < 4096; i++) {
@@ -265,7 +276,7 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
 //    memcpy(cs->skyLight, section->at("SkyLight")->toByteArray(), 2048);
 //  }
   if (section->has("BlockLight")) {
-    memcpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);
+    safeMemCpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);
   }
 }
 
