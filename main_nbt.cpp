@@ -70,6 +70,8 @@ int main(int argc, char* argv[])
 
         ChunkLoader loader(path, chunkId);
 
+        std::cout << "loading chunk from region file: " << loader.getRegionFilename(path, chunkId).toStdString() << std::endl;
+
         auto nbt = loader.loadNbt();
 
         if (nbt != nullptr)

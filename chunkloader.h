@@ -39,6 +39,9 @@ class ChunkLoader
   QSharedPointer<NBT> loadNbt();
 
   QSharedPointer<Chunk> runInternal();
+
+  static QString getRegionFilename(const QString& path, const ChunkID& id);
+
  private:
   QString path;
   ChunkID id;

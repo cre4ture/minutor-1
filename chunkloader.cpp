@@ -27,11 +27,9 @@ void ChunkLoader::run() {
 
 QSharedPointer<NBT> ChunkLoader::loadNbt()
 {
-    int rx = id.getX() >> 5;
-    int rz = id.getZ() >> 5;
+    QString filename = getRegionFilename(path, id);
 
-    QFile f(path + "/region/r." + QString::number(rx) + "." +
-            QString::number(rz) + ".mca");
+    QFile f(filename);
     if (!f.open(QIODevice::ReadOnly)) {  // no chunks in this region
       return nullptr;
     }
@@ -77,6 +75,14 @@ QSharedPointer<Chunk> ChunkLoader::runInternal()
     return chunk;
 }
 
+QString ChunkLoader::getRegionFilename(const QString& path, const ChunkID& id)
+{
+    int rx = id.getX() >> 5;
+    int rz = id.getZ() >> 5;
+
+    return path + "/region/r." + QString::number(rx) + "." +
+            QString::number(rz) + ".mca";
+}
 
 void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
 {
@@ -91,4 +97,3 @@ void ChunkLoaderThreadPool::signalUpdated(QSharedPointer<Chunk> chunk, ChunkID i
 {
     emit chunkUpdated(chunk, id);
 }
-
