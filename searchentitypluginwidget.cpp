@@ -17,8 +17,6 @@ SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidge
         auto desc = m_config.definitions.careerDefinitions->getDescriptor(id);
         ui->cb_villager_type->addItem(desc.name);
     }
-
-    //qRegisterMetaType<SearchPluginI::ResultListT>("SearchPluginI::ResultListT");
 }
 
 SearchEntityPluginWidget::~SearchEntityPluginWidget()

@@ -7,12 +7,15 @@
 
 #include <QVariant>
 #include <QTreeWidgetItem>
+#include <boost/noncopyable.hpp>
 
 SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
   , ui(new Ui::SearchEntityWidget)
   , m_input(input)
   , m_threadPoolWrapper(m_input.threadpool, this)
+  , m_searchRunning(false)
+  , m_requestCancel(false)
 {
     ui->setupUi(this);
 
@@ -31,6 +34,36 @@ SearchChunksWidget::~SearchChunksWidget()
 
 void SearchChunksWidget::on_pb_search_clicked()
 {
+    class SearchStateResetGuard: public boost::noncopyable
+    {
+    public:
+        SearchStateResetGuard(SearchChunksWidget& parent)
+            : m_parent(parent)
+        {
+            m_parent.m_searchRunning = true;
+            m_parent.ui->pb_search->setText("Cancel");
+        }
+
+        ~SearchStateResetGuard()
+        {
+            m_parent.m_searchRunning = false;
+            m_parent.ui->pb_search->setText("Search");
+        }
+
+    private:
+        SearchChunksWidget& m_parent;
+    };
+
+    if (m_searchRunning)
+    {
+        m_requestCancel = true;
+        ui->pb_search->setText("Cancelling ...");
+        return;
+    }
+
+    SearchStateResetGuard searchRunningGuard(*this);
+    m_requestCancel = false;
+
     m_searchedBlockCoordinates.clear();
 
     ui->resultList->clearResults();
@@ -53,12 +86,23 @@ void SearchChunksWidget::on_pb_search_clicked()
         for (int x = -radius; x <= radius; x++)
         {
             trySearchChunk(poi.x() + x, poi.y() + z);
+
+            if (m_requestCancel)
+            {
+                return;
+            }
         }
+        QApplication::processEvents();
     }
 }
 
 void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
+    if (m_requestCancel || !m_searchRunning)
+    {
+        return;
+    }
+
     if (chunk)
     {
         searchChunk(chunk);

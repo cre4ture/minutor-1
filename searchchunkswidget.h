@@ -73,6 +73,8 @@ private:
     SearchEntityWidgetInputC m_input;
     ThreadPoolQtJob m_threadPoolWrapper;
     std::set<ChunkID> m_searchedBlockCoordinates;
+    bool m_searchRunning;
+    bool m_requestCancel;
 
     void trySearchChunk(int x, int z);
 
