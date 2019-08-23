@@ -129,11 +129,11 @@ INSTALLS += desktopfile pixmapfile target
 
 FORMS += \
     properties.ui \
+    searchchunkswidget.ui \
     settings.ui \
     jumpto.ui \
     pngexport.ui \
     searchresultwidget.ui \
-    searchentitywidget.ui \
     searchentitypluginwidget.ui \
     searchblockpluginwidget.ui
 

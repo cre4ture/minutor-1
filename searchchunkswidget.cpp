@@ -1,5 +1,5 @@
 #include "searchchunkswidget.h"
-#include "ui_searchentitywidget.h"
+#include "ui_searchchunkswidget.h"
 
 #include "./chunkcache.h"
 #include "chunkmath.hpp"
@@ -11,7 +11,7 @@
 
 SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
-  , ui(new Ui::SearchEntityWidget)
+  , ui(new Ui::SearchChunksWidget)
   , m_input(input)
   , m_threadPoolWrapper(m_input.threadpool, this)
   , m_searchRunning(false)
@@ -131,6 +131,51 @@ void SearchChunksWidget::trySearchChunk(int x, int z)
     }
 }
 
+template <typename _ValueT>
+class Range
+{
+public:
+    Range(_ValueT start_including, _ValueT end_including)
+        : start(start_including)
+        , end(end_including)
+    {}
+
+    static Range createFromUnorderedParams(_ValueT v1, _ValueT v2)
+    {
+        if (v1 > v2)
+        {
+            std::swap(v1, v2);
+        }
+
+        return Range(v1, v2);
+    }
+
+    static Range max()
+    {
+        return Range(std::numeric_limits<_ValueT>::lowest(), std::numeric_limits<_ValueT>::max());
+    }
+
+    const _ValueT start;
+    const _ValueT end;
+
+    bool isInsideRange(_ValueT value) const
+    {
+        return (value >= start) && (value <= end);
+    }
+};
+
+Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1, const QSpinBox& sb2)
+{
+    if (!checkBox.isChecked())
+    {
+        return Range<float>::max();
+    }
+    else
+    {
+        return Range<float>::createFromUnorderedParams(sb1.value(), sb2.value());
+    }
+}
+
 void SearchChunksWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
 {
     ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
@@ -143,9 +188,24 @@ void SearchChunksWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
 
     m_searchedBlockCoordinates.insert(id);
 
-    m_threadPoolWrapper.enqueueJob([this, chunk]()
+    const Range<float> range_x = helperRangeCreation(*ui->check_range_x, *ui->sb_x_start, *ui->sb_x_end);
+    const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
+    const Range<float> range_z = helperRangeCreation(*ui->check_range_z, *ui->sb_z_start, *ui->sb_z_end);
+
+    m_threadPoolWrapper.enqueueJob([this, chunk, range_x, range_y, range_z]()
     {
-        auto results = QSharedPointer<SearchPluginI::ResultListT>::create(m_input.searchPlugin->searchChunk(*chunk));
+        auto results_tmp = m_input.searchPlugin->searchChunk(*chunk);
+        auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
+
+        for (const auto& result: results_tmp)
+        {
+            if (range_x.isInsideRange(result.pos.x()) &&
+                range_y.isInsideRange(result.pos.y()) &&
+                range_z.isInsideRange(result.pos.z()))
+            {
+                results->push_back(result);
+            }
+        }
 
         return std::function<void()>([this, results]()
         {

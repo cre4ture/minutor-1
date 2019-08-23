@@ -13,7 +13,7 @@
 #include <set>
 
 namespace Ui {
-class SearchEntityWidget;
+class SearchChunksWidget;
 }
 
 class ChunkCache;
@@ -69,7 +69,7 @@ private slots:
     void on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> >);
 
 private:
-    Ui::SearchEntityWidget *ui;
+    Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;
     ThreadPoolQtJob m_threadPoolWrapper;
     std::set<ChunkID> m_searchedBlockCoordinates;
