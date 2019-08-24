@@ -839,6 +839,9 @@ SearchChunksWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPlugin
                                               searchPlugin
     ));
 
+    auto villageList = mapview->getOverlayItems("Structure.Village");
+    form->setVillageLocations(villageList);
+
     connect(form, SIGNAL(jumpTo(QVector3D)),
             this, SLOT(triggerJumpToPosition(QVector3D))
             );
@@ -909,7 +912,7 @@ enum {
 
 void Minutor::updateChunksAroundPlayer(const Location &pos, size_t areaRadius)
 {
-    const Location chunkCoordinates = pos / CHUNKSIZE;
+    auto id = ChunkID::fromCoordinates(static_cast<int>(pos.x), static_cast<int>(pos.z));
     const int chunkRadius = 1 + static_cast<int>(areaRadius) / CHUNKSIZE;
 
     ChunkCache::Locker locker(*cache);
@@ -919,7 +922,8 @@ void Minutor::updateChunksAroundPlayer(const Location &pos, size_t areaRadius)
         for (int dz = -chunkRadius; dz < chunkRadius; dz++)
         {
             QSharedPointer<Chunk> chunk;
-            locker.fetch(chunk, chunkCoordinates.x + dx, chunkCoordinates.z + dz, ChunkCache::FetchBehaviour::FORCE_UPDATE);
+            ChunkID chunkToSearchID(id.getX() + dx, id.getZ() + dz);
+            locker.fetch(chunk, chunkToSearchID, ChunkCache::FetchBehaviour::FORCE_UPDATE);
         }
     }
 }

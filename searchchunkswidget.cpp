@@ -32,6 +32,11 @@ SearchChunksWidget::~SearchChunksWidget()
     delete ui;
 }
 
+void SearchChunksWidget::setVillageLocations(const QList<QSharedPointer<OverlayItem> > &villages)
+{
+    m_villages = villages;
+}
+
 void SearchChunksWidget::on_pb_search_clicked()
 {
     class SearchStateResetGuard: public boost::noncopyable
@@ -64,7 +69,7 @@ void SearchChunksWidget::on_pb_search_clicked()
     SearchStateResetGuard searchRunningGuard(*this);
     m_requestCancel = false;
 
-    m_searchedBlockCoordinates.clear();
+    m_chunksToSearchList.clear();
 
     ui->resultList->clearResults();
     ui->resultList->setPointOfInterest(m_input.posOfInterestProvider());
@@ -85,7 +90,7 @@ void SearchChunksWidget::on_pb_search_clicked()
     {
         for (int x = -radius; x <= radius; x++)
         {
-            trySearchChunk(poi.x() + x, poi.y() + z);
+            checkLocationAndTrySearchChunk(ChunkID(poi.x() + x, poi.y() + z));
 
             if (m_requestCancel)
             {
@@ -98,35 +103,54 @@ void SearchChunksWidget::on_pb_search_clicked()
 
 void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-    if (m_requestCancel || !m_searchRunning)
+    if (m_requestCancel)
     {
         return;
     }
 
     if (chunk)
     {
-        searchChunk(chunk);
+        searchLoadedChunk(chunk);
     }
     else
     {
-        ui->progressBar->setValue(ui->progressBar->value() + 1);
+        oneChunkDoneNotify();
     }
 }
 
-void SearchChunksWidget::trySearchChunk(int x, int z)
+void SearchChunksWidget::checkLocationAndTrySearchChunk(ChunkID id)
 {
-    QSharedPointer<Chunk> chunk = nullptr;
-    ChunkCache::Locker locked_cache(*m_input.cache);
-
-    if (locked_cache.isCached(x, z, chunk)) // can return true and nullptr in case of inexistend chunk
+    bool searchThisChunk = true;
+    if (ui->check_villages->isChecked())
     {
-        chunkLoaded(chunk, x, z);
+        searchThisChunk = searchThisChunk && villageFilter(id);
+    }
+
+    if (!searchThisChunk)
+    {
+        oneChunkDoneNotify();
         return;
     }
 
-    if (locked_cache.fetch(chunk, x, z)) // normally schedules async loading and return false. But it can happen in rare cases that chunk has been loaded since isCached() check returned
+    trySearchChunk(id);
+}
+
+void SearchChunksWidget::trySearchChunk(ChunkID id)
+{
+    m_chunksToSearchList.insert(id);
+
+    QSharedPointer<Chunk> chunk = nullptr;
+    ChunkCache::Locker locked_cache(*m_input.cache);
+
+    if (locked_cache.isCached(id, chunk)) // can return true and nullptr in case of inexistend chunk
     {
-        chunkLoaded(chunk, x, z);
+        chunkLoaded(chunk, id.getX(), id.getZ());
+        return;
+    }
+
+    if (locked_cache.fetch(chunk, id)) // normally schedules async loading and return false. But it can happen in rare cases that chunk has been loaded since isCached() check returned
+    {
+        chunkLoaded(chunk, id.getX(), id.getZ());
         return;
     }
 }
@@ -176,17 +200,17 @@ Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1,
     }
 }
 
-void SearchChunksWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
+void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 {
     ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
-    auto it = m_searchedBlockCoordinates.find(id);
-    if (it != m_searchedBlockCoordinates.end())
+    auto it = m_chunksToSearchList.find(id);
+    if (it == m_chunksToSearchList.end())
     {
-        return; // already searched!
+        return; // already searched or not of interest
     }
 
-    m_searchedBlockCoordinates.insert(id);
+    m_chunksToSearchList.erase(it);
 
     const Range<float> range_x = helperRangeCreation(*ui->check_range_x, *ui->sb_x_start, *ui->sb_x_end);
     const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
@@ -214,9 +238,31 @@ void SearchChunksWidget::searchChunk(const QSharedPointer<Chunk>& chunk)
                 ui->resultList->addResult(result);
             }
 
-            ui->progressBar->setValue(ui->progressBar->value() + 1);
+            oneChunkDoneNotify();
         });
     });
+}
+
+bool SearchChunksWidget::villageFilter(ChunkID id) const
+{
+    const float limit_squared = ui->sb_villages_radius->value() * ui->sb_villages_radius->value();
+    const auto location = id.toCoordinates();
+    for (auto& village: m_villages)
+    {
+        QVector2D vector(location.x - village->midpoint().x,
+                         location.z - village->midpoint().z);
+        if (vector.lengthSquared() < limit_squared)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SearchChunksWidget::oneChunkDoneNotify()
+{
+    ui->progressBar->setValue(ui->progressBar->value() + 1);
 }
 
 void SearchChunksWidget::on_resultList_jumpTo(const QVector3D &pos)

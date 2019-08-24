@@ -1,6 +1,8 @@
 #ifndef CHUNKCACHETYPES_H
 #define CHUNKCACHETYPES_H
 
+#include "location.h"
+
 #include <QSharedPointer>
 #include <QMap>
 
@@ -20,6 +22,13 @@ class ChunkID {
       if (x < 0) x -= 16;
       if (z < 0) z -= 16;
       return ChunkID(x / 16, z / 16);
+  }
+
+  Location toCoordinates() const
+  {
+    int cx = x*16 + 8;
+    int cz = z*16 + 8;
+    return Location(cx, cz);
   }
 
  protected:

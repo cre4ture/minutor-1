@@ -79,49 +79,37 @@ QString ChunkCache::getPath() {
   return path;
 }
 
-bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, int x, int z, FetchBehaviour behav)
+bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav)
 {
-  ChunkID id(x, z);
+  const auto& chunkInfo = cachemap[id];
+  const bool cached = chunkInfo.state[ChunkState::Cached];
 
+  if ( (behav == FetchBehaviour::FORCE_UPDATE) ||
+       (
+           (behav == FetchBehaviour::USE_CACHED_OR_UDPATE) && (!cached)
+       )
+    )
   {
-      const auto& chunkInfo = cachemap[id];
-      const bool cached = chunkInfo.state[ChunkState::Cached];
-
-      if ( (behav == FetchBehaviour::FORCE_UPDATE) ||
-           (
-               (behav == FetchBehaviour::USE_CACHED_OR_UDPATE) && (!cached)
-           )
-        )
-      {
-          loadChunkAsync_unprotected(id);
-          chunk_out = nullptr;
-          return false;
-      }
-
-      chunk_out = chunkInfo.chunk;
-      return cached;
+      loadChunkAsync_unprotected(id);
+      chunk_out = nullptr;
+      return false;
   }
+
+  chunk_out = chunkInfo.chunk;
+  return cached;
 }
 
-bool ChunkCache::isLoaded_unprotected(int x, int z,  QSharedPointer<Chunk> &chunkPtr_out)
+bool ChunkCache::isLoaded_unprotected(ChunkID id,  QSharedPointer<Chunk> &chunkPtr_out)
 {
-    ChunkID id(x, z);
-
-    {
-        chunkPtr_out = cachemap[id].chunk;
-        return (chunkPtr_out != nullptr);
-    }
+    chunkPtr_out = cachemap[id].chunk;
+    return (chunkPtr_out != nullptr);
 }
 
-bool ChunkCache::isCached_unprotected(int x, int z, QSharedPointer<Chunk> &chunkPtr_out)
+bool ChunkCache::isCached_unprotected(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out)
 {
-    ChunkID id(x, z);
-
-    {
-        ChunkInfoT& info = cachemap[id];
-        chunkPtr_out = info.chunk;
-        return info.state.test(ChunkState::Cached);
-    }
+    ChunkInfoT& info = cachemap[id];
+    chunkPtr_out = info.chunk;
+    return info.state.test(ChunkState::Cached);
 }
 
 void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)

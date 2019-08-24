@@ -413,7 +413,7 @@ void MapView::regularUpdate()
                 chunksToLoad.erase(chunksToLoad.begin());
 
                 QSharedPointer<Chunk> chunk;
-                locker.fetch(chunk, id.getX(), id.getZ(), ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
+                locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
                 i++;
                 if (i > maxIterLoadAndRender)
                 {
@@ -432,7 +432,7 @@ void MapView::regularUpdate()
                 chunksToRedraw.erase(chunksToRedraw.begin());
 
                 QSharedPointer<Chunk> chunk;
-                locker.fetch(chunk, id.getX(), id.getZ(), ChunkCache::FetchBehaviour::USE_CACHED);
+                locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED);
                 renderlock.renderChunkAsync(chunk);
                 i++;
                 if (i > maxIterLoadAndRender)
@@ -667,7 +667,7 @@ void MapView::drawChunk(int x, int z, DrawHelper2& h, ChunkCache::Locker& locked
 
     // fetch the chunk
     QSharedPointer<Chunk> chunk;
-    const bool valid = locked_cache.fetch(chunk, x, z, ChunkCache::FetchBehaviour::USE_CACHED);
+    const bool valid = locked_cache.fetch(chunk, ChunkID(x, z), ChunkCache::FetchBehaviour::USE_CACHED);
     if (!valid)
     {
         chunksToLoad.insert(ChunkID(x, z));
@@ -947,7 +947,7 @@ void MapView::getToolTip(int x, int z) {
   ChunkCache::Locker locked_cache(*cache);
 
   QSharedPointer<Chunk> chunk;
-  const bool chunkValid = locked_cache.fetch(chunk, cx, cz);
+  const bool chunkValid = locked_cache.fetch(chunk, ChunkID(cx, cz));
 
   int offset = (x & 0xf) + (z & 0xf) * 16;
   int y = 0;
@@ -1072,7 +1072,7 @@ int MapView::getY(int x, int z) {
   int cz = floor(z / 16.0);
   ChunkCache::Locker locked_cache(*cache);
   QSharedPointer<Chunk> chunk;
-  locked_cache.fetch(chunk, cx, cz);
+  locked_cache.fetch(chunk, ChunkID(cx, cz));
   return chunk ? chunk->depth[(x & 0xf) + (z & 0xf) * 16] : -1;
 }
 
@@ -1082,7 +1082,7 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
   int cz = floor(z / 16.0);
   ChunkCache::Locker locked_cache(*cache);
   QSharedPointer<Chunk> chunk;
-  locked_cache.fetch(chunk, cx, cz);
+  locked_cache.fetch(chunk, ChunkID(cx, cz));
 
   if (chunk) {
     double invzoom = 10.0 / getZoom();

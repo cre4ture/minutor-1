@@ -3,6 +3,7 @@
 #define MINUTOR_H_
 
 #include "playerinfos.h"
+#include "location.h"
 
 #include <QtWidgets/QMainWindow>
 #include <QDir>
@@ -30,18 +31,6 @@ class SearchChunksWidget;
 class ChunkCache;
 class SearchPluginI;
 class AsyncTaskProcessorBase;
-
-class Location {
- public:
-  Location(double x, double z) : x(x), z(z) {}
-  Location(const QVector3D& pos3D) : x(pos3D.x()), z(pos3D.z()) {}
-  double x, z;
-
-  Location operator/(int divider) const
-  {
-      return Location(x / divider, z / divider);
-  }
-};
 
 class Minutor : public QMainWindow {
   Q_OBJECT

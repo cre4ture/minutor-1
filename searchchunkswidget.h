@@ -56,6 +56,8 @@ public:
     explicit SearchChunksWidget(const SearchEntityWidgetInputC& input);
     ~SearchChunksWidget();
 
+    void setVillageLocations(const QList<QSharedPointer<OverlayItem> > &villages);
+
 signals:
     void jumpTo(QVector3D pos);
     void highlightEntities(QVector<QSharedPointer<OverlayItem> >);
@@ -72,13 +74,20 @@ private:
     Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;
     ThreadPoolQtJob m_threadPoolWrapper;
-    std::set<ChunkID> m_searchedBlockCoordinates;
+    std::set<ChunkID> m_chunksToSearchList;
+    QList<QSharedPointer<OverlayItem> > m_villages;
     bool m_searchRunning;
     bool m_requestCancel;
 
-    void trySearchChunk(int x, int z);
+    void checkLocationAndTrySearchChunk(ChunkID id);
 
-    void searchChunk(const QSharedPointer<Chunk> &chunk);
+    void trySearchChunk(ChunkID id);
+
+    void searchLoadedChunk(const QSharedPointer<Chunk> &chunk);
+
+    bool villageFilter(ChunkID id) const;
+
+    void oneChunkDoneNotify();
 };
 
 #endif // SEARCHENTITYWIDGET_H
