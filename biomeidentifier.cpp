@@ -202,7 +202,14 @@ BiomeIdentifier& BiomeIdentifier::Instance() {
 }
 
 BiomeInfo &BiomeIdentifier::getBiome(int biome) {
-  QList<BiomeInfo*> &list = biomes[biome];
+
+  auto it = biomes.find(biome);
+  if (it == biomes.end())
+  {
+    return unknownBiome;
+  }
+
+  QList<BiomeInfo*> &list = *it;
   // search backwards for priority sorting to work
   for (int i = list.length() - 1; i >= 0; i--)
     if (list[i]->enabled)
