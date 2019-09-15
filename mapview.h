@@ -148,8 +148,8 @@ class MapView : public QWidget {
   int flags;
   QTimer updateTimer;
   QSharedPointer<ChunkCache> cache;
-  QImage image;
-  QImage image_entities;
+  QImage imageChunks;
+  QImage imageOverlays;
   QImage image_players;
   std::set<ChunkID> chunksToLoad;
   std::set<ChunkID> chunksToRedraw;

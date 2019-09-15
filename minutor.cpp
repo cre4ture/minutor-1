@@ -35,7 +35,7 @@
 #include <QVector3D>
 
 Minutor::Minutor()
-    : cache(nullptr)
+    : cache(ChunkCache::Instance())
     , searchMenu(nullptr)
     , searchEntityAction(nullptr)
     , searchBlockAction(nullptr)
@@ -43,7 +43,6 @@ Minutor::Minutor()
     , periodicUpdateTimer()
 {
   threadpool = QSharedPointer<AsyncTaskProcessorBase>::create();
-  cache = QSharedPointer<ChunkCache>::create();
   mapview = new MapView(threadpool);
   mapview->attach(cache);
   connect(mapview, SIGNAL(hoverTextChanged(QString)),

@@ -25,7 +25,7 @@ bool ChunkID::operator==(const ChunkID &other) const {
 
 bool ChunkID::operator<(const ChunkID &other) const
 {
-    return (other.cx < x) || ((other.cx == cx) && (other.z < z));
+    return (other.cx < cx) || ((other.cx == cx) && (other.cz < cz));
 }
 uint qHash(const ChunkID &c) {
   return (c.cx << 16) ^ (c.cz & 0xffff);  // safe way to hash a pair of integers
@@ -70,8 +70,8 @@ ChunkCache::~ChunkCache() {
   loaderThreadPool.waitForDone();
 }
 
-ChunkCache& ChunkCache::Instance() {
-  static ChunkCache singleton;
+QSharedPointer<ChunkCache> ChunkCache::Instance() {
+  static QSharedPointer<ChunkCache> singleton(new ChunkCache(), [](ChunkCache* o){ delete o; });
   return singleton;
 }
 
@@ -93,6 +93,7 @@ QString ChunkCache::getPath() const {
 
 int ChunkCache::getCost() const {
   return cache.totalCost();
+}
 
 int ChunkCache::getMaxCost() const {
   return cache.maxCost();
@@ -144,30 +145,8 @@ QSharedPointer<Chunk> ChunkCache::fetchCached(int cx, int cz) {
     return QSharedPointer<Chunk>(NULL);  // we're loading this chunk, or it's blank.
 }
 
-QSharedPointer<Chunk> ChunkCache::fetch(int cx, int cz) {
-  // try to get Chunk from Cache
-  ChunkID id(cx, cz);
-  mutex.lock();
-  QSharedPointer<Chunk> * p_chunk(cache[id]);   // const operation
-  mutex.unlock();
-  if (p_chunk != NULL ) {
-    QSharedPointer<Chunk> chunk(*p_chunk);
-    if (chunk->loaded)
-      return chunk;
-    return QSharedPointer<Chunk>(NULL);  // we're loading this chunk, or it's blank.
-  }
-  // launch background process to load this chunk
-  p_chunk = new QSharedPointer<Chunk>(new Chunk());
-  connect(p_chunk->data(), SIGNAL(structureFound(QSharedPointer<GeneratedStructure>)),
-          this,            SLOT  (routeStructure(QSharedPointer<GeneratedStructure>)));
-  mutex.lock();
-  cache.insert(id, p_chunk);    // non-const operation !
-  mutex.unlock();
-  ChunkLoader *loader = new ChunkLoader(path, cx, cz);
-  connect(loader, SIGNAL(loaded(int, int)),
-          this,   SLOT(gotChunk(int, int)));
-  loaderThreadPool.start(loader);
-  return QSharedPointer<Chunk>(NULL);
+void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
+  emit structureFound(structure);
 }
 
 void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
@@ -182,10 +161,6 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
     emit chunkLoaded(chunk, id.getX(), id.getZ());
 
     //std::cout << "cached chunks: " << cachemap.size() << std::endl;
-}
-
-void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
-  emit structureFound(structure);
 }
 
 void ChunkCache::loadChunkAsync_unprotected(ChunkID id)

@@ -36,29 +36,6 @@ class ChunkRenderer: public QObject, public QRunnable {
 
 };
 
-class ChunkRenderer : public QObject, public QRunnable {
-  Q_OBJECT
-
- public:
-  ChunkRenderer(int cx, int cz, int y, int flags);
-  ~ChunkRenderer() {}
-
- protected:
-  void run();
-
- public:  // public to allow usage from WorldSave
-  void renderChunk(QSharedPointer<Chunk> chunk);
-
- signals:
-  void rendered(int cx, int cz);
-
- private:
-  int cx, cz;
-  int depth;
-  int flags;
-  ChunkCache &cache;
-};
-
 class CaveShade {
  public:
   // singleton: access to global usable instance

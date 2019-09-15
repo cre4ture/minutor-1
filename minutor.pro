@@ -100,7 +100,6 @@ SOURCES += \
     propertietreecreator.cpp \
     genericidentifier.cpp \
     playerinfos.cpp \
-    chunkrenderer.cpp \
     entityevaluator.cpp \
     searchentitypluginwidget.cpp \
     searchblockpluginwidget.cpp \

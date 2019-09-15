@@ -47,17 +47,6 @@ private:
     UnderlyingIntT m_raw;
 };
 
-// ChunkID is the key used to identify entries in the Cache
-// Chunks are identified by their coordinates (CX,CZ) but a single key is needed to access a map like structure
-class ChunkID {
- public:
-  ChunkID(int cx, int cz);
-  bool operator==(const ChunkID &) const;
-  friend uint qHash(const ChunkID &);
- protected:
-  int cx, cz;
-};
-
 class ChunkLoaderThreadPool;
 
 
@@ -66,7 +55,7 @@ class ChunkCache : public QObject {
 
  public:
   // singleton: access to global usable instance
-  static ChunkCache &Instance();
+  static QSharedPointer<ChunkCache> Instance();
  private:
   // singleton: prevent access to constructor and copyconstructor
   ChunkCache();
@@ -126,8 +115,8 @@ class ChunkCache : public QObject {
   void adaptCacheToWindow(int wx, int wy);
 
  private slots:
-  void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id);
   void routeStructure(QSharedPointer<GeneratedStructure> structure);
+  void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id);
 
  private:
   QString path;                                   // path to folder with region files
@@ -148,8 +137,6 @@ class ChunkCache : public QObject {
   };
 
   QMap<ChunkID, ChunkInfoT> cachemap;
-  QMutex mutex;
-  int maxcache;
   QSharedPointer<ChunkLoaderThreadPool> m_loaderPool;
 
   void loadChunkAsync_unprotected(ChunkID id);

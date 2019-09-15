@@ -301,7 +301,7 @@ void WorldSave::drawChunk(uchar *scanlines, int stride, int x, QSharedPointer<Ch
     attenuation *= 0.9f;
 
   // render chunk with current settings
-  ChunkRenderer::renderChunk(*map, chunk);
+  ChunkRenderer::renderChunk(*map, chunk.get());
   // we can't memcpy each scanline because it's in BGRA format.
   int offset = x * 16 * 4 + 1;
   int ioffset = 0;

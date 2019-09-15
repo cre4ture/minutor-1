@@ -34,7 +34,6 @@ class ChunkLoader
   ChunkLoader(QString path, ChunkID id_);
   ~ChunkLoader();
 
-
   void run();
 
   QSharedPointer<NBT> loadNbt();

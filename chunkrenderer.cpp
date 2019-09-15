@@ -8,26 +8,34 @@
 #include "./biomeidentifier.h"
 #include "./clamp.h"
 
-ChunkRenderer::ChunkRenderer(int cx, int cz, int y, int flags)
-  : cx(cx)
-  , cz(cz)
-  , depth(y)
-  , flags(flags)
-  , cache(ChunkCache::Instance())
+
+
+ChunkRenderer::ChunkRenderer(const QSharedPointer<Chunk> &chunk, MapView &parent_)
+    : m_chunk(chunk)
+    , m_parent(parent_)
 {}
 
+ChunkRenderer::~ChunkRenderer()
+{}
 
-void ChunkRenderer::run() {
-  // get existing Chunk entry from Cache
-  QSharedPointer<Chunk> chunk(cache.fetchCached(cx, cz));
-  // render Chunk data
-  if (chunk) {
-    renderChunk(chunk);
+void ChunkRenderer::run()
+{
+    renderChunk(m_parent, m_chunk.get());
+    emit chunkRenderingCompleted(m_chunk);
   }
-  emit rendered(cx, cz);
-}
 
-void ChunkRenderer::renderChunk(QSharedPointer<Chunk> chunk) {
+void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
+{
+    int depth;
+    int flags;
+
+    {
+        QReadLocker locker(&parent.m_readWriteLock);
+
+        depth = parent.depth;
+        flags = parent.flags;
+    }
+
   int offset = 0;
   uchar *bits = chunk->image;
   uchar *depthbits = chunk->depth;
@@ -60,7 +68,8 @@ void ChunkRenderer::renderChunk(QSharedPointer<Chunk> chunk) {
         //int data = section->getData(offset, y);
 
         // get BlockInfo from block value
-        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
+        const auto& paletteEntry = section->getPaletteEntry(offset, y);
+        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
         if (block.alpha == 0.0) continue;
 
         // get light value from one block above
@@ -216,6 +225,7 @@ void ChunkRenderer::renderChunk(QSharedPointer<Chunk> chunk) {
   chunk->renderedAt = depth;
   chunk->renderedFlags = flags;
 }
+
 
 
 // define a shading curve for Cave Mode:

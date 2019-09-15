@@ -112,10 +112,7 @@ void Chunk::load(const NBT &nbt) {
   if (version >= 1519) {
     if (level->has("Structures")) {
       auto nbtListStructures = level->at("Structures");
-      auto structurelist     = GeneratedStructure::tryParseChunk(nbtListStructures);
-      for (auto it = structurelist.begin(); it != structurelist.end(); ++it) {
-        emit structureFound(*it);
-      }
+      structurelist = GeneratedStructure::tryParseChunk(nbtListStructures);
     }
   }
 

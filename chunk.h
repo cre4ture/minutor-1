@@ -57,9 +57,6 @@ class Chunk : public QObject {
   int getChunkX() const { return chunkX; }
   int getChunkZ() const { return chunkZ; }
 
- signals:
-  void structureFound(QSharedPointer<GeneratedStructure> structure);
-
  protected:
   void loadSection1343(ChunkSection *cs, const Tag *section);
   void loadSection1519(ChunkSection *cs, const Tag *section);
@@ -75,6 +72,9 @@ class Chunk : public QObject {
   EntityMap entities;
   int chunkX;
   int chunkZ;
+
+  QList<QSharedPointer<GeneratedStructure> > structurelist;
+
   friend class MapView;
   friend class ChunkRenderer;
   friend class ChunkCache;

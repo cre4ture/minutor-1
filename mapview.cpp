@@ -43,7 +43,7 @@ public:
         : parent(parent_)
         , zoom(parent.getZoom())
     {
-        auto& image = parent.image;
+        auto& image = parent.imageChunks;
         auto& x = parent.x;
         auto& z = parent.z;
 
@@ -80,8 +80,8 @@ class DrawHelper2
 public:
     DrawHelper2(DrawHelper& h_, MapView& parent)
                 : h(h_)
-                , canvas(&parent.image)
-                , canvas_entities(&parent.image_entities)
+                , canvas(&parent.imageChunks)
+                , canvas_entities(&parent.imageOverlays)
                 , canvas_players(&parent.image_players)
                 , m_parent(parent)
     {}
@@ -578,16 +578,16 @@ void MapView::keyPressEvent(QKeyEvent *event) {
 
 void MapView::resizeEvent(QResizeEvent *event) {
   imageChunks   = QImage(event->size(), QImage::Format_RGB32);
-  imageOverlays = QImage(event->size(), QImage::Format_RGBA8888);
-  image_entities = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
+  //imageOverlays = QImage(event->size(), QImage::Format_RGBA8888);
+  imageOverlays = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
   image_players = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
 }
 
 void MapView::paintEvent(QPaintEvent * /* event */) {
   QPainter p(this);
   p.drawImage(QPoint(0, 0), imageChunks);
+  //p.drawImage(QPoint(0, 0), imageOverlays);
   p.drawImage(QPoint(0, 0), imageOverlays);
-  p.drawImage(QPoint(0, 0), image_entities);
   p.drawImage(QPoint(0, 0), image_players);
   p.end();
 }
@@ -623,7 +623,6 @@ void MapView::redraw() {
     return;
   }
 
-  image_entities.fill(0);
   image_players.fill(0);
 
   ChunkCache::Locker locker(*cache);
@@ -639,17 +638,17 @@ void MapView::redraw() {
   imageOverlays.fill(0);
 
   // add on the entity layer
+  // done as part of drawChunk
 
-      QSharedPointer<Chunk> chunk(cache.fetch(cx, cz));
   // draw the generated structures 
-        for (auto &type : overlayItemTypes) {
+  for (auto &type : overlayItemTypes) {
     for (auto &item : overlayItems[type]) {
       if (item->intersects(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
                            OverlayItem::Point(h.x2 + 1, depth, h.z2 + 1))) {
         item->draw(h.x1, h.z1, getZoom(), &h2.getCanvas());
-            }
-          }
-        }
+      }
+    }
+  }
 
   const int maxViewWidth = 64 * 16; // (radius 32 chunks)
 
@@ -657,14 +656,14 @@ void MapView::redraw() {
   for (double x = firstGridLineX; x < h.x2; x += maxViewWidth)
   {
       const int line_x = round((x - h.x1) * getZoom());
-      h2.getCanvas().drawLine(line_x, 0, line_x, image.height());
+      h2.getCanvas().drawLine(line_x, 0, line_x, imageChunks.height());
       }
 
   const double firstGridLineZ = ceil(h.z1 / maxViewWidth) * maxViewWidth;
   for (double z = firstGridLineZ; z < h.z2; z += maxViewWidth)
   {
       const int line_z = round((z - h.z1) * getZoom());
-      h2.getCanvas().drawLine(0, line_z, image.width(), line_z);
+      h2.getCanvas().drawLine(0, line_z, imageChunks.width(), line_z);
   }
 
   h2.drawPlayers();
@@ -740,219 +739,6 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk
 
   canvas.drawImage(targetRect, srcImage);
   }
-
-ChunkRenderer::ChunkRenderer(const QSharedPointer<Chunk> &chunk, MapView &parent_)
-    : m_chunk(chunk)
-    , m_parent(parent_)
-{}
-
-ChunkRenderer::~ChunkRenderer()
-{}
-
-void ChunkRenderer::run()
-{
-    renderChunk(m_parent, m_chunk.get());
-    emit chunkRenderingCompleted(m_chunk);
-  }
-
-void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
-{
-    int depth;
-    int flags;
-
-    {
-        QReadLocker locker(&parent.m_readWriteLock);
-
-        depth = parent.depth;
-        flags = parent.flags;
-    }
-
-    //auto& blocksDefinitions = BlockIdentifier::Instance();
-
-  int offset = 0;
-  uchar *bits = chunk->image;
-  uchar *depthbits = chunk->depth;
-  for (int z = 0; z < 16; z++) {  // n->s
-    int lasty = -1;
-    for (int x = 0; x < 16; x++, offset++) {  // e->w
-      // initialize color
-      uchar r = 0, g = 0, b = 0;
-      double alpha = 0.0;
-      // get Biome
-      auto &biome = BiomeIdentifier::Instance().getBiome(chunk->biomes[offset]);
-      int top = depth;
-      if (top > chunk->highest)
-        top = chunk->highest;
-      int highest = 0;
-      for (int y = top; y >= 0; y--) {  // top->down
-        int sec = y >> 4;
-        ChunkSection *section = chunk->sections[sec];
-        if (!section) {
-          y = (sec << 4) - 1;  // skip whole section
-          continue;
-        }
-
-        // get data value
-        //int data = section->getData(offset, y);
-
-        // get BlockInfo from block value
-        const auto& paletteEntry = section->getPaletteEntry(offset, y);
-        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
-        if (block.alpha == 0.0) continue;
-
-        // get light value from one block above
-        int light = 0;
-        ChunkSection *section1 = NULL;
-        if (y < 255)
-          section1 = chunk->sections[(y+1) >> 4];
-        if (section1)
-          light = section1->getBlockLight(offset, y+1);
-        int light1 = light;
-        if (!(flags & MapView::flgLighting))
-          light = 13;
-        if (alpha == 0.0 && lasty != -1) {
-          if (lasty < y)
-            light += 2;
-          else if (lasty > y)
-            light -= 2;
-        }
-//        if (light < 0) light = 0;
-//        if (light > 15) light = 15;
-
-        // get current block color
-        QColor blockcolor = block.colors[15];  // get the color from Block definition
-        if (block.biomeWater()) {
-          blockcolor = biome.getBiomeWaterColor(blockcolor);
-        }
-        else if (block.biomeGrass()) {
-          blockcolor = biome.getBiomeGrassColor(blockcolor, y-64);
-        }
-        else if (block.biomeFoliage()) {
-          blockcolor = biome.getBiomeFoliageColor(blockcolor, y-64);
-        }
-
-        // shade color based on light value
-        double light_factor = pow(0.90,15-light);
-        quint32 colr = std::clamp( int(light_factor*blockcolor.red()),   0, 255 );
-        quint32 colg = std::clamp( int(light_factor*blockcolor.green()), 0, 255 );
-        quint32 colb = std::clamp( int(light_factor*blockcolor.blue()),  0, 255 );
-
-        // process flags
-        if (flags & MapView::flgDepthShading) {
-          // Use a table to define depth-relative shade:
-          static const quint32 shadeTable[] = {
-            0, 12, 18, 22, 24, 26, 28, 29, 30, 31, 32};
-          size_t idx = qMin(static_cast<size_t>(depth - y),
-                            sizeof(shadeTable) / sizeof(*shadeTable) - 1);
-          quint32 shade = shadeTable[idx];
-          colr = colr - qMin(shade, colr);
-          colg = colg - qMin(shade, colg);
-          colb = colb - qMin(shade, colb);
-        }
-        if (flags & MapView::flgMobSpawn) {
-          // get block info from 1 and 2 above and 1 below
-          uint blid1(0), blid2(0), blidB(0);  // default to legacy air (todo: better handling of block above)
-          ChunkSection *section2 = NULL;
-          ChunkSection *sectionB = NULL;
-          if (y < 254)
-            section2 = chunk->sections[(y+2) >> 4];
-          if (y > 0)
-            sectionB = chunk->sections[(y-1) >> 4];
-          if (section1) {
-            blid1 = section1->getPaletteEntry(offset, y+1).hid;
-          }
-          if (section2) {
-            blid2 = section2->getPaletteEntry(offset, y+2).hid;
-          }
-          if (sectionB) {
-            blidB = sectionB->getPaletteEntry(offset, y-1).hid;
-          }
-          BlockInfo &block2 = BlockIdentifier::Instance().getBlockInfo(blid2);
-          BlockInfo &block1 = BlockIdentifier::Instance().getBlockInfo(blid1);
-          BlockInfo &block0 = block;
-          BlockInfo &blockB = BlockIdentifier::Instance().getBlockInfo(blidB);
-          int light0 = section->getBlockLight(offset, y);
-
-           // spawn check #1: on top of solid block
-           if (block0.doesBlockHaveSolidTopSurface() &&
-               !block0.isBedrock() && light1 < 8 &&
-               !block1.isBlockNormalCube() && block1.spawninside &&
-               !block1.isLiquid() &&
-               !block2.isBlockNormalCube() && block2.spawninside) {
-             colr = (colr + 256) / 2;
-             colg = (colg + 0) / 2;
-             colb = (colb + 192) / 2;
-           }
-           // spawn check #2: current block is transparent,
-           // but mob can spawn through (e.g. snow)
-           if (blockB.doesBlockHaveSolidTopSurface() &&
-               !blockB.isBedrock() && light0 < 8 &&
-               !block0.isBlockNormalCube() && block0.spawninside &&
-               !block0.isLiquid() &&
-               !block1.isBlockNormalCube() && block1.spawninside) {
-             colr = (colr + 192) / 2;
-             colg = (colg + 0) / 2;
-             colb = (colb + 256) / 2;
-           }
-        }
-        if (flags & MapView::flgBiomeColors) {
-          colr = biome.colors[light].red();
-          colg = biome.colors[light].green();
-          colb = biome.colors[light].blue();
-          alpha = 0;
-        }
-
-        // combine current block to final color
-        if (alpha == 0.0) {
-          // first color sample
-          alpha = block.alpha;
-          r = colr;
-          g = colg;
-          b = colb;
-          highest = y;
-        } else {
-          // combine further color samples with blending
-          r = (quint8)(alpha * r + (1.0 - alpha) * colr);
-          g = (quint8)(alpha * g + (1.0 - alpha) * colg);
-          b = (quint8)(alpha * b + (1.0 - alpha) * colb);
-          alpha += block.alpha * (1.0 - alpha);
-        }
-
-        // finish depth (Y) scanning when color is saturated enough
-        if (block.alpha == 1.0 || alpha > 0.9)
-          break;
-      }
-      if (flags & MapView::flgCaveMode) {
-        float cave_factor = 1.0;
-        int cave_test = 0;
-        for (int y=highest-1; (y >= 0) && (cave_test < MapView::CAVE_DEPTH); y--, cave_test++) {  // top->down
-          // get section
-          ChunkSection *section = chunk->sections[y >> 4];
-          if (!section) continue;
-          // get data value
-          // int data = section->getData(offset, y);
-          // get BlockInfo from block value
-          BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
-          if (block.transparent) {
-            cave_factor -= parent.caveshade[cave_test];
-          }
-        }
-        cave_factor = std::max(cave_factor,0.25f);
-        // darken color by blending with cave shade factor
-        r = (quint8)(cave_factor * r);
-        g = (quint8)(cave_factor * g);
-        b = (quint8)(cave_factor * b);
-      }
-      *depthbits++ = lasty = highest;
-      *bits++ = b;
-      *bits++ = g;
-      *bits++ = r;
-      *bits++ = 0xff;
-    }
-  }
-  chunk->renderedAt = depth;
-  chunk->renderedFlags = flags;
-}
 
 void MapView::getToolTip(int x, int z) {
   int cx = floor(x / 16.0);
