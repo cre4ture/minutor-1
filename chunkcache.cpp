@@ -151,16 +151,24 @@ void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
 
 void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 {
-    QMutexLocker locker(&mutex);
+  QMutexLocker locker(&mutex);
 
-    auto& chunkInfo = cachemap[id];
-    chunkInfo.chunk = chunk;
-    chunkInfo.state << ChunkState::Cached;
-    chunkInfo.state.unset(ChunkState::Loading);
+  auto& chunkInfo = cachemap[id];
+  chunkInfo.chunk = chunk;
+  chunkInfo.state << ChunkState::Cached;
+  chunkInfo.state.unset(ChunkState::Loading);
 
-    emit chunkLoaded(chunk, id.getX(), id.getZ());
+  if (chunk)
+  {
+    for (const auto& structure: chunk->structurelist)
+    {
+      emit structureFound(structure);
+    }
+  }
 
-    //std::cout << "cached chunks: " << cachemap.size() << std::endl;
+  emit chunkLoaded(chunk, id.getX(), id.getZ());
+
+  //std::cout << "cached chunks: " << cachemap.size() << std::endl;
 }
 
 void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
