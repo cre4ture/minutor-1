@@ -4,6 +4,7 @@
 
 #include <QHash>
 #include <QList>
+#include <memory>
 
 class JSONHelper;
 
@@ -98,7 +99,7 @@ class JSONParseException {
 
 class JSON {
  public:
-  static JSONData *parse(const QString data);
+  static std::unique_ptr<JSONData> parse(const QString data);
 };
 
 #endif  // JSON_H_

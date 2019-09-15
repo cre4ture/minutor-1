@@ -16,7 +16,7 @@ class NBT;
 
 class ChunkLoaderThreadPool : public QObject, public AsyncTaskProcessorBase
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
     void enqueueChunkLoading(QString path, ChunkID id);
@@ -33,6 +33,7 @@ class ChunkLoader
  public:
   ChunkLoader(QString path, ChunkID id_);
   ~ChunkLoader();
+
 
   void run();
 

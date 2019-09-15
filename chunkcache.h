@@ -47,6 +47,17 @@ private:
     UnderlyingIntT m_raw;
 };
 
+// ChunkID is the key used to identify entries in the Cache
+// Chunks are identified by their coordinates (CX,CZ) but a single key is needed to access a map like structure
+class ChunkID {
+ public:
+  ChunkID(int cx, int cz);
+  bool operator==(const ChunkID &) const;
+  friend uint qHash(const ChunkID &);
+ protected:
+  int cx, cz;
+};
+
 class ChunkLoaderThreadPool;
 
 
@@ -54,11 +65,23 @@ class ChunkCache : public QObject {
   Q_OBJECT
 
  public:
+  // singleton: access to global usable instance
+  static ChunkCache &Instance();
+ private:
+  // singleton: prevent access to constructor and copyconstructor
   ChunkCache();
   ~ChunkCache();
+  ChunkCache(const ChunkCache &);
+  ChunkCache &operator=(const ChunkCache &);
+
+ public:
   void clear();
   void setPath(QString path);
-  QString getPath();
+  QString getPath() const;
+  QSharedPointer<Chunk> fetch(int cx, int cz);         // fetch Chunk and load when not found
+  QSharedPointer<Chunk> fetchCached(int cx, int cz);   // fetch Chunk only if cached
+  int getCost() const;
+  int getMaxCost() const;
 
   enum class FetchBehaviour
   {
@@ -100,14 +123,18 @@ class ChunkCache : public QObject {
   void structureFound(QSharedPointer<GeneratedStructure> structure);
 
  public slots:
-  void adaptCacheToWindow(int x, int y);
+  void adaptCacheToWindow(int wx, int wy);
 
  private slots:
   void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id);
   void routeStructure(QSharedPointer<GeneratedStructure> structure);
 
  private:
-  QString path;
+  QString path;                                   // path to folder with region files
+  QCache<ChunkID, QSharedPointer<Chunk>> cache;   // real Cache
+  QMutex mutex;                                   // Mutex for accessing the Cache
+  int maxcache;                                   // number of Chunks that fit into Cache
+  QThreadPool loaderThreadPool;                   // extra thread pool for loading
 
   enum class ChunkState {
       Loading,

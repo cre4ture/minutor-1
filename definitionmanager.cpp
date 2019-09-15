@@ -48,12 +48,12 @@ static const boost::bimap<QString, Definition::Type> s_defintionLookupBi = makeB
 
 DefinitionManager::DefinitionManager(QWidget *parent) :
     QWidget(parent),
-    isUpdating(false),
-    dimensionManager(DimensionIdentifier::Instance()),
-    blockManager(BlockIdentifier::Instance()),
     biomeManager(BiomeIdentifier::Instance()),
+    blockManager(BlockIdentifier::Instance()),
+    dimensionManager(DimensionIdentifier::Instance()),
     entityManager(EntityIdentifier::Instance()),
-    flatteningConverter(FlatteningConverter::Instance())
+    flatteningConverter(FlatteningConverter::Instance()),
+    isUpdating(false)
 {
   m_managers[Definition::Dimension] = &dimensionManager;
   m_managers[Definition::Block] = &blockManager;
@@ -301,7 +301,7 @@ void DefinitionManager::installJson(QString path, bool overwrite,
   QString destdir = QStandardPaths::writableLocation(
       QStandardPaths::DataLocation);
 
-  JSONData *def;
+  std::unique_ptr<JSONData> def;
   QFile f(path);
   f.open(QIODevice::ReadOnly);
   try {
@@ -317,7 +317,7 @@ void DefinitionManager::installJson(QString path, bool overwrite,
 
   QString key = def->at("name")->asString() + def->at("type")->asString();
   QString exeversion = def->at("version")->asString();
-  delete def;
+
   QString dest = destdir + "/" + QString("%1").arg(qHash(key,42)) + ".json";
 
   // check if build in version is newer than version on disk
@@ -332,7 +332,7 @@ void DefinitionManager::installJson(QString path, bool overwrite,
       return;
     }
     QString fileversion = def->at("version")->asString();
-    delete def;
+
     if (exeversion.compare(fileversion, Qt::CaseInsensitive) > 0) {
       // force overwriting outdated local copy
       QFile::remove(dest);
@@ -373,7 +373,7 @@ void DefinitionManager::installZip(QString path, bool overwrite,
     return;
   }
   // fetch the pack info
-  JSONData *info;
+  std::unique_ptr<JSONData> info;
   try {
     info = JSON::parse(zip.get("pack_info.json"));
   } catch (JSONParseException e) {
@@ -385,23 +385,20 @@ void DefinitionManager::installZip(QString path, bool overwrite,
   }
   // let's verify all the jsons in the pack
   for (int i = 0; i < info->at("data")->length(); i++) {
-    JSONData *def;
+    std::unique_ptr<JSONData> def;
     try {
       def = JSON::parse(zip.get(info->at("data")->at(i)->asString()));
-      delete def;
     } catch (JSONParseException e) {
       QMessageBox::warning(this, tr("Couldn't install %1").arg(path),
                            tr("%1: %2")
                            .arg(info->at("data")->at(i)->asString(),
                                 e.reason), QMessageBox::Cancel);
-      delete info;
       zip.close();
       return;
     }
   }
 
   QString key = info->at("name")->asString() + info->at("type")->asString();
-  delete info;
   QString dest = destdir + "/" + QString("%1").arg(qHash(key,42)) + ".zip";
   if (!QFile::exists(dest) || overwrite) {
     if (QFile::exists(dest) && install)
@@ -477,7 +474,7 @@ void DefinitionManager::loadDefinition(QString path) {
 
 void DefinitionManager::loadDefinition_json(QString path)
 {
-    JSONData *def;
+    std::unique_ptr<JSONData> def;
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) return;
     try {
@@ -509,7 +506,6 @@ void DefinitionManager::loadDefinition_json(QString path)
     d.type = manager.type;
 
     definitions.insert(path, d);
-    delete def;
 }
 
 void DefinitionManager::loadDefinition_zipped(QString path)
@@ -517,7 +513,7 @@ void DefinitionManager::loadDefinition_zipped(QString path)
     ZipReader zip(path);
     if (!zip.open())
       return;
-    JSONData *info;
+    std::unique_ptr<JSONData> info;
     try {
       info = JSON::parse(zip.get("pack_info.json"));
     } catch (JSONParseException e) {
@@ -534,7 +530,7 @@ void DefinitionManager::loadDefinition_zipped(QString path)
     d.type = Definition::Pack;
     QString key = d.name+"pack";
     for (int i = 0; i < info->at("data")->length(); i++) {
-      JSONData *def;
+      std::unique_ptr<JSONData> def;
       try {
         def = JSON::parse(zip.get(info->at("data")->at(i)->asString()));
       } catch (JSONParseException e) {
@@ -558,11 +554,8 @@ void DefinitionManager::loadDefinition_zipped(QString path)
                           dynamic_cast<JSONArray*>(def->at("data")), packId);
           }
       }
-
-      delete def;
     }
     definitions.insert(path, d);
-    delete info;
     zip.close();
 }
 
