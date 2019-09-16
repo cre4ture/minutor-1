@@ -359,10 +359,7 @@ MapView::TopViewPosition MapView::transformMousePos(QPoint mouse_pos)
 
 double MapView::getZoom() const
 {
-    double should = zoom_internal * zoom_internal;
-    int blocksize = round(16.0 * should);
-    double locked = double(blocksize) / 16.0;
-    return locked;
+  return zoom_internal * zoom_internal;
 }
 
 void MapView::adjustZoom(double rate)
@@ -721,8 +718,8 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk
   int centerchunkx = floor(m_parent.x / chunkSizeOrig);
   int centerchunkz = floor(m_parent.z / chunkSizeOrig);
   // and the center chunk screen coordinates
-  int centerx = m_parent.imageChunks.width() / 2;
-  int centery = m_parent.imageChunks.height() / 2;
+  double centerx = m_parent.imageChunks.width() / 2;
+  double centery = m_parent.imageChunks.height() / 2;
   // which need to be shifted to account for panning inside that chunk
   centerx -= (m_parent.x - centerchunkx * chunkSizeOrig) * m_parent.getZoom();
   centery -= (m_parent.z - centerchunkz * chunkSizeOrig) * m_parent.getZoom();
@@ -735,7 +732,7 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk
   const uchar* srcImageData = chunk ? chunk->image : m_parent.placeholder;
   QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
 
-  QRect targetRect(centerx, centery, chunksize, chunksize);
+  QRectF targetRect(centerx, centery, chunksize, chunksize);
 
   canvas.drawImage(targetRect, srcImage);
   }
