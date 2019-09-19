@@ -9,6 +9,16 @@
 
 static const QString prefixToBeRemoved = "minecraft:";
 
+QString removeMinecraftPrefix(const QString& id)
+{
+  if (id.startsWith(prefixToBeRemoved))
+  {
+    return id.mid(prefixToBeRemoved.size());
+  }
+
+  return id;
+}
+
 using SpecialParamsFunctionT = std::function<QString(const EntityEvaluator &entity)>;
 
 static std::map<QString, SpecialParamsFunctionT> special_param_extractor =
@@ -17,6 +27,9 @@ static std::map<QString, SpecialParamsFunctionT> special_param_extractor =
                  return "horse,speed/jump/health: " + entity.getNamedAttribute("generic.movementSpeed")
                       + "/" + entity.getNamedAttribute("horse.jumpStrength")
                       + "/" + entity.getNamedAttribute("generic.maxHealth");
+             })},
+            {"minecraft:villager", SpecialParamsFunctionT([](const EntityEvaluator &entity) -> QString {
+                 return "[" + removeMinecraftPrefix(entity.getCareerName()) + "]" + entity.getOffers().join("|");
              })}
         };
 
@@ -148,11 +161,7 @@ QString EntityEvaluator::describeReceipeItem(const QTreeWidgetItem &itemNode) co
             value += QString::number(count) + "*";
         }
 
-        QString id = itemIdNode->text(1);
-        if (id.startsWith(prefixToBeRemoved))
-        {
-            id.remove(0, prefixToBeRemoved.size());
-        }
+        QString id = removeMinecraftPrefix(itemIdNode->text(1));
 
         value += id;
 
@@ -190,12 +199,8 @@ void EntityEvaluator::addResult()
     result.pos.setX(m_config.entity->midpoint().x);
     result.pos.setY(m_config.entity->midpoint().y);
     result.pos.setZ(m_config.entity->midpoint().z);
-    QString offers = getOffers().join("|");
-    if (offers == "")
-    {
-        offers = getSpecialParams();
-    }
-    result.sells = offers;
+    QString info = getSpecialParams();
+    result.sells = info;
     result.entity = m_config.entity;
     m_config.resultSink.push_back(result);
 }
@@ -261,6 +266,13 @@ bool EntityEvaluator::isVillager() const
 
 QString EntityEvaluator::getCareerName() const
 {
+  auto node = getNodeFromPath("VillagerData", *m_rootNode);
+  if (node != nullptr)
+  {
+    return getNodeValueFromPath("profession", *node, "");
+  }
+  else
+  {
     QString profession = getNodeValueFromPath("Profession", *m_rootNode, "-1");
     QString career = getNodeValueFromPath("Career", *m_rootNode, "-1");
 
@@ -275,6 +287,7 @@ QString EntityEvaluator::getCareerName() const
     }
 
     return "-";
+  }
 }
 
 QString EntityEvaluator::getNamedAttribute(const QString &name) const
@@ -302,4 +315,6 @@ QString EntityEvaluator::getNamedAttribute(const QString &name) const
             }
         }
     }
+
+    return "";
 }

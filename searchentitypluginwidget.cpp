@@ -58,7 +58,7 @@ bool SearchEntityPluginWidget::evaluateEntity(EntityEvaluator &entity)
     {
         QString searchFor = ui->cb_villager_type->currentText();
         QString career = entity.getCareerName();
-        result = result && (career.compare(searchFor, Qt::CaseInsensitive) == 0);
+        result = result && (career.contains(searchFor, Qt::CaseInsensitive));
     }
 
     if (ui->check_buys->isChecked())
