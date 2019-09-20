@@ -307,7 +307,6 @@ void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
   DrawHelper2 h2(h, *this);
 
   drawChunk2(x, z, chunk, h2);
-  h2.drawPlayers();
 
   update();
 }
