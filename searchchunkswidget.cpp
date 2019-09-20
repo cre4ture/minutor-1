@@ -114,12 +114,14 @@ void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, 
     }
     else
     {
-        oneChunkDoneNotify();
+        oneChunkDoneNotify(ChunkID(x, z));
     }
 }
 
 void SearchChunksWidget::checkLocationAndTrySearchChunk(ChunkID id)
 {
+    m_chunksToSearchDoneList.insert(id);
+
     bool searchThisChunk = true;
     if (ui->check_villages->isChecked())
     {
@@ -128,7 +130,7 @@ void SearchChunksWidget::checkLocationAndTrySearchChunk(ChunkID id)
 
     if (!searchThisChunk)
     {
-        oneChunkDoneNotify();
+        oneChunkDoneNotify(id);
         return;
     }
 
@@ -216,7 +218,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
     const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
     const Range<float> range_z = helperRangeCreation(*ui->check_range_z, *ui->sb_z_start, *ui->sb_z_end);
 
-    m_threadPoolWrapper.enqueueJob([this, chunk, range_x, range_y, range_z]()
+    m_threadPoolWrapper.enqueueJob([this, id, chunk, range_x, range_y, range_z]()
     {
         auto results_tmp = m_input.searchPlugin->searchChunk(*chunk);
         auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
@@ -231,14 +233,14 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
             }
         }
 
-        return std::function<void()>([this, results]()
+        return std::function<void()>([this, id, results]()
         {
             for (const auto& result: *results)
             {
                 ui->resultList->addResult(result);
             }
 
-            oneChunkDoneNotify();
+            oneChunkDoneNotify(id);
         });
     });
 }
@@ -260,9 +262,15 @@ bool SearchChunksWidget::villageFilter(ChunkID id) const
     return false;
 }
 
-void SearchChunksWidget::oneChunkDoneNotify()
+void SearchChunksWidget::oneChunkDoneNotify(ChunkID id)
 {
-    ui->progressBar->setValue(ui->progressBar->value() + 1);
+  ui->progressBar->setValue(ui->progressBar->value() + 1);
+
+  const size_t erased = m_chunksToSearchDoneList.erase(id);
+  if (!m_searchRunning && (erased == 1) && (m_chunksToSearchDoneList.empty()))
+  {
+    ui->resultList->searchDone();
+  }
 }
 
 void SearchChunksWidget::on_resultList_jumpTo(const QVector3D &pos)

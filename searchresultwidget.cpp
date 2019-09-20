@@ -117,8 +117,6 @@ void SearchResultWidget::on_check_display_all_stateChanged(int arg1)
             auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
 
             items.push_back(data.entity);
-
-            emit highlightEntities(items);
         }
     }
 

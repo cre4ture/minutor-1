@@ -75,6 +75,7 @@ private:
     SearchEntityWidgetInputC m_input;
     ThreadPoolQtJob m_threadPoolWrapper;
     std::set<ChunkID> m_chunksToSearchList;
+    std::set<ChunkID> m_chunksToSearchDoneList;
     QList<QSharedPointer<OverlayItem> > m_villages;
     bool m_searchRunning;
     bool m_requestCancel;
@@ -87,7 +88,7 @@ private:
 
     bool villageFilter(ChunkID id) const;
 
-    void oneChunkDoneNotify();
+    void oneChunkDoneNotify(ChunkID id);
 };
 
 #endif // SEARCHENTITYWIDGET_H
