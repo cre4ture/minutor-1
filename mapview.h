@@ -121,16 +121,10 @@ class MapView : public QWidget {
   int getY(int x, int z);
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
 
-  struct TopViewPosition
-  {
-      TopViewPosition(double _x, double _z)
-          : x(_x)
-          , z(_z)
-      {}
+  template<typename _numberT>
+  struct TopViewPosition_t;
 
-      double x;
-      double z;
-  };
+  using TopViewPosition = TopViewPosition_t<double>;
 
   TopViewPosition transformMousePos(QPoint mouse_pos);
 
@@ -201,6 +195,35 @@ private slots:
     void renderingDone(const QSharedPointer<Chunk>& chunk);
 
     void regularUpdate();
+};
+
+template<>
+struct MapView::TopViewPosition_t<int>
+{
+    TopViewPosition_t(int _x, int _z)
+        : x(_x)
+        , z(_z)
+    {}
+
+    int x;
+    int z;
+};
+
+template<>
+struct MapView::TopViewPosition_t<double>
+{
+    TopViewPosition_t(double _x, double _z)
+        : x(_x)
+        , z(_z)
+    {}
+
+    double x;
+    double z;
+
+    TopViewPosition_t<int> floor()
+    {
+      return TopViewPosition_t<int>(::floor(x), ::floor(z));
+    }
 };
 
 #endif  // MAPVIEW_H_

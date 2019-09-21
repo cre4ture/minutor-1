@@ -341,19 +341,14 @@ void MapView::mousePressEvent(QMouseEvent *event) {
 
 MapView::TopViewPosition MapView::transformMousePos(QPoint mouse_pos)
 {
-    double centerblockx = floor(this->x);
-    double centerblockz = floor(this->z);
+    const QPoint centerPixel(imageChunks.width() / 2, imageChunks.height() / 2);
+    const QPoint mouseDelta = mouse_pos - centerPixel;
 
-    int centerx = imageChunks.width() / 2;
-    int centery = imageChunks.height() / 2;
+    const QPointF mouseDeltaInBlocks = QPointF(mouseDelta) / getZoom();
 
-    centerx -= (this->x - centerblockx) * getZoom();
-    centery -= (this->z - centerblockz) * getZoom();
+    const QPointF mousePosInBlocks = QPointF(x,z) + mouseDeltaInBlocks;
 
-    return TopViewPosition(
-                floor(centerblockx - (centerx - mouse_pos.x()) / getZoom()),
-                floor(centerblockz - (centery - mouse_pos.y()) / getZoom())
-                );
+    return TopViewPosition(mousePosInBlocks.x(), mousePosInBlocks.y());
 }
 
 double MapView::getZoom() const
@@ -459,7 +454,7 @@ void MapView::regularUpdate()
 
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
 {
-    TopViewPosition worldPos =  transformMousePos(QPoint(mouse_x, mouse_y));
+    auto worldPos = transformMousePos(QPoint(mouse_x, mouse_y)).floor();
 
     getToolTip(worldPos.x, worldPos.z);
 }
