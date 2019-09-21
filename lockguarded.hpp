@@ -1,0 +1,4 @@
+#ifndef LOCKGUARDED_HPP
+#define LOCKGUARDED_HPP
+
+#endif // LOCKGUARDED_HPP

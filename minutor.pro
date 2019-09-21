@@ -21,6 +21,7 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 # Input
 HEADERS += \
     location.h \
+    lockguarded.hpp \
     searchchunkswidget.h \
     threadpoolqtjob.h \
     zlib/zlib.h \

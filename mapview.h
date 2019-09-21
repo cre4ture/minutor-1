@@ -5,6 +5,8 @@
 #include "./chunkcache.h"
 #include "./playerinfos.h"
 
+#include "lockguarded.hpp"
+
 #include <QtWidgets/QWidget>
 #include <QSharedPointer>
 
@@ -112,6 +114,7 @@ class MapView : public QWidget {
   class AsyncRenderLock;
   void drawChunk(int x, int z, DrawHelper2 &h, ChunkCache::Locker &locked_cache);
   void drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawHelper2 &h);
+  bool redrawNeeded(const RenderedChunk& renderedChunk) const;
   void drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &chunk, DrawHelper2 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
@@ -148,6 +151,7 @@ class MapView : public QWidget {
   int flags;
   QTimer updateTimer;
   QSharedPointer<ChunkCache> cache;
+  LockGuarded<QHash<ChunkID, QSharedPointer<RenderedChunk> > > renderCache;
   QImage imageChunks;
   QImage imageOverlays;
   QImage image_players;

@@ -400,6 +400,8 @@ void MapView::AsyncRenderLock::renderChunkAsync(const QSharedPointer<Chunk> &chu
 void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
 {
     ChunkID id(chunk->chunkX, chunk->chunkZ);
+    renderCache.lock()()[id] = chunk->rendered;
+
     {
         QMutexLocker locker(&m_renderStatesMutex);
         renderStates[id] = NONE;
@@ -440,7 +442,7 @@ void MapView::regularUpdate()
                 chunksToRedraw.erase(chunksToRedraw.begin());
 
                 QSharedPointer<Chunk> chunk;
-                locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED);
+                locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
                 renderlock.renderChunkAsync(chunk);
                 i++;
                 if (i > maxIterLoadAndRender)
@@ -626,12 +628,31 @@ void MapView::redraw() {
 
   ChunkCache::Locker locker(*cache);
 
+  auto renderdCacheLock = renderCache.lock();
+
   DrawHelper h(*this);
   DrawHelper2 h2(h, *this);
 
   for (int cz = h.startz; cz < h.startz + h.blockstall; cz++)
     for (int cx = h.startx; cx < h.startx + h.blockswide; cx++)
-      drawChunk(cx, cz, h2, locker);
+    {
+      ChunkID id(cx, cz);
+
+      auto it = renderdCacheLock().find(id);
+      if (it != renderdCacheLock().end())
+      {
+        drawChunk3(cx, cz, *it, h2);
+
+        if (redrawNeeded(*(*it)))
+        {
+          chunksToRedraw.insert(id);
+        }
+      }
+      else
+      {
+        drawChunk(cx, cz, h2, locker);
+      }
+    }
 
   // clear the overlay layer
   imageOverlays.fill(0);
@@ -690,14 +711,11 @@ void MapView::drawChunk(int x, int z, DrawHelper2& h, ChunkCache::Locker& locked
 
 void MapView::drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawHelper2 &h)
 {
-
-
   if (chunk)
   {
     bool needRender = !chunk->rendered;
 
-    needRender = needRender || (chunk->rendered->renderedAt != depth ||
-                                chunk->rendered->renderedFlags != flags);
+    needRender = needRender || redrawNeeded(*chunk->rendered);
 
     if (needRender)
     {
@@ -707,6 +725,12 @@ void MapView::drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawH
   }
 
   drawChunk3(x,z,chunk ? chunk->rendered : nullptr,h);
+}
+
+bool MapView::redrawNeeded(const RenderedChunk &renderedChunk) const
+{
+  return (renderedChunk.renderedAt != depth ||
+          renderedChunk.renderedFlags != flags);
 }
 
 void MapView::drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk, DrawHelper2 &h)
