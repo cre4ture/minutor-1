@@ -111,8 +111,8 @@ class MapView : public QWidget {
  private:
   class AsyncRenderLock;
   void drawChunk(int x, int z, DrawHelper2 &h, ChunkCache::Locker &locked_cache);
-  void drawChunk2(int x, int z, const QSharedPointer<Chunk>& chunk, DrawHelper2 &h);
-  void drawChunk3(int x, int z, const QSharedPointer<Chunk>& chunk, DrawHelper2 &h);
+  void drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawHelper2 &h);
+  void drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &chunk, DrawHelper2 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   int getY(int x, int z);

@@ -41,6 +41,8 @@ struct Block
     quint32 id;
 };
 
+class RenderedChunk;
+
 class Chunk : public QObject {
   Q_OBJECT
 
@@ -64,14 +66,12 @@ class Chunk : public QObject {
   quint32 biomes[16*16];
   int highest;
   ChunkSection *sections[16];
-  int renderedAt;
-  int renderedFlags;
   bool loaded;
-  uchar image[16 * 16 * 4];  // cached render
-  uchar depth[16 * 16];
   EntityMap entities;
   int chunkX;
   int chunkZ;
+
+  QSharedPointer<RenderedChunk> rendered;
 
   QList<QSharedPointer<GeneratedStructure> > structurelist;
 
@@ -80,6 +80,27 @@ class Chunk : public QObject {
   friend class ChunkCache;
   friend class WorldSave;
   friend class DrawHelper2;
+};
+
+class RenderedChunk
+{
+public:
+  const QWeakPointer<Chunk> chunk;
+  const int chunkX;
+  const int chunkZ;
+  int renderedAt;
+  int renderedFlags;
+  uchar depth[16 * 16];
+  uchar image[16 * 16 * 4];  // cached render
+
+  RenderedChunk(const QSharedPointer<Chunk>& chunk)
+    : chunk(chunk)
+    , chunkX(chunk->getChunkX())
+    , chunkZ(chunk->getChunkZ())
+  {
+    renderedAt = -1;  // impossible.
+    renderedFlags = 0;  // no flags
+  }
 };
 
 #endif  // CHUNK_H_

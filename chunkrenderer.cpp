@@ -20,25 +20,30 @@ ChunkRenderer::~ChunkRenderer()
 
 void ChunkRenderer::run()
 {
-    renderChunk(m_parent, m_chunk.get());
+    renderChunk(m_parent, m_chunk);
     emit chunkRenderingCompleted(m_chunk);
   }
 
-void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
+void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& chunk)
 {
-    int depth;
-    int flags;
+  int depth;
+  int flags;
 
-    {
-        QReadLocker locker(&parent.m_readWriteLock);
+  {
+      QReadLocker locker(&parent.m_readWriteLock);
 
-        depth = parent.depth;
-        flags = parent.flags;
-    }
+      depth = parent.depth;
+      flags = parent.flags;
+  }
+
+  if (!chunk->rendered)
+  {
+    chunk->rendered = QSharedPointer<RenderedChunk>::create(chunk);
+  }
 
   int offset = 0;
-  uchar *bits = chunk->image;
-  uchar *depthbits = chunk->depth;
+  uchar *bits = chunk->rendered->image;
+  uchar *depthbits = chunk->rendered->depth;
   for (int z = 0; z < 16; z++) {  // n->s
     int lasty = -1;
     for (int x = 0; x < 16; x++, offset++) {  // e->w
@@ -222,8 +227,8 @@ void ChunkRenderer::renderChunk(MapView &parent, Chunk *chunk)
       *bits++ = 0xff;
     }
   }
-  chunk->renderedAt = depth;
-  chunk->renderedFlags = flags;
+  chunk->rendered->renderedAt = depth;
+  chunk->rendered->renderedFlags = flags;
 }
 
 

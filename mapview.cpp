@@ -88,7 +88,7 @@ public:
 
     void drawChunkEntities(const Chunk &chunk);
 
-    void drawChunk_Map(int x, int z, const QSharedPointer<Chunk> &chunk);
+    void drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk);
 
     void drawPlayers()
     {
@@ -392,7 +392,7 @@ void MapView::AsyncRenderLock::renderChunkAsync(const QSharedPointer<Chunk> &chu
     }
 
     m_parent.m_asyncRendererPool->enqueueJob([&parent=m_parent, chunk](){
-        ChunkRenderer::renderChunk(parent, chunk.get());
+        ChunkRenderer::renderChunk(parent, chunk);
         parent.emit_chunkRenderingCompleted(chunk);
     });
 }
@@ -602,10 +602,13 @@ void DrawHelper2::drawChunkEntities(const Chunk& chunk)
             int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
             int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
             int index = entityX + (entityZ << 4);
-            int highY = chunk.depth[index];
-            if ( (entityY+10 >= highY) ||
-                 (entityY+10 >= m_parent.depth) )
-              (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas_entities);
+            if (chunk.rendered)
+            {
+              int highY = chunk.rendered->depth[index];
+              if ( (entityY+10 >= highY) ||
+                   (entityY+10 >= m_parent.depth) )
+                (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas_entities);
+            }
           }
         }
     }
@@ -687,27 +690,40 @@ void MapView::drawChunk(int x, int z, DrawHelper2& h, ChunkCache::Locker& locked
 
 void MapView::drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawHelper2 &h)
 {
-  if (chunk && (chunk->renderedAt != depth ||
-                  chunk->renderedFlags != flags))
+
+
+  if (chunk)
+  {
+    bool needRender = !chunk->rendered;
+
+    needRender = needRender || (chunk->rendered->renderedAt != depth ||
+                                chunk->rendered->renderedFlags != flags);
+
+    if (needRender)
     {
-        chunksToRedraw.insert(ChunkID(x, z));
-    return;
+      chunksToRedraw.insert(ChunkID(x, z));
+      return;
+    }
   }
 
-    drawChunk3(x,z,chunk,h);
+  drawChunk3(x,z,chunk ? chunk->rendered : nullptr,h);
 }
 
-void MapView::drawChunk3(int x, int z, const QSharedPointer<Chunk> &chunk, DrawHelper2 &h)
+void MapView::drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk, DrawHelper2 &h)
 {
-    h.drawChunk_Map(x, z, chunk);
+    h.drawChunk_Map(x, z, renderedChunk);
 
-    if (chunk)
+    if (renderedChunk)
     {
+      auto chunk = renderedChunk->chunk.lock();
+      if (chunk)
+      {
         h.drawChunkEntities(*chunk);
+      }
     }
 }
 
-void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk) {
+void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk>& renderedChunk) {
 
   const int chunkSizeOrig = 16;
 
@@ -728,7 +744,7 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<Chunk>& chunk
   centerx += (x - centerchunkx) * chunksize;
   centery += (z - centerchunkz) * chunksize;
 
-  const uchar* srcImageData = chunk ? chunk->image : m_parent.placeholder;
+  const uchar* srcImageData = renderedChunk ? renderedChunk->image : m_parent.placeholder;
   QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
 
   QRectF targetRect(centerx, centery, chunksize, chunksize);
@@ -876,7 +892,7 @@ int MapView::getY(int x, int z) {
   ChunkCache::Locker locked_cache(*cache);
   QSharedPointer<Chunk> chunk;
   locked_cache.fetch(chunk, ChunkID(cx, cz));
-  return chunk ? chunk->depth[(x & 0xf) + (z & 0xf) * 16] : -1;
+  return chunk ? (chunk->rendered ? chunk->rendered->depth[(x & 0xf) + (z & 0xf) * 16] : -1) : -1;
 }
 
 QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
