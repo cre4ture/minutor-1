@@ -149,6 +149,7 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
   if (!chunk)
   {
     chunkState.set(ChunkState::NonExisting);
+    emit chunkLoaded(nullptr, id.getX(), id.getZ()); // signal that chunk information about non existend chunk is available now
     return;
   }
 

@@ -312,7 +312,21 @@ int MapView::getDepth() const {
 
 void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-  chunksToRedraw.insert(std::pair<ChunkID, QSharedPointer<Chunk>>(ChunkID(x, z), chunk));
+  ChunkID id(x, z);
+  auto lock = renderCache.lock();
+  auto& data = lock()[id];
+
+  data.state.unset(RenderStateT::LoadingRequested);
+
+  if (!chunk)
+  {
+    data.state.set(RenderStateT::EmptyChunk);
+    data.state.unset(RenderStateT::RenderingRequested);
+    return;
+  }
+
+  chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(ChunkID(x, z), chunk));
+  data.state.set(RenderStateT::RenderingRequested);
 }
 
 QString MapView::getWorldPath() {
@@ -384,95 +398,118 @@ void MapView::emit_chunkRenderingCompleted(const QSharedPointer<Chunk> &chunk)
     emit chunkRenderingCompleted(chunk);
 }
 
-void MapView::AsyncRenderLock::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
+void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-    if (!chunk)
-    return;
-
-    ChunkID id(chunk->chunkX, chunk->chunkZ);
-
-    {
-        auto state = m_parent.renderStates[id];
-
-        if (state == RENDERING)
-        {
-            return; // already busy with this chunk
-        }
-
-        m_parent.renderStates[id] = RENDERING;
-    }
-
-    m_parent.m_asyncRendererPool->enqueueJob([&parent=m_parent, chunk](){
-        ChunkRenderer::renderChunk(parent, chunk);
-        parent.emit_chunkRenderingCompleted(chunk);
+    m_asyncRendererPool->enqueueJob([this, chunk](){
+        ChunkRenderer::renderChunk(*this, chunk);
+        QMetaObject::invokeMethod(this, [this, chunk](){
+          emit chunkRenderingCompleted(chunk);
+        });
     });
 }
 
 void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
 {
     ChunkID id(chunk->chunkX, chunk->chunkZ);
-    renderCache.lock()()[id] = chunk->rendered;
+    auto lock = renderCache.lock();
 
-    {
-        QMutexLocker locker(&m_renderStatesMutex);
-        renderStates[id] = NONE;
-    }
+    auto& data = lock()[id];
+    data.renderedChunk = chunk->rendered;
+    data.state.unset(RenderStateT::RenderingRequested);
 }
 
 void MapView::regularUpdate()
 {
-    const int maxIterLoadAndRender = 100000;
+  if (!this->isEnabled()) {
+    return;
+  }
+
+  regularUpdata__checkRedraw();
+
+  const int maxIterLoadAndRender = 100000;
+
+  {
+    ChunkCache::Locker locker(*cache);
 
     {
-        ChunkCache::Locker locker(*cache);
+      size_t i = 0;
+      while (chunksToLoad.size() > 0)
+      {
+        const ChunkID id = chunksToLoad.dequeue();
 
+        QSharedPointer<Chunk> chunk;
+        locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
+        i++;
+        if (i > maxIterLoadAndRender)
         {
-            size_t i = 0;
-            while (chunksToLoad.size() > 0)
-            {
-                const ChunkID id = *chunksToLoad.begin();
-                chunksToLoad.erase(chunksToLoad.begin());
-
-                QSharedPointer<Chunk> chunk;
-                locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
-                i++;
-                if (i > maxIterLoadAndRender)
-                {
-                    break;
-                }
-            }
+            break;
         }
-
-        {
-            AsyncRenderLock renderlock(*this);
-
-            size_t i = 0;
-            while (chunksToRedraw.size() > 0)
-            {
-                const auto id = *chunksToRedraw.begin();
-                chunksToRedraw.erase(chunksToRedraw.begin());
-
-                QSharedPointer<Chunk> chunk = id.second;
-                if (!chunk)
-                {
-                  locker.fetch(chunk, id.first, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
-                }
-
-                if (chunk)
-                {
-                  renderlock.renderChunkAsync(chunk);
-                  i++;
-                  if (i > maxIterLoadAndRender)
-                  {
-                      break;
-                  }
-                }
-  }
-        }
+      }
     }
 
+    {
+      size_t i = 0;
+      while (chunksToRedraw.size() > 0)
+      {
+        const auto id = chunksToRedraw.dequeue();
+
+        QSharedPointer<Chunk> chunk = id.second;
+        if (!chunk)
+        {
+          locker.fetch(chunk, id.first, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
+        }
+
+        if (chunk)
+        {
+          renderChunkAsync(chunk);
+          i++;
+          if (i > maxIterLoadAndRender)
+          {
+              break;
+          }
+        }
+      }
+    }
+  }
+
   redraw();
-    update();
+  update();
+}
+
+void MapView::regularUpdata__checkRedraw()
+{
+  const int maxIterLoadAndRender = 10000;
+  int counter = 0;
+
+  ChunkCache::Locker locker(*cache);
+  auto renderdCacheLock = renderCache.lock();
+
+  DrawHelper h(*this);
+
+  for (int cz = h.startz; cz < h.startz + h.blockstall; cz++)
+    for (int cx = h.startx; cx < h.startx + h.blockswide; cx++)
+    {
+      ChunkID id(cx, cz);
+
+      bool need = false;
+      RenderData& data = renderdCacheLock()[id];
+      if ((!data.state[RenderStateT::EmptyChunk]) && (!data.state[RenderStateT::LoadingRequested]) && (!data.state[RenderStateT::RenderingRequested]))
+      {
+          need = (!data.renderedChunk) || redrawNeeded(*data.renderedChunk);
+      }
+
+      if (need)
+      {
+        chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(id, nullptr));
+        data.state.set(RenderStateT::RenderingRequested);
+        counter++;
+
+        if (counter > maxIterLoadAndRender)
+        {
+          return;
+        }
+      }
+    }
 }
 
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
@@ -503,23 +540,14 @@ void MapView::mouseReleaseEvent(QMouseEvent * event) {
 }
 
 void MapView::mouseDoubleClickEvent(QMouseEvent *event) {
-  int centerblockx = floor(this->x);
-  int centerblockz = floor(this->z);
 
-  int centerx = imageChunks.width() / 2;
-  int centery = imageChunks.height() / 2;
-
-  centerx -= (this->x - centerblockx) * getZoom();
-  centery -= (this->z - centerblockz) * getZoom();
-
-  int mx = floor(centerblockx - (centerx - event->x()) / getZoom());
-  int mz = floor(centerblockz - (centery - event->y()) / getZoom());
+  const auto mouse_block = getCamera().transformPixelToBlockCoordinates(event->pos()).floor();
 
   // get the y coordinate
-  int my = getY(mx, mz);
+  int my = getY(mouse_block.x, mouse_block.z);
 
   QList<QVariant> properties;
-  for (auto &item : getItems(mx, my, mz)) {
+  for (auto &item : getItems(mouse_block.x, my, mouse_block.z)) {
     properties.append(item->properties());
   }
 
@@ -597,12 +625,15 @@ void MapView::resizeEvent(QResizeEvent *event) {
   //imageOverlays = QImage(event->size(), QImage::Format_RGBA8888);
   imageOverlays = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
   image_players = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
+  if (!isEnabled())
+  {
+    redraw(); // to initialize buffers
+  }
 }
 
 void MapView::paintEvent(QPaintEvent * /* event */) {
   QPainter p(this);
   p.drawImage(QPoint(0, 0), imageChunks);
-  //p.drawImage(QPoint(0, 0), imageOverlays);
   p.drawImage(QPoint(0, 0), imageOverlays);
   p.drawImage(QPoint(0, 0), image_players);
   p.end();
@@ -635,14 +666,16 @@ void DrawHelper2::drawChunkEntities(const Chunk& chunk)
 }
 
 void MapView::redraw() {
+
+  image_players.fill(0);
+  imageOverlays.fill(0);
+
   if (!this->isEnabled()) {
     // blank
     imageChunks.fill(0xeeeeee);
     update();
     return;
   }
-
-  image_players.fill(0);
 
   ChunkCache::Locker locker(*cache);
 
@@ -658,35 +691,37 @@ void MapView::redraw() {
     {
       ChunkID id(cx, cz);
 
+      RenderData renderedData;
       auto it = renderdCacheLock().find(id);
       if (it != renderdCacheLock().end())
       {
-        QSharedPointer<RenderedChunk> renderedChunk = *it;
-        drawChunk3(cx, cz, renderedChunk, h2);
+        renderedData = *it;
+      }
 
-        if (redrawNeeded(*renderedChunk))
+      drawChunk3(cx, cz, renderedData.renderedChunk, h2);
+
+      if (true)
+      {
+        bool isCached = renderedData.state[RenderStateT::EmptyChunk];
+        if (!isCached && renderedData.renderedChunk)
         {
-          chunksToRedraw.insert(std::pair<ChunkID, QSharedPointer<Chunk>>(id, nullptr));
+          auto chunk = renderedData.renderedChunk->chunk.lock();
+          isCached = (chunk != nullptr);
+        }
+
+        QBrush b(Qt::Dense6Pattern);
+        b.setColor(renderedData.state[RenderStateT::RenderingRequested] ? Qt::yellow : (isCached ? Qt::green : Qt::red));
+        if (b.color() != Qt::green)
+        {
+          TopViewPosition b1(cx*DrawHelper2::chunkSizeOrig, cz*DrawHelper2::chunkSizeOrig);
+          TopViewPosition b2((cx+1)*DrawHelper2::chunkSizeOrig, (cz+1)*DrawHelper2::chunkSizeOrig);
+          QRectF rect(camera.getPixelFromBlockCoordinates(b1), camera.getPixelFromBlockCoordinates(b2));
+          h2.getCanvas().setBrush(b);
+          h2.getCanvas().setPen(QPen(Qt::PenStyle::NoPen));
+          h2.getCanvas().drawRect(rect);
         }
       }
-      else
-      {
-        drawChunk(cx, cz, h2, locker);
-      }
-
-      QSharedPointer<Chunk> chunkptr;
-      bool isCached = locker.isCached(id, chunkptr);
-      TopViewPosition b1(cx*DrawHelper2::chunkSizeOrig, cz*DrawHelper2::chunkSizeOrig);
-      TopViewPosition b2((cx+1)*DrawHelper2::chunkSizeOrig, (cz+1)*DrawHelper2::chunkSizeOrig);
-      QRectF rect(camera.getPixelFromBlockCoordinates(b1), camera.getPixelFromBlockCoordinates(b2));
-      QBrush b(Qt::Dense6Pattern);
-      b.setColor(isCached ? Qt::green : Qt::red);
-      h2.getCanvas().setBrush(b);
-      h2.getCanvas().drawRect(rect);
     }
-
-  // clear the overlay layer
-  imageOverlays.fill(0);
 
   // add on the entity layer
   // done as part of drawChunk
@@ -700,6 +735,8 @@ void MapView::redraw() {
       }
     }
   }
+
+  h2.getCanvas().setPen(QPen(Qt::PenStyle::SolidLine));
 
   const int maxViewWidth = 64 * 16; // (radius 32 chunks)
 
@@ -722,40 +759,6 @@ void MapView::redraw() {
   emit(coordinatesChanged(x, depth, z));
 
   update();
-}
-
-void MapView::drawChunk(int x, int z, DrawHelper2& h, ChunkCache::Locker& locked_cache)
-{
-  if (!this->isEnabled())
-    return;
-
-  // fetch the chunk
-    QSharedPointer<Chunk> chunk;
-    const bool valid = locked_cache.fetch(chunk, ChunkID(x, z), ChunkCache::FetchBehaviour::USE_CACHED);
-    if (!valid)
-    {
-        chunksToLoad.insert(ChunkID(x, z));
-    }
-
-    drawChunk2(x,z,chunk,h);
-}
-
-void MapView::drawChunk2(int x, int z, const QSharedPointer<Chunk> &chunk, DrawHelper2 &h)
-{
-  if (chunk)
-  {
-    bool needRender = !chunk->rendered;
-
-    needRender = needRender || redrawNeeded(*chunk->rendered);
-
-    if (needRender)
-    {
-      chunksToRedraw.insert(std::pair<ChunkID, QSharedPointer<Chunk>>(ChunkID(x, z), chunk));
-      return;
-    }
-  }
-
-  drawChunk3(x,z,chunk ? chunk->rendered : nullptr,h);
 }
 
 bool MapView::redrawNeeded(const RenderedChunk &renderedChunk) const

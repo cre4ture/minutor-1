@@ -5,48 +5,11 @@
 #include "./chunk.h"
 #include "./chunkcachetypes.h"
 #include "safecache.hpp"
+#include "enumbitset.hpp"
 
 #include <QObject>
 #include <QCache>
 #include <QSharedPointer>
-
-template<typename EnumT, typename UnderlyingIntT>
-class Bitset
-{
-public:
-    Bitset()
-        : m_raw(0)
-    {}
-
-    bool operator[](EnumT position) const
-    {
-        return test(position);
-    }
-
-    Bitset& operator<<(EnumT position)
-    {
-        set(position);
-        return *this;
-    }
-
-    void unset(EnumT position)
-    {
-        m_raw = m_raw & ~(1 << (int)position);
-    }
-
-    void set(EnumT position)
-    {
-        m_raw = m_raw | (1 << (int)position);
-    }
-
-    bool test(EnumT position) const
-    {
-        return (m_raw & (1 << (int)position)) != 0;
-    }
-
-private:
-    UnderlyingIntT m_raw;
-};
 
 class ChunkLoaderThreadPool;
 

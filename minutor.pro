@@ -20,6 +20,7 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
+  enumbitset.hpp \
     location.h \
     lockguarded.hpp \
   mapcamera.hpp \
