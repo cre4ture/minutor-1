@@ -292,7 +292,7 @@ void MapView::setDimension(QString path, int scale) {
     this->x = 0;  // and we jump to the center spawn automatically
     this->z = 0;
   }
-  cache->clear();
+  clearCache();
   cache->setPath(path);
 }
 
@@ -357,6 +357,9 @@ void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayIt
 }
 
 void MapView::clearCache() {
+  chunksToLoad.clear();
+  chunksToRedraw.clear();
+  renderCache.lock()().clear();
   cache->clear();
 }
 
