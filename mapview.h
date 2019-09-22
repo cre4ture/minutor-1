@@ -118,6 +118,7 @@ class MapView : public QWidget {
   void drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &chunk, DrawHelper2 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
+  void getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk> &chunk);
   int getY(int x, int z);
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
 
@@ -140,6 +141,10 @@ class MapView : public QWidget {
   int flags;
   QTimer updateTimer;
   QSharedPointer<ChunkCache> cache;
+
+  bool havePendingToolTip;
+  ChunkID pendingToolTipChunk;
+  QPoint pendingToolTipPos;
 
   enum class RenderStateT
   {

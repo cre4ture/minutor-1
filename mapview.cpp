@@ -91,7 +91,7 @@ public:
     {
     }
 
-    void drawChunkEntities(const Chunk &chunk);
+    void drawChunkEntities(const RenderedChunk &chunk);
 
     void drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk);
 
@@ -194,14 +194,16 @@ MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidg
   , dragging(false)
   , m_asyncRendererPool(threadpool)
 {
-    connect(this, SIGNAL(chunkRenderingCompleted(QSharedPointer<Chunk>)),
-            this, SLOT(renderingDone(const QSharedPointer<Chunk>&)));
+  havePendingToolTip = false;
 
-    connect(&updateTimer, SIGNAL(timeout()),
-            this, SLOT(regularUpdate()));
+  connect(this, SIGNAL(chunkRenderingCompleted(QSharedPointer<Chunk>)),
+          this, SLOT(renderingDone(const QSharedPointer<Chunk>&)));
 
-    updateTimer.setInterval(30);
-    updateTimer.start();
+  connect(&updateTimer, SIGNAL(timeout()),
+          this, SLOT(regularUpdate()));
+
+  updateTimer.setInterval(30);
+  updateTimer.start();
 
   depth = 255;
   scale = 1;
@@ -327,6 +329,12 @@ void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
 
   chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(ChunkID(x, z), chunk));
   data.state.set(RenderStateT::RenderingRequested);
+
+  if (havePendingToolTip && (id == pendingToolTipChunk))
+  {
+    havePendingToolTip = false;
+    getToolTip_withChunkAvailable(pendingToolTipPos.x(), pendingToolTipPos.y(), chunk);
+  }
 }
 
 QString MapView::getWorldPath() {
@@ -521,6 +529,9 @@ void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
 
 
 void MapView::mouseMoveEvent(QMouseEvent *event) {
+
+  getToolTipMousePos(event->x(), event->y());
+
   if (!dragging) {
     return;
   }
@@ -639,30 +650,32 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
-void DrawHelper2::drawChunkEntities(const Chunk& chunk)
+void DrawHelper2::drawChunkEntities(const RenderedChunk& rendered)
 {
-    for (const auto &type : m_parent.overlayItemTypes) {
+  if (!rendered.entities)
+  {
+    return;
+  }
 
-        auto range = chunk.entities.equal_range(type);
-        for (auto it = range.first; it != range.second; ++it) {
-          // don't show entities above our depth
-          int entityY = (*it)->midpoint().y;
-          // everything below the current block,
-          // but also inside the current block
-          if (entityY < m_parent.depth + 1) {
-            int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
-            int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
-            int index = entityX + (entityZ << 4);
-            if (chunk.rendered)
-            {
-              int highY = chunk.rendered->depth[index];
-              if ( (entityY+10 >= highY) ||
-                   (entityY+10 >= m_parent.depth) )
-                (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas_entities);
-            }
-          }
-        }
+  for (const auto &type : m_parent.overlayItemTypes)
+  {
+    auto range = rendered.entities->equal_range(type);
+    for (auto it = range.first; it != range.second; ++it) {
+      // don't show entities above our depth
+      int entityY = (*it)->midpoint().y;
+      // everything below the current block,
+      // but also inside the current block
+      if (entityY < m_parent.depth + 1) {
+        int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
+        int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
+        int index = entityX + (entityZ << 4);
+        int highY = rendered.depth[index];
+        if ( (entityY+10 >= highY) ||
+             (entityY+10 >= m_parent.depth) )
+          (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas_entities);
+      }
     }
+  }
 }
 
 void MapView::redraw() {
@@ -773,11 +786,7 @@ void MapView::drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &rend
 
     if (renderedChunk)
     {
-      auto chunk = renderedChunk->chunk.lock();
-      if (chunk)
-      {
-        h.drawChunkEntities(*chunk);
-      }
+      h.drawChunkEntities(*renderedChunk);
     }
 }
 
@@ -803,17 +812,33 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk
   QRectF targetRect(centerx, centery, chunksize, chunksize);
 
   canvas.drawImage(targetRect, srcImage);
-  }
+}
 
 void MapView::getToolTip(int x, int z) {
+
   int cx = floor(x / 16.0);
   int cz = floor(z / 16.0);
 
-  ChunkCache::Locker locked_cache(*cache);
+  pendingToolTipPos = QPoint(x, z);
+  pendingToolTipChunk = ChunkID(cx, cz);
 
   QSharedPointer<Chunk> chunk;
-  const bool chunkValid = locked_cache.fetch(chunk, ChunkID(cx, cz));
+  bool chunkValid = false;
+  {
+    ChunkCache::Locker locked_cache(*cache);
+    chunkValid = locked_cache.fetch(chunk, pendingToolTipChunk);
+  }
 
+  if (chunkValid)
+  {
+    getToolTip_withChunkAvailable(x, z, chunk);
+  }
+
+  havePendingToolTip = !chunkValid;
+}
+
+void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk>& chunk)
+{
   int offset = (x & 0xf) + (z & 0xf) * 16;
   int y = 0;
 
@@ -970,7 +995,7 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
       }
 
       // entities
-      auto itemRange = chunk->entities.equal_range(type);
+      auto itemRange = chunk->entities->equal_range(type);
       for (auto itItem = itemRange.first; itItem != itemRange.second;
           ++itItem) {
         double ymin = y - 4;

@@ -32,7 +32,9 @@ quint16 getBits(const unsigned char *data, int pos, int n) {
 
 
 
-Chunk::Chunk() {
+Chunk::Chunk()
+  : entities(QSharedPointer<EntityMap>::create())
+{
   loaded = false;
 }
 
@@ -126,7 +128,7 @@ void Chunk::load(const NBT &nbt) {
   for (int i = 0; i < numEntities; ++i) {
     auto e = Entity::TryParse(entitylist->at(i));
     if (e)
-      entities.insertMulti(e->type(), e);
+      entities->insertMulti(e->type(), e);
   }
   }
 

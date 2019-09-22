@@ -52,7 +52,8 @@ class Chunk : public QObject {
   ~Chunk();
   void load(const NBT &nbt);
 
-  const EntityMap& getEntityMap() const { return entities; }
+  const EntityMap& getEntityMap() const { return *entities; }
+  const QSharedPointer<EntityMap> getEntityMapSp() const { return entities; }
 
   Block getBlockData(int x, int y, int z) const;
 
@@ -67,7 +68,7 @@ class Chunk : public QObject {
   int highest;
   ChunkSection *sections[16];
   bool loaded;
-  EntityMap entities;
+  QSharedPointer<EntityMap> entities;
   int chunkX;
   int chunkZ;
 
@@ -86,6 +87,7 @@ class RenderedChunk
 {
 public:
   const QWeakPointer<Chunk> chunk;
+  QSharedPointer<Chunk::EntityMap> entities;
   const int chunkX;
   const int chunkZ;
   int renderedAt;
@@ -95,6 +97,7 @@ public:
 
   RenderedChunk(const QSharedPointer<Chunk>& chunk)
     : chunk(chunk)
+    , entities(chunk->getEntityMapSp())
     , chunkX(chunk->getChunkX())
     , chunkZ(chunk->getChunkZ())
   {
