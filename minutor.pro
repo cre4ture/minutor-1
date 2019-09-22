@@ -22,6 +22,8 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 HEADERS += \
     location.h \
     lockguarded.hpp \
+  mapcamera.hpp \
+  safecache.hpp \
     searchchunkswidget.h \
     threadpoolqtjob.h \
     zlib/zlib.h \

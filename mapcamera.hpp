@@ -1,0 +1,4 @@
+#ifndef MAPCAMERA_HPP
+#define MAPCAMERA_HPP
+
+#endif // MAPCAMERA_HPP

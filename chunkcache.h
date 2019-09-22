@@ -4,6 +4,7 @@
 
 #include "./chunk.h"
 #include "./chunkcachetypes.h"
+#include "safecache.hpp"
 
 #include <QObject>
 #include <QCache>
@@ -68,7 +69,6 @@ class ChunkCache : public QObject {
   void setPath(QString path);
   QString getPath() const;
   QSharedPointer<Chunk> fetch(int cx, int cz);         // fetch Chunk and load when not found
-  QSharedPointer<Chunk> fetchCached(int cx, int cz);   // fetch Chunk only if cached
   int getCost() const;
   int getMaxCost() const;
 
@@ -86,11 +86,6 @@ class ChunkCache : public QObject {
           : m_parent(parent)
           , m_locker(&parent.mutex)
       {}
-
-      bool isLoaded(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out)
-      {
-          return m_parent.isLoaded_unprotected(id, chunkPtr_out);
-      }
 
       bool isCached(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out)
       {
@@ -120,28 +115,23 @@ class ChunkCache : public QObject {
 
  private:
   QString path;                                   // path to folder with region files
-  QCache<ChunkID, QSharedPointer<Chunk>> cache;   // real Cache
+
+  enum class ChunkState {
+      Loading,
+      NonExisting,
+  };
+
+  using ChunkInfoT = Bitset<ChunkState, uint8_t>;
+
+  SafeCache<ChunkID, Chunk> cache;           // real Cache
+  QHash<ChunkID, ChunkInfoT> chunkStates;
   QMutex mutex;                                   // Mutex for accessing the Cache
   int maxcache;                                   // number of Chunks that fit into Cache
   QThreadPool loaderThreadPool;                   // extra thread pool for loading
 
-  enum class ChunkState {
-      Loading,
-      Cached
-  };
-
-  struct ChunkInfoT
-  {
-    Bitset<ChunkState, uint8_t> state;
-    QSharedPointer<Chunk> chunk;
-  };
-
-  QMap<ChunkID, ChunkInfoT> cachemap;
   QSharedPointer<ChunkLoaderThreadPool> m_loaderPool;
 
   void loadChunkAsync_unprotected(ChunkID id);
-
-  bool isLoaded_unprotected(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out);
 
   bool isCached_unprotected(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out);
 

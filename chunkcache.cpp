@@ -52,6 +52,8 @@ ChunkCache::ChunkCache()
   //cache.setMaxCost(chunks);
   maxcache = 2 * chunks;  // most chunks are less than half filled with sections
 
+  cache.setMaxCost(maxcache);
+
   // determain optimal thread pool size for "loading"
   // as this contains disk access, use less than number of cores
   int tmax = loaderThreadPool.maxThreadCount();
@@ -78,7 +80,8 @@ QSharedPointer<ChunkCache> ChunkCache::Instance() {
 void ChunkCache::clear() {
   QThreadPool::globalInstance()->waitForDone();
   mutex.lock();
-  cachemap.clear();
+  cache.clear();
+  chunkStates.clear();
   mutex.unlock();
 }
 
@@ -101,8 +104,7 @@ int ChunkCache::getMaxCost() const {
 
 bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav)
 {
-  const auto& chunkInfo = cachemap[id];
-  const bool cached = chunkInfo.state[ChunkState::Cached];
+  const bool cached = isCached_unprotected(id, chunk_out);
 
   if ( (behav == FetchBehaviour::FORCE_UPDATE) ||
        (
@@ -115,34 +117,22 @@ bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id,
       return false;
   }
 
-  chunk_out = chunkInfo.chunk;
   return cached;
-}
-
-bool ChunkCache::isLoaded_unprotected(ChunkID id,  QSharedPointer<Chunk> &chunkPtr_out)
-{
-    chunkPtr_out = cachemap[id].chunk;
-    return (chunkPtr_out != nullptr);
 }
 
 bool ChunkCache::isCached_unprotected(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out)
 {
-    ChunkInfoT& info = cachemap[id];
-    chunkPtr_out = info.chunk;
-    return info.state.test(ChunkState::Cached);
-}
-
-QSharedPointer<Chunk> ChunkCache::fetchCached(int cx, int cz) {
-  // try to get Chunk from Cache
-  ChunkID id(cx, cz);
-  mutex.lock();
-  QSharedPointer<Chunk> * p_chunk(cache[id]);   // const operation
-  mutex.unlock();
-
-  if (p_chunk != NULL )
-    return QSharedPointer<Chunk>(*p_chunk);
+  auto& chunkState = chunkStates[id];
+  if (chunkState.test(ChunkState::NonExisting))
+  {
+    chunkPtr_out = nullptr;
+    return true; // state not existing is known -> cached that there is no chunk!
+  }
   else
-    return QSharedPointer<Chunk>(NULL);  // we're loading this chunk, or it's blank.
+  {
+    chunkPtr_out = cache[id];
+    return (chunkPtr_out != nullptr);
+  }
 }
 
 void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
@@ -153,10 +143,16 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 {
   QMutexLocker locker(&mutex);
 
-  auto& chunkInfo = cachemap[id];
-  chunkInfo.chunk = chunk;
-  chunkInfo.state << ChunkState::Cached;
-  chunkInfo.state.unset(ChunkState::Loading);
+  auto& chunkState = chunkStates[id];
+  chunkState.unset(ChunkState::Loading);
+
+  if (!chunk)
+  {
+    chunkState.set(ChunkState::NonExisting);
+    return;
+  }
+
+  cache.insert(id, chunk);
 
   if (chunk)
   {
@@ -174,14 +170,14 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
 {
     {
-        auto& chunkInfo = cachemap[id];
+      auto& chunkState = chunkStates[id];
 
-        if (chunkInfo.state[ChunkState::Loading])
-        {
-            return; // prevent loading chunk twice
-        }
+      if (chunkState[ChunkState::Loading])
+      {
+          return; // prevent loading chunk twice
+      }
 
-        chunkInfo.state << ChunkState::Loading;
+      chunkState << ChunkState::Loading;
     }
 
     m_loaderPool->enqueueChunkLoading(path, id);

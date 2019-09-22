@@ -4,6 +4,7 @@
 
 #include "./chunkcache.h"
 #include "./playerinfos.h"
+#include "mapcamera.hpp"
 
 #include "lockguarded.hpp"
 
@@ -121,12 +122,7 @@ class MapView : public QWidget {
   int getY(int x, int z);
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
 
-  template<typename _numberT>
-  struct TopViewPosition_t;
-
-  using TopViewPosition = TopViewPosition_t<double>;
-
-  TopViewPosition transformMousePos(QPoint mouse_pos);
+  MapCamera getCamera() const;
 
   static const int CAVE_DEPTH = 16;  // maximum depth caves are searched in cave mode
   float caveshade[CAVE_DEPTH];
@@ -150,7 +146,7 @@ class MapView : public QWidget {
   QImage imageOverlays;
   QImage image_players;
   std::set<ChunkID> chunksToLoad;
-  std::set<ChunkID> chunksToRedraw;
+  std::set<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
   DefinitionManager *dm;
   uchar placeholder[16 * 16 * 4];  // no chunk found placeholder
   QSet<QString> overlayItemTypes;
@@ -195,35 +191,6 @@ private slots:
     void renderingDone(const QSharedPointer<Chunk>& chunk);
 
     void regularUpdate();
-};
-
-template<>
-struct MapView::TopViewPosition_t<int>
-{
-    TopViewPosition_t(int _x, int _z)
-        : x(_x)
-        , z(_z)
-    {}
-
-    int x;
-    int z;
-};
-
-template<>
-struct MapView::TopViewPosition_t<double>
-{
-    TopViewPosition_t(double _x, double _z)
-        : x(_x)
-        , z(_z)
-    {}
-
-    double x;
-    double z;
-
-    TopViewPosition_t<int> floor()
-    {
-      return TopViewPosition_t<int>(::floor(x), ::floor(z));
-    }
 };
 
 #endif  // MAPVIEW_H_
