@@ -30,7 +30,9 @@ class Settings : public QDialog {
   void pathChanged(const QString &path);
   void toggleVerticalDepth(bool on);
 
- private:
+  void on_checkBox_zoom_out_toggled(bool checked);
+
+private:
   Ui::Settings m_ui;
 };
 

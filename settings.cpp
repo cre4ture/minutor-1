@@ -104,3 +104,10 @@ void Settings::toggleVerticalDepth(bool value) {
   info.setValue("verticaldepth", value);
   emit settingsUpdated();
 }
+
+void Settings::on_checkBox_zoom_out_toggled(bool checked)
+{
+  QSettings info;
+  info.setValue("zoomout", checked);
+  emit settingsUpdated();
+}

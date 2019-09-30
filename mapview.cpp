@@ -17,9 +17,6 @@
 #include <QMessageBox>
 #include <assert.h>
 
-const double g_zoomMin = 0.25;
-const double g_zoomMax = 20.0;
-
 class DrawHelper
 {
 private:
@@ -394,14 +391,22 @@ QPointF MapCamera::getPixelFromBlockCoordinates(TopViewPosition block_pos) const
 
 double MapView::getZoom() const
 {
-  return zoom_internal * zoom_internal;
+    return zoom_internal * zoom_internal;
 }
 
 void MapView::adjustZoom(double rate)
 {
-    zoom_internal *= (1.0 + (rate / 100.0));
-    if (zoom_internal < g_zoomMin) zoom_internal = g_zoomMin;
-    if (zoom_internal > g_zoomMax) zoom_internal = g_zoomMax;
+  double zoomMin = sqrt(1.0);
+  double zoomMax = sqrt(20.0);
+
+  if (QSettings().value("zoomout", false).toBool())
+  {
+    zoomMin = sqrt(0.20);
+  }
+
+  zoom_internal *= (1.0 + (rate / 25.0));
+  if (zoom_internal < zoomMin) zoom_internal = zoomMin;
+  if (zoom_internal > zoomMax) zoom_internal = zoomMax;
 }
 
 void MapView::emit_chunkRenderingCompleted(const QSharedPointer<Chunk> &chunk)
@@ -615,11 +620,11 @@ void MapView::keyPressEvent(QKeyEvent *event) {
       break;
     case Qt::Key_PageUp:
     case Qt::Key_Q:
-      adjustZoom(1);
+      adjustZoom(+10);
       break;
     case Qt::Key_PageDown:
     case Qt::Key_E:
-      adjustZoom(-1);
+      adjustZoom(-10);
       break;
     case Qt::Key_Home:
     case Qt::Key_Plus:
@@ -716,7 +721,7 @@ void MapView::redraw() {
 
       drawChunk3(cx, cz, renderedData.renderedChunk, h2);
 
-      if (true)
+      if (false)
       {
         bool isCached = renderedData.state[RenderStateT::EmptyChunk];
         if (!isCached && renderedData.renderedChunk)
