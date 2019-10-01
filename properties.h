@@ -6,6 +6,7 @@
 
 #include <QDialog>
 #include <QMap>
+#include <QVector3D>
 
 namespace Ui {
 class Properties;
@@ -22,9 +23,19 @@ class Properties : public QDialog {
 
   void DisplayProperties(QVariant p);
 
- private:
+signals:
+  void onBoundingBoxSelected(QVector3D from, QVector3D to);
+
+private slots:
+  void on_propertyView_itemClicked(QTreeWidgetItem *item, int column);
+
+  void on_propertyView_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
+
+private:
   Ui::Properties *ui;
   PropertieTreeCreator m_creator;
+
+  bool evaluateBB(QTreeWidgetItem *item);
 };
 
 #endif  // PROPERTIES_H_

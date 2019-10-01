@@ -88,6 +88,8 @@ private slots:
   void triggerJumpToPosition(QVector3D pos);
   void highlightEntities(QVector<QSharedPointer<OverlayItem> >);
 
+  void highlightBoundingBox(QVector3D from, QVector3D to);
+
   void periodicUpdate();
 
 signals:

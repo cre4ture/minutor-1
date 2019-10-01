@@ -20,7 +20,6 @@ class GeneratedStructure: public OverlayItem {
                    QPainter *canvas) const;
   virtual Point midpoint() const;
 
- protected:
   GeneratedStructure() {}
 
   // these are used to draw a rounded rect. If you want to draw something

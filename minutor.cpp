@@ -847,6 +847,7 @@ void Minutor::showProperties(QVariant props)
   if (!props.isNull()) {
     Properties * propView = new Properties(this);
     propView->DisplayProperties(props);
+    connect(propView, SIGNAL(onBoundingBoxSelected(QVector3D,QVector3D)), this, SLOT(highlightBoundingBox(QVector3D,QVector3D)));
     propView->show();
   }
 }
@@ -896,7 +897,15 @@ void Minutor::triggerJumpToPosition(QVector3D pos)
 
 void Minutor::highlightEntities(QVector<QSharedPointer<OverlayItem> > items)
 {
-    mapview->updateSearchResultPositions(items);
+  mapview->updateSearchResultPositions(items);
+}
+
+void Minutor::highlightBoundingBox(QVector3D from, QVector3D to)
+{
+  auto structure = QSharedPointer<GeneratedStructure>::create();
+  structure->setBounds(OverlayItem::Point(from), OverlayItem::Point(to));
+
+  highlightEntities({structure});
 }
 
 void Minutor::periodicUpdate()

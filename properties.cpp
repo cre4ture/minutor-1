@@ -1,5 +1,6 @@
 /** Copyright 2014 Rian Shelley */
 #include <QRegularExpression>
+#include <QVector3D>
 #include "./properties.h"
 #include "./ui_properties.h"
 
@@ -181,3 +182,47 @@ QString PropertieTreeCreator::GetSummary(const QString& key, const QVariant& v) 
   return ret;
 }
 
+
+void Properties::on_propertyView_itemClicked(QTreeWidgetItem *item, int column)
+{
+  if (evaluateBB(item))
+  {
+    return;
+  }
+
+  for (int i = 0; i < item->childCount(); i++)
+  {
+    if (evaluateBB(item->child(i)))
+    {
+      return;
+    }
+  }
+}
+
+bool Properties::evaluateBB(QTreeWidgetItem *item)
+{
+  QString text = item->data(0, Qt::DisplayRole).toString();
+
+  if ((text == "BB") && (item->childCount() >= 6))
+  {
+    QVector3D from;
+    from.setX(item->child(0)->data(1, Qt::DisplayRole).toFloat());
+    from.setY(item->child(1)->data(1, Qt::DisplayRole).toFloat());
+    from.setZ(item->child(2)->data(1, Qt::DisplayRole).toFloat());
+
+    QVector3D to;
+    to.setX(item->child(3)->data(1, Qt::DisplayRole).toFloat());
+    to.setY(item->child(4)->data(1, Qt::DisplayRole).toFloat());
+    to.setZ(item->child(5)->data(1, Qt::DisplayRole).toFloat());
+
+    emit onBoundingBoxSelected(from, to);
+    return true;
+  }
+
+  return false;
+}
+
+void Properties::on_propertyView_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
+{
+    on_propertyView_itemClicked(current, 0);
+}
