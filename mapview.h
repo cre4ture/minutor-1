@@ -133,10 +133,9 @@ class MapView : public QWidget {
   double x, z;
   int scale;
 
-  double zoom_internal;
+  double zoom;
 
-  double getZoom() const;
-  void adjustZoom(double rate);
+  void adjustZoom(double steps);
 
   int flags;
   QTimer updateTimer;

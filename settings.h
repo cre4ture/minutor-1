@@ -14,6 +14,8 @@ class Settings : public QDialog {
   bool autoUpdate;
   bool verticalDepth;
   QString mcpath;
+  bool fineZoom;
+  bool zoomOut;
 
 
   /** Returns the default path to be used for Minecraft location. */
@@ -31,6 +33,8 @@ class Settings : public QDialog {
   void toggleVerticalDepth(bool on);
 
   void on_checkBox_zoom_out_toggled(bool checked);
+
+  void on_checkBox_fine_zoom_toggled(bool checked);
 
 private:
   Ui::Settings m_ui;

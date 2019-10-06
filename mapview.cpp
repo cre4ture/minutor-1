@@ -38,7 +38,7 @@ public:
 
     DrawHelper(MapView& parent_)
         : parent(parent_)
-        , zoom(parent.getZoom())
+        , zoom(parent.zoom)
     {
         auto& image = parent.imageChunks;
         auto& x = parent.x;
@@ -186,7 +186,7 @@ private:
 MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidget *parent)
   : QWidget(parent)
   , cache(ChunkCache::Instance())
-  , zoom_internal(1.0)
+  , zoom(1.0)
   , updateTimer()
   , dragging(false)
   , m_asyncRendererPool(threadpool)
@@ -389,24 +389,24 @@ QPointF MapCamera::getPixelFromBlockCoordinates(TopViewPosition block_pos) const
   return centerPixel + pixelDelta;
 }
 
-double MapView::getZoom() const
+void MapView::adjustZoom(double steps)
 {
-    return zoom_internal * zoom_internal;
-}
+  const bool allowZoomOut = QSettings().value("zoomout", false).toBool();
 
-void MapView::adjustZoom(double rate)
-{
-  double zoomMin = sqrt(1.0);
-  double zoomMax = sqrt(20.0);
+  const double zoomMin = allowZoomOut ? 0.20 : 1.0;
+  const double zoomMax = 20.0;
 
-  if (QSettings().value("zoomout", false).toBool())
-  {
-    zoomMin = sqrt(0.20);
+  const bool useFineZoomStrategy = QSettings().value("finezoom", false).toBool();
+
+  if (useFineZoomStrategy) {
+    zoom *= pow(1.3, steps);
+  }
+  else {
+    zoom = floor(zoom + steps);
   }
 
-  zoom_internal *= (1.0 + (rate / 25.0));
-  if (zoom_internal < zoomMin) zoom_internal = zoomMin;
-  if (zoom_internal > zoomMax) zoom_internal = zoomMax;
+  if (zoom < zoomMin) zoom = zoomMin;
+  if (zoom > zoomMax) zoom = zoomMax;
 }
 
 void MapView::emit_chunkRenderingCompleted(const QSharedPointer<Chunk> &chunk)
@@ -543,8 +543,8 @@ void MapView::mouseMoveEvent(QMouseEvent *event) {
   if (!dragging) {
     return;
   }
-  x += (lastMousePressPosition.x()-event->x()) / getZoom();
-  z += (lastMousePressPosition.y()-event->y()) / getZoom();
+  x += (lastMousePressPosition.x()-event->x()) / zoom;
+  z += (lastMousePressPosition.y()-event->y()) / zoom;
   lastMousePressPosition = event->pos();
 }
 
@@ -580,7 +580,8 @@ void MapView::wheelEvent(QWheelEvent *event) {
     // change depth
     emit demandDepthChange(event->delta() / 120);
   } else {  // change zoom
-    adjustZoom( event->delta() / 90.0 );
+    const double StepsOf15Degree = (event->angleDelta().y() / 120.0); // according to documentation of QWheelEvent
+    adjustZoom( StepsOf15Degree );
   }
 }
 
@@ -604,27 +605,27 @@ void MapView::keyPressEvent(QKeyEvent *event) {
   switch (event->key()) {
     case Qt::Key_Up:
     case Qt::Key_W:
-      z -= stepSize / getZoom();
+      z -= stepSize / zoom;
       break;
     case Qt::Key_Down:
     case Qt::Key_S:
-      z += stepSize / getZoom();
+      z += stepSize / zoom;
       break;
     case Qt::Key_Left:
     case Qt::Key_A:
-      x -= stepSize / getZoom();
+      x -= stepSize / zoom;
       break;
     case Qt::Key_Right:
     case Qt::Key_D:
-      x += stepSize / getZoom();
+      x += stepSize / zoom;
       break;
     case Qt::Key_PageUp:
     case Qt::Key_Q:
-      adjustZoom(+10);
+      adjustZoom(+1);
       break;
     case Qt::Key_PageDown:
     case Qt::Key_E:
-      adjustZoom(-10);
+      adjustZoom(-1);
       break;
     case Qt::Key_Home:
     case Qt::Key_Plus:
@@ -680,7 +681,7 @@ void DrawHelper2::drawChunkEntities(const RenderedChunk& rendered)
         int highY = rendered.depth[index];
         if ( (entityY+10 >= highY) ||
              (entityY+10 >= m_parent.depth) )
-          (*it)->draw(h.x1, h.z1, m_parent.getZoom(), &canvas_entities);
+          (*it)->draw(h.x1, h.z1, m_parent.zoom, &canvas_entities);
       }
     }
   }
@@ -752,7 +753,7 @@ void MapView::redraw() {
     for (auto &item : overlayItems[type]) {
       if (item->intersects(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
                            OverlayItem::Point(h.x2 + 1, depth, h.z2 + 1))) {
-        item->draw(h.x1, h.z1, getZoom(), &h2.getCanvas());
+        item->draw(h.x1, h.z1, zoom, &h2.getCanvas());
       }
     }
   }
@@ -764,14 +765,14 @@ void MapView::redraw() {
   const double firstGridLineX = ceil(h.x1 / maxViewWidth) * maxViewWidth;
   for (double x = firstGridLineX; x < h.x2; x += maxViewWidth)
   {
-      const int line_x = round((x - h.x1) * getZoom());
+      const int line_x = round((x - h.x1) * zoom);
       h2.getCanvas().drawLine(line_x, 0, line_x, imageChunks.height());
       }
 
   const double firstGridLineZ = ceil(h.z1 / maxViewWidth) * maxViewWidth;
   for (double z = firstGridLineZ; z < h.z2; z += maxViewWidth)
   {
-      const int line_z = round((z - h.z1) * getZoom());
+      const int line_z = round((z - h.z1) * zoom);
       h2.getCanvas().drawLine(0, line_z, imageChunks.width(), line_z);
   }
 
@@ -806,11 +807,11 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk
   double centerx = m_parent.imageChunks.width() / 2;
   double centery = m_parent.imageChunks.height() / 2;
   // which need to be shifted to account for panning inside that chunk
-  centerx -= (m_parent.x - centerchunkx * chunkSizeOrig) * m_parent.getZoom();
-  centery -= (m_parent.z - centerchunkz * chunkSizeOrig) * m_parent.getZoom();
+  centerx -= (m_parent.x - centerchunkx * chunkSizeOrig) * m_parent.zoom;
+  centery -= (m_parent.z - centerchunkz * chunkSizeOrig) * m_parent.zoom;
   // centerx,y now points to the top left corner of the center chunk
   // so now calculate our x,y in relation
-  double chunksize = chunkSizeOrig * m_parent.getZoom();
+  double chunksize = chunkSizeOrig * m_parent.zoom;
   centerx += (x - centerchunkx) * chunksize;
   centery += (z - centerchunkz) * chunksize;
 
@@ -925,6 +926,8 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
   if (entityStr.length() > 0)
     hovertext += " - " + entityStr;
 
+  hovertext += QString(" - zoom: %1").arg(zoom);
+
 #ifdef DEBUG
   hovertext += " [Cache:"
             + QString().number(this->cache.getCost()) + "/"
@@ -990,7 +993,7 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
   locked_cache.fetch(chunk, ChunkID(cx, cz));
 
   if (chunk) {
-    double invzoom = 10.0 / getZoom();
+    double invzoom = 10.0 / zoom;
     for (auto &type : overlayItemTypes) {
       // generated structures
       for (auto &item : overlayItems[type]) {
@@ -1026,6 +1029,6 @@ MapCamera MapView::getCamera() const
   camera.centerpos_blocks.x = x;
   camera.centerpos_blocks.z = z;
   camera.size_pixels = QSize(width(), height());
-  camera.zoom = getZoom();
+  camera.zoom = zoom;
   return camera;
 }

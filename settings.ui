@@ -92,9 +92,16 @@
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
+         <widget class="QCheckBox" name="checkBox_fine_zoom">
+          <property name="text">
+           <string>Fine zoom steps (recommended for zoom-out)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="checkBox_zoom_out">
           <property name="text">
-           <string>Enable zoom-out functionality (needs much RAM)</string>
+           <string>Zoom-out functionality (needs much RAM)</string>
           </property>
          </widget>
         </item>
