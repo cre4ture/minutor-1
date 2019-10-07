@@ -185,6 +185,7 @@ class MapView : public QWidget {
   DefinitionManager *dm;
 
   static uchar* getPlaceholder();
+  static const QImage &getChunkGroupPlaceholder();
 
   QSet<QString> overlayItemTypes;
   QMap<QString, QList<QSharedPointer<OverlayItem>>> overlayItems;

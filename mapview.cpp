@@ -437,6 +437,32 @@ uchar *MapView::getPlaceholder()
   return placeholder;
 }
 
+const QImage& MapView::getChunkGroupPlaceholder()
+{
+  static QImage img;
+  static bool initDone = false;
+  if (!initDone)
+  {
+    const QImage placeholderImage(getPlaceholder(), ChunkID::SIZE_N, ChunkID::SIZE_N, QImage::Format_RGB32);
+
+    const int size1d = ChunkID::SIZE_N * ChunkGroupID::SIZE_N;
+    const QSize size2d(size1d, size1d);
+    img = QImage(size2d, QImage::Format_RGB32);
+    QPainter canvas(&img);
+
+    for (int iy = 0; iy < ChunkGroupID::SIZE_N; iy++)
+    {
+      for (int ix = 0; ix < ChunkGroupID::SIZE_N; ix++)
+      {
+        const QRect targetRect(ix * ChunkID::SIZE_N, iy * ChunkID::SIZE_N, ChunkID::SIZE_N, ChunkID::SIZE_N);
+        canvas.drawImage(targetRect, placeholderImage);
+      }
+    }
+  }
+
+  return img;
+}
+
 void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
     m_asyncRendererPool->enqueueJob([this, chunk](){
@@ -786,6 +812,8 @@ void MapView::redraw() {
   const int chunkGroupsTall = 2 + (h.imageSize.height() / zoom / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
   const int chunkGroupsWide = 2 + (h.imageSize.width() / zoom / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
 
+  const QImage& placeholderImg = getChunkGroupPlaceholder();
+
   for (int zi = 0; zi < chunkGroupsTall; zi++)
     for (int xi = 0; xi < chunkGroupsWide; xi++)
     {
@@ -806,7 +834,7 @@ void MapView::redraw() {
                             topLeftInBlocks.z + 16 * ChunkGroupID::SIZE_N));
       QRectF targetRect(topLeftInPixeln, bottomRightInPixeln);
 
-      h2.getCanvas().drawImage(targetRect, renderedData.renderedImg);
+      h2.getCanvas().drawImage(targetRect, renderedData.renderedImg.isNull() ? placeholderImg : renderedData.renderedImg);
 
       /*
        * drawChunk3(cx, cz, renderedData.renderedChunk, h2);
