@@ -330,7 +330,7 @@ void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
 
   if (!chunk)
   {
-    data.state.set(RenderStateT::EmptyChunk);
+    data.state.set(RenderStateT::Empty);
     data.state.unset(RenderStateT::RenderingRequested);
     return;
   }
@@ -540,7 +540,7 @@ void MapView::regularUpdata__checkRedraw()
 
       bool need = false;
       RenderData& data = renderdCacheLock()[id];
-      if ((!data.state[RenderStateT::EmptyChunk]) && (!data.state[RenderStateT::LoadingRequested]) && (!data.state[RenderStateT::RenderingRequested]))
+      if ((!data.state[RenderStateT::Empty]) && (!data.state[RenderStateT::LoadingRequested]) && (!data.state[RenderStateT::RenderingRequested]))
       {
           need = (!data.renderedChunk) || redrawNeeded(*data.renderedChunk);
       }
@@ -755,7 +755,7 @@ void MapView::redraw() {
 
       if (false)
       {
-        bool isCached = renderedData.state[RenderStateT::EmptyChunk];
+        bool isCached = renderedData.state[RenderStateT::Empty];
         if (!isCached && renderedData.renderedChunk)
         {
           auto chunk = renderedData.renderedChunk->chunk.lock();

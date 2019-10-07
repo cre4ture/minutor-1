@@ -12,25 +12,6 @@
 #include <windows.h>
 #endif
 
-ChunkID::ChunkID()
-    : cx(0)
-    , cz(0)
-{}
-
-ChunkID::ChunkID(int cx, int cz) : cx(cx), cz(cz) {
-}
-bool ChunkID::operator==(const ChunkID &other) const {
-    return (other.cx == cx) && (other.cz == cz);
-}
-
-bool ChunkID::operator<(const ChunkID &other) const
-{
-    return (other.cx < cx) || ((other.cx == cx) && (other.cz < cz));
-}
-uint qHash(const ChunkID &c) {
-  return (c.cx << 16) ^ (c.cz & 0xffff);  // safe way to hash a pair of integers
-}
-
 ChunkCache::ChunkCache()
     : mutex(QMutex::Recursive)
     , m_loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create())

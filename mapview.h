@@ -149,7 +149,7 @@ class MapView : public QWidget {
 
   enum class RenderStateT
   {
-    EmptyChunk,
+    Empty,
     LoadingRequested,
     RenderingRequested,
   };
@@ -167,11 +167,21 @@ class MapView : public QWidget {
   };
 
   LockGuarded<QHash<ChunkID, RenderData>> renderCache;
+
+  struct RenderGroupData
+  {
+    Bitset<RenderStateT, uint8_t> state;
+    QImage renderedImg;
+  };
+
+  LockGuarded<QHash<ChunkGroupID, RenderGroupData>> renderedChunkGroupsCache;
+
   QImage imageChunks;
   QImage imageOverlays;
   QImage image_players;
   QQueue<ChunkID> chunksToLoad;
   QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
+  QQueue<ChunkGroupID> chunkGroupsToDraw;
   DefinitionManager *dm;
 
   static uchar* getPlaceholder();
