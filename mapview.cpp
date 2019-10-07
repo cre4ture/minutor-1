@@ -42,39 +42,39 @@ public:
   double z2;
 
   DrawHelper(const double x_, const double z_, const double zoom_, const QRect image)
-      : x(x_)
-      , z(z_)
-      , imageSize(image)
-      , zoom(zoom_)
-      , chunksize(16* zoom)
-      // first find the center block position
-      , centerchunkx((int)floor(x / 16.0))
-      , centerchunkz((int)floor(z / 16.0))
+    : x(x_)
+    , z(z_)
+    , imageSize(image)
+    , zoom(zoom_)
+    , chunksize(16* zoom)
+    // first find the center block position
+    , centerchunkx((int)floor(x / 16.0))
+    , centerchunkz((int)floor(z / 16.0))
   {
-      // and the center of the screen
-      int centerx = image.width() / 2;
-      int centery = image.height() / 2;
-      // and align for panning
-      centerx -= (x - centerchunkx * 16) * zoom;
-      centery -= (z - centerchunkz * 16) * zoom;
-      // now calculate the topleft block on the screen
-      startx = centerchunkx - floor(centerx / chunksize) - 1;
-      startz = centerchunkz - floor(centery / chunksize) - 1;
-      // and the dimensions of the screen in blocks
-      blockswide = image.width() / chunksize + 3;
-      blockstall = image.height() / chunksize + 3;
+    // and the center of the screen
+    int centerx = image.width() / 2;
+    int centery = image.height() / 2;
+    // and align for panning
+    centerx -= (x - centerchunkx * 16) * zoom;
+    centery -= (z - centerchunkz * 16) * zoom;
+    // now calculate the topleft block on the screen
+    startx = centerchunkx - floor(centerx / chunksize) - 1;
+    startz = centerchunkz - floor(centery / chunksize) - 1;
+    // and the dimensions of the screen in blocks
+    blockswide = image.width() / chunksize + 3;
+    blockstall = image.height() / chunksize + 3;
 
 
-      double halfviewwidth = image.width() / 2 / zoom;
-      double halvviewheight = image.height() / 2 / zoom;
-      x1 = x - halfviewwidth;
-      z1 = z - halvviewheight;
-      x2 = x + halfviewwidth;
-      z2 = z + halvviewheight;
+    double halfviewwidth = image.width() / 2 / zoom;
+    double halvviewheight = image.height() / 2 / zoom;
+    x1 = x - halfviewwidth;
+    z1 = z - halvviewheight;
+    x2 = x + halfviewwidth;
+    z2 = z + halvviewheight;
   }
 
   explicit DrawHelper(MapView& parent)
-      : DrawHelper(parent.x, parent.z, parent.zoom, parent.imageChunks.rect())
+    : DrawHelper(parent.x, parent.z, parent.zoom, parent.imageChunks.rect())
   {
 
   }
