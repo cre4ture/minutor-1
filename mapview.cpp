@@ -85,9 +85,9 @@ class DrawHelper2
 public:
   static const int chunkSizeOrig = 16;
 
-  DrawHelper2(DrawHelper& h_, MapView& parent)
+  DrawHelper2(DrawHelper& h_, QImage& imageBuffer)
                 : h(h_)
-                , canvas(&parent.imageChunks)
+                , canvas(&imageBuffer)
                 , centerchunkx(floor(h.x / chunkSizeOrig))
                 , centerchunkz(floor(h.z / chunkSizeOrig))
   {
@@ -114,7 +114,7 @@ public:
   static const int chunkSizeOrig = 16;
 
   DrawHelper3(DrawHelper& h_, MapView& parent)
-                : DrawHelper2(h_, parent)
+                : DrawHelper2(h_, parent.imageChunks)
                 , m_parent(parent)
                 , canvas_entities(&parent.imageOverlays)
                 , canvas_players(&parent.image_players)
