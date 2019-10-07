@@ -248,7 +248,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 bool SearchChunksWidget::villageFilter(ChunkID id) const
 {
     const float limit_squared = ui->sb_villages_radius->value() * ui->sb_villages_radius->value();
-    const auto location = id.toCoordinates();
+    const auto location = id.centerCoordinates();
     for (auto& village: m_villages)
     {
         QVector2D vector(location.x - village->midpoint().x,

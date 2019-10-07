@@ -198,8 +198,6 @@ class MapView : public QWidget {
 
   QSharedPointer<AsyncTaskProcessorBase> m_asyncRendererPool;
 
-  void emit_chunkRenderingCompleted(const QSharedPointer<Chunk>& chunk);
-
   void renderChunkAsync(const QSharedPointer<Chunk> &chunk);
 
 private slots:
@@ -207,6 +205,7 @@ private slots:
 
     void regularUpdate();
     void regularUpdata__checkRedraw();
+    void regularUpdate__drawChunkGroups();
 };
 
 #endif  // MAPVIEW_H_

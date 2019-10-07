@@ -32,7 +32,7 @@ protected:
 
 // ChunkID is the key used to identify entries in the Cache
 // Chunks are identified by their coordinates (CX,CZ) but a single key is needed to access a map like structure
-template <int _SizeN>
+template <int _SizeN, typename _ThisT>
 class ChunkID_t: public CoordinateID
 {
  public:
@@ -42,28 +42,33 @@ class ChunkID_t: public CoordinateID
     SIZE_N = _SizeN
   };
 
-  static ChunkID_t fromCoordinates(int x, int z)
+  static _ThisT fromCoordinates(double x, double z)
   {
-      if (x < 0) x -= SIZE_N;
-      if (z < 0) z -= SIZE_N;
-      return ChunkID_t(x / SIZE_N, z / SIZE_N);
+      return _ThisT(floor(x / SIZE_N), floor(z / SIZE_N));
   }
 
-  Location toCoordinates() const
+  Location centerCoordinates() const
   {
-    int cx = cx*SIZE_N + (SIZE_N / 2);
-    int cz = cz*SIZE_N + (SIZE_N / 2);
-    return Location(cx, cz);
+    int x = cx*SIZE_N + (SIZE_N / 2);
+    int z = cz*SIZE_N + (SIZE_N / 2);
+    return Location(x, z);
+  }
+
+  Location topLeft() const
+  {
+    int x = cx*SIZE_N;
+    int z = cz*SIZE_N;
+    return Location(x, z);
   }
 };
 
-class ChunkID: public ChunkID_t<16>
+class ChunkID: public ChunkID_t<16, ChunkID>
 {
 public:
   using ChunkID_t::ChunkID_t;
 };
 
-class ChunkGroupID: public ChunkID_t<2>
+class ChunkGroupID: public ChunkID_t<8, ChunkGroupID>
 {
 public:
   using ChunkID_t::ChunkID_t;

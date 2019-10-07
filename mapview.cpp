@@ -211,9 +211,6 @@ MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidg
 {
   havePendingToolTip = false;
 
-  connect(this, SIGNAL(chunkRenderingCompleted(QSharedPointer<Chunk>)),
-          this, SLOT(renderingDone(const QSharedPointer<Chunk>&)));
-
   connect(&updateTimer, SIGNAL(timeout()),
           this, SLOT(regularUpdate()));
 
@@ -440,17 +437,12 @@ uchar *MapView::getPlaceholder()
   return placeholder;
 }
 
-void MapView::emit_chunkRenderingCompleted(const QSharedPointer<Chunk> &chunk)
-{
-    emit chunkRenderingCompleted(chunk);
-}
-
 void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
     m_asyncRendererPool->enqueueJob([this, chunk](){
         ChunkRenderer::renderChunk(*this, chunk);
         QMetaObject::invokeMethod(this, [this, chunk](){
-          emit chunkRenderingCompleted(chunk);
+          renderingDone(chunk);
         });
     });
 }
@@ -463,6 +455,15 @@ void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
     auto& data = lock()[id];
     data.renderedChunk = chunk->rendered;
     data.state.unset(RenderStateT::RenderingRequested);
+
+    const auto cgID = ChunkGroupID::fromCoordinates(id.getX(), id.getZ());
+    auto cgLock = renderedChunkGroupsCache.lock();
+    auto& grData = cgLock()[cgID];
+    if (!grData.state.test(RenderStateT::RenderingRequested))
+    {
+      grData.state.set(RenderStateT::RenderingRequested);
+      chunkGroupsToDraw.enqueue(cgID);
+    }
 }
 
 void MapView::regularUpdate()
@@ -519,6 +520,8 @@ void MapView::regularUpdate()
     }
   }
 
+  regularUpdate__drawChunkGroups();
+
   redraw();
   update();
 }
@@ -557,6 +560,43 @@ void MapView::regularUpdata__checkRedraw()
         }
       }
     }
+}
+
+void MapView::regularUpdate__drawChunkGroups()
+{
+  auto renderdCacheLock = renderCache.lock();
+  auto renderdChunkGroupLock = renderedChunkGroupsCache.lock();
+
+  while (chunkGroupsToDraw.size() > 0)
+  {
+    const auto cgid = chunkGroupsToDraw.dequeue();
+
+    const auto topLeft = cgid.topLeft();
+    QRectF groupRegionF(topLeft.x * 16, topLeft.z * 16, cgid.SIZE_N * 16, cgid.SIZE_N * 16);
+    const auto groupRegionCenter = groupRegionF.center();
+    QRect groupRegion = groupRegionF.toRect();
+    DrawHelper h(groupRegionCenter.x(), groupRegionCenter.y(),
+                 1.0, groupRegion);
+
+    QImage image(groupRegion.size(), QImage::Format_RGB32);
+    DrawHelper2 h2(h, image);
+
+    for (size_t x = 0; x < cgid.SIZE_N; x++)
+    {
+      for (size_t z = 0; z < cgid.SIZE_N; z++)
+      {
+        const ChunkID cid(topLeft.x + x, topLeft.z + z);
+
+        auto renderedChunkData = renderdCacheLock()[cid];
+
+        h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunkData.renderedChunk); // can deal with nullptr!
+      }
+    }
+
+    auto& data = renderdChunkGroupLock()[cgid];
+    data.state.unset(RenderStateT::RenderingRequested);
+    data.renderedImg = image;
+  }
 }
 
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
@@ -732,26 +772,44 @@ void MapView::redraw() {
 
   ChunkCache::Locker locker(*cache);
 
-  auto renderdCacheLock = renderCache.lock();
+  auto renderdCacheLock = renderedChunkGroupsCache.lock();
 
   DrawHelper h(*this);
   DrawHelper3 h2(h, *this);
 
   const auto camera = getCamera();
 
-  for (int cz = h.startz; cz < h.startz + h.blockstall; cz++)
-    for (int cx = h.startx; cx < h.startx + h.blockswide; cx++)
-    {
-      ChunkID id(cx, cz);
+  const auto rootTopLeft = camera.transformPixelToBlockCoordinates(QPoint(0,0));
+  const auto rootTopLeftChunkID = ChunkID::fromCoordinates(rootTopLeft.x, rootTopLeft.z);
+  const auto rootTopLeftChunkGroupId = ChunkGroupID::fromCoordinates(rootTopLeftChunkID.getX(), rootTopLeftChunkID.getZ());
 
-      RenderData renderedData;
-      auto it = renderdCacheLock().find(id);
+  const int chunkGroupsTall = 1 + (h.imageSize.height() / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
+  const int chunkGroupsWide = 1 + (h.imageSize.width() / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
+
+  for (int cz = h.startz; cz < h.startz + h.blockstall; cz += ChunkGroupID::SIZE_N)
+    for (int cx = h.startx; cx < h.startx + h.blockswide; cx += ChunkGroupID::SIZE_N)
+    {
+      const auto cgID = ChunkGroupID::fromCoordinates(cx, cz);
+      const auto topLeftChunk = ChunkID(cgID.topLeft().x, cgID.topLeft().z);
+
+      RenderGroupData renderedData;
+      auto it = renderdCacheLock().find(cgID);
       if (it != renderdCacheLock().end())
       {
         renderedData = *it;
       }
 
-      drawChunk3(cx, cz, renderedData.renderedChunk, h2);
+      const auto topLeftInBlocks = TopViewPosition(topLeftChunk.topLeft().x, topLeftChunk.topLeft().z);
+      const auto topLeftInPixeln = camera.getPixelFromBlockCoordinates(topLeftInBlocks);
+      const auto bottomRightInPixeln = camera.getPixelFromBlockCoordinates(
+            TopViewPosition(topLeftInBlocks.x + 16 * ChunkGroupID::SIZE_N,
+                            topLeftInBlocks.z + 16 * ChunkGroupID::SIZE_N));
+      QRectF targetRect(topLeftInPixeln, bottomRightInPixeln);
+
+      h2.getCanvas().drawImage(targetRect, renderedData.renderedImg);
+
+      /*
+       * drawChunk3(cx, cz, renderedData.renderedChunk, h2);
 
       if (false)
       {
@@ -774,6 +832,7 @@ void MapView::redraw() {
           h2.getCanvas().drawRect(rect);
         }
       }
+        */
     }
 
   // add on the entity layer
