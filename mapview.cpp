@@ -783,13 +783,13 @@ void MapView::redraw() {
   const auto rootTopLeftChunkID = ChunkID::fromCoordinates(rootTopLeft.x, rootTopLeft.z);
   const auto rootTopLeftChunkGroupId = ChunkGroupID::fromCoordinates(rootTopLeftChunkID.getX(), rootTopLeftChunkID.getZ());
 
-  const int chunkGroupsTall = 1 + (h.imageSize.height() / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
-  const int chunkGroupsWide = 1 + (h.imageSize.width() / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
+  const int chunkGroupsTall = 2 + (h.imageSize.height() / zoom / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
+  const int chunkGroupsWide = 2 + (h.imageSize.width() / zoom / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N));
 
-  for (int cz = h.startz; cz < h.startz + h.blockstall; cz += ChunkGroupID::SIZE_N)
-    for (int cx = h.startx; cx < h.startx + h.blockswide; cx += ChunkGroupID::SIZE_N)
+  for (int zi = 0; zi < chunkGroupsTall; zi++)
+    for (int xi = 0; xi < chunkGroupsWide; xi++)
     {
-      const auto cgID = ChunkGroupID::fromCoordinates(cx, cz);
+      const auto cgID = ChunkGroupID(xi + rootTopLeftChunkGroupId.getX(), zi + rootTopLeftChunkGroupId.getZ());
       const auto topLeftChunk = ChunkID(cgID.topLeft().x, cgID.topLeft().z);
 
       RenderGroupData renderedData;

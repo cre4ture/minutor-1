@@ -68,7 +68,7 @@ public:
   using ChunkID_t::ChunkID_t;
 };
 
-class ChunkGroupID: public ChunkID_t<8, ChunkGroupID>
+class ChunkGroupID: public ChunkID_t<16, ChunkGroupID>
 {
 public:
   using ChunkID_t::ChunkID_t;
