@@ -20,6 +20,8 @@
 class DrawHelper
 {
 public:
+  const double x;
+  const double z;
   const QRect imageSize;
   const double zoom;
 
@@ -39,8 +41,10 @@ public:
   double x2;
   double z2;
 
-  DrawHelper(const double x, const double z, const double zoom_, const QRect image)
-      : imageSize(image)
+  DrawHelper(const double x_, const double z_, const double zoom_, const QRect image)
+      : x(x_)
+      , z(z_)
+      , imageSize(image)
       , zoom(zoom_)
       , chunksize(16* zoom)
       // first find the center block position
@@ -84,24 +88,22 @@ public:
   DrawHelper2(DrawHelper& h_, MapView& parent)
                 : h(h_)
                 , canvas(&parent.imageChunks)
-                , m_parent(parent)
-                , centerchunkx(floor(m_parent.x / chunkSizeOrig))
-                , centerchunkz(floor(m_parent.z / chunkSizeOrig))
-    {
-    }
+                , centerchunkx(floor(h.x / chunkSizeOrig))
+                , centerchunkz(floor(h.z / chunkSizeOrig))
+  {
+  }
 
-    void drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk);
+  void drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk);
 
-    QPainter& getCanvas() { return canvas; }
+  QPainter& getCanvas() { return canvas; }
 
 protected:
-    DrawHelper& h;
-    QPainter canvas;
-    MapView& m_parent;
+  DrawHelper& h;
+  QPainter canvas;
 
-    // first find the center chunk
-    const int centerchunkx;
-    const int centerchunkz;
+  // first find the center chunk
+  const int centerchunkx;
+  const int centerchunkz;
 };
 
 
@@ -113,6 +115,7 @@ public:
 
   DrawHelper3(DrawHelper& h_, MapView& parent)
                 : DrawHelper2(h_, parent)
+                , m_parent(parent)
                 , canvas_entities(&parent.imageOverlays)
                 , canvas_players(&parent.image_players)
     {
@@ -132,6 +135,7 @@ public:
     }
 
 private:
+    MapView& m_parent;
     QPainter canvas_entities;
     QPainter canvas_players;
 };
@@ -223,15 +227,8 @@ MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidg
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
 
-  int offset = 0;
-  for (int y = 0; y < 16; y++)
-    for (int x = 0; x < 16; x++) {
-      uchar color = ((x & 8) ^ (y & 8)) == 0 ? 0x44 : 0x88;
-      placeholder[offset++] = color;
-      placeholder[offset++] = color;
-      placeholder[offset++] = color;
-      placeholder[offset++] = 0xff;
-    }
+  getPlaceholder(); // force init
+
   // calculate exponential function for cave shade
   float cavesum = 0.0;
   for (int i=0; i<CAVE_DEPTH; i++) {
@@ -421,6 +418,26 @@ void MapView::adjustZoom(double steps)
 
   if (zoom < zoomMin) zoom = zoomMin;
   if (zoom > zoomMax) zoom = zoomMax;
+}
+
+uchar *MapView::getPlaceholder()
+{
+  static uchar placeholder[16 * 16 * 4];  // no chunk found placeholder
+  static bool initDone = false;
+  if (!initDone)
+  {
+    int offset = 0;
+    for (int y = 0; y < 16; y++)
+      for (int x = 0; x < 16; x++) {
+        uchar color = ((x & 8) ^ (y & 8)) == 0 ? 0x44 : 0x88;
+        placeholder[offset++] = color;
+        placeholder[offset++] = color;
+        placeholder[offset++] = color;
+        placeholder[offset++] = 0xff;
+      }
+  }
+
+  return placeholder;
 }
 
 void MapView::emit_chunkRenderingCompleted(const QSharedPointer<Chunk> &chunk)
@@ -819,18 +836,18 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk
   // this figures out where on the screen this chunk should be drawn
 
   // and the center chunk screen coordinates
-  double centerx = m_parent.imageChunks.width() / 2;
-  double centery = m_parent.imageChunks.height() / 2;
+  double centerx = h.imageSize.width() / 2;
+  double centery = h.imageSize.height() / 2;
   // which need to be shifted to account for panning inside that chunk
-  centerx -= (m_parent.x - centerchunkx * chunkSizeOrig) * m_parent.zoom;
-  centery -= (m_parent.z - centerchunkz * chunkSizeOrig) * m_parent.zoom;
+  centerx -= (h.x - centerchunkx * chunkSizeOrig) * h.zoom;
+  centery -= (h.z - centerchunkz * chunkSizeOrig) * h.zoom;
   // centerx,y now points to the top left corner of the center chunk
   // so now calculate our x,y in relation
-  double chunksize = chunkSizeOrig * m_parent.zoom;
+  double chunksize = chunkSizeOrig * h.zoom;
   centerx += (x - centerchunkx) * chunksize;
   centery += (z - centerchunkz) * chunksize;
 
-  const uchar* srcImageData = renderedChunk ? renderedChunk->image : m_parent.placeholder;
+  const uchar* srcImageData = renderedChunk ? renderedChunk->image : MapView::getPlaceholder();
   QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
 
   QRectF targetRect(centerx, centery, chunksize, chunksize);

@@ -173,7 +173,9 @@ class MapView : public QWidget {
   QQueue<ChunkID> chunksToLoad;
   QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
   DefinitionManager *dm;
-  uchar placeholder[16 * 16 * 4];  // no chunk found placeholder
+
+  static uchar* getPlaceholder();
+
   QSet<QString> overlayItemTypes;
   QMap<QString, QList<QSharedPointer<OverlayItem>>> overlayItems;
   BlockLocation currentLocation;
