@@ -366,6 +366,7 @@ void MapView::clearCache() {
   chunksToRedraw.clear();
   renderCache.lock()().clear();
   cache->clear();
+  renderedChunkGroupsCache.lock()().clear();
 }
 
 void MapView::mousePressEvent(QMouseEvent *event) {
@@ -401,7 +402,7 @@ void MapView::adjustZoom(double steps)
 {
   const bool allowZoomOut = QSettings().value("zoomout", false).toBool();
 
-  const double zoomMin = allowZoomOut ? 0.20 : 1.0;
+  const double zoomMin = allowZoomOut ? 0.05 : 1.0;
   const double zoomMax = 20.0;
 
   const bool useFineZoomStrategy = QSettings().value("finezoom", false).toBool();
@@ -555,7 +556,6 @@ void MapView::regularUpdate()
 void MapView::regularUpdata__checkRedraw()
 {
   const int maxIterLoadAndRender = 10000;
-  int counter = 0;
 
   ChunkCache::Locker locker(*cache);
   auto renderdCacheLock = renderCache.lock();
@@ -564,7 +564,7 @@ void MapView::regularUpdata__checkRedraw()
 
   chunkRedrawIterator.setRange(h.blockswide, h.blockstall);
   const int maxIters = h.blockstall * h.blockswide;
-  const int iters = std::min(maxIters, 10000);
+  const int iters = std::min(maxIters, maxIterLoadAndRender);
 
   for (int i = 0; i < iters; i++)
   {
@@ -581,9 +581,8 @@ void MapView::regularUpdata__checkRedraw()
     {
       chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(id, nullptr));
       data.state.set(RenderStateT::RenderingRequested);
-      counter++;
 
-      if (counter > maxIterLoadAndRender || chunksToRedraw.size() > 1000)
+      if (chunksToRedraw.size() > maxIterLoadAndRender)
       {
         return;
       }
