@@ -19,9 +19,6 @@
 
 class DrawHelper
 {
-private:
-    MapView& parent;
-
 public:
     const double zoom;
 
@@ -36,14 +33,9 @@ public:
     double x2;
     double z2;
 
-    DrawHelper(MapView& parent_)
-        : parent(parent_)
-        , zoom(parent.zoom)
+    DrawHelper(const double x, const double z, const double zoom_, const QRect image)
+        : zoom(zoom_)
     {
-        auto& image = parent.imageChunks;
-        auto& x = parent.x;
-        auto& z = parent.z;
-
         double chunksize = 16 * zoom;
 
         // first find the center block position
@@ -69,6 +61,12 @@ public:
         z1 = z - halvviewheight;
         x2 = x + halfviewwidth;
         z2 = z + halvviewheight;
+    }
+
+    explicit DrawHelper(MapView& parent)
+        : DrawHelper(parent.x, parent.z, parent.zoom, parent.imageChunks.rect())
+    {
+
     }
 };
 
