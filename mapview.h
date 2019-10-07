@@ -21,6 +21,7 @@ class BlockIdentifier;
 class OverlayItem;
 class DrawHelper;
 class DrawHelper2;
+class DrawHelper3;
 class ChunkRenderer;
 class AsyncTaskProcessorBase;
 
@@ -30,6 +31,7 @@ class MapView : public QWidget {
     friend class DrawHelper;
     friend class ChunkRenderer;
     friend class DrawHelper2;
+    friend class DrawHelper3;
 
  public:
   /// Values for the individual flags
@@ -115,7 +117,7 @@ class MapView : public QWidget {
  private:
   class AsyncRenderLock;
   bool redrawNeeded(const RenderedChunk& renderedChunk) const;
-  void drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &chunk, DrawHelper2 &h);
+  void drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &chunk, DrawHelper3 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   void getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk> &chunk);
