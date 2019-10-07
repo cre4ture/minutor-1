@@ -78,4 +78,43 @@ inline uint qHash(const CoordinateID &c) {
   return (c.getX() << 16) ^ (c.getZ() & 0xffff);  // safe way to hash a pair of integers
 }
 
+class ChunkIteratorC
+{
+public:
+  ChunkIteratorC()
+    : cx(0)
+    , cz(0)
+  {}
+
+  void setRange(int newRangeX, int newRangeZ)
+  {
+    range_x = newRangeX;
+    range_z = newRangeZ;
+  }
+
+  ChunkID getNext(int startx, int startz)
+  {
+    cx++;
+    if (cx >= range_x)
+    {
+      cx = 0;
+      cz++;
+    }
+
+    if (cz >= range_z)
+    {
+      cx = 0;
+      cz = 0;
+    }
+
+    return ChunkID(startx + cx, startz + cz);
+  }
+
+private:
+  int cx;
+  int cz;
+  int range_x;
+  int range_z;
+};
+
 #endif // CHUNKCACHETYPES_H

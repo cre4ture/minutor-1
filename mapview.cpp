@@ -562,30 +562,33 @@ void MapView::regularUpdata__checkRedraw()
 
   DrawHelper h(*this);
 
-  for (int cz = h.startz; cz < h.startz + h.blockstall; cz++)
-    for (int cx = h.startx; cx < h.startx + h.blockswide; cx++)
+  chunkRedrawIterator.setRange(h.blockswide, h.blockstall);
+  const int maxIters = h.blockstall * h.blockswide;
+  const int iters = std::min(maxIters, 10000);
+
+  for (int i = 0; i < iters; i++)
+  {
+    ChunkID id = chunkRedrawIterator.getNext(h.startx, h.startz);
+
+    bool need = false;
+    RenderData& data = renderdCacheLock()[id];
+    if ((!data.state[RenderStateT::Empty]) && (!data.state[RenderStateT::LoadingRequested]) && (!data.state[RenderStateT::RenderingRequested]))
     {
-      ChunkID id(cx, cz);
+        need = (!data.renderedChunk) || redrawNeeded(*data.renderedChunk);
+    }
 
-      bool need = false;
-      RenderData& data = renderdCacheLock()[id];
-      if ((!data.state[RenderStateT::Empty]) && (!data.state[RenderStateT::LoadingRequested]) && (!data.state[RenderStateT::RenderingRequested]))
+    if (need)
+    {
+      chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(id, nullptr));
+      data.state.set(RenderStateT::RenderingRequested);
+      counter++;
+
+      if (counter > maxIterLoadAndRender || chunksToRedraw.size() > 1000)
       {
-          need = (!data.renderedChunk) || redrawNeeded(*data.renderedChunk);
-      }
-
-      if (need)
-      {
-        chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(id, nullptr));
-        data.state.set(RenderStateT::RenderingRequested);
-        counter++;
-
-        if (counter > maxIterLoadAndRender)
-        {
-          return;
-        }
+        return;
       }
     }
+  }
 }
 
 void MapView::regularUpdate__drawChunkGroups()
