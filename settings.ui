@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>370</height>
+    <height>467</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -102,6 +102,22 @@
          <widget class="QCheckBox" name="checkBox_zoom_out">
           <property name="text">
            <string>Zoom-out functionality (needs much RAM)</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_developer">
+       <property name="title">
+        <string>Developer features</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <widget class="QCheckBox" name="checkBox_display_depth_map">
+          <property name="text">
+           <string>Display depth map</string>
           </property>
          </widget>
         </item>

@@ -25,6 +25,8 @@ class DrawHelper3;
 class ChunkRenderer;
 class AsyncTaskProcessorBase;
 
+MapCamera CreateCameraForChunkGroup(const ChunkGroupID& cgid);
+
 class MapView : public QWidget {
   Q_OBJECT
 

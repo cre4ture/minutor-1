@@ -23,7 +23,7 @@ public:
   const MapCamera cam;
   const double x;
   const double z;
-  const QRect imageSize;
+  const QSize imageSize;
   const double zoom;
 
   const double chunksize;
@@ -42,11 +42,11 @@ public:
   double x2;
   double z2;
 
-  DrawHelper(const double x_, const double z_, const double zoom_, const QRect image)
-    : cam(x, z, image.size(), zoom_)
+  DrawHelper(const double x_, const double z_, const double zoom_, const QSize size_)
+    : cam(x_, z_, size_, zoom_)
     , x(x_)
     , z(z_)
-    , imageSize(image)
+    , imageSize(size_)
     , zoom(zoom_)
     , chunksize(16* zoom)
     // first find the center block position
@@ -54,8 +54,8 @@ public:
     , centerchunkz((int)floor(z / 16.0))
   {
     // and the center of the screen
-    int centerx = image.width() / 2;
-    int centery = image.height() / 2;
+    int centerx = imageSize.width() / 2;
+    int centery = imageSize.height() / 2;
     // and align for panning
     centerx -= (x - centerchunkx * 16) * zoom;
     centery -= (z - centerchunkz * 16) * zoom;
@@ -63,12 +63,12 @@ public:
     startx = centerchunkx - floor(centerx / chunksize) - 1;
     startz = centerchunkz - floor(centery / chunksize) - 1;
     // and the dimensions of the screen in blocks
-    blockswide = image.width() / chunksize + 3;
-    blockstall = image.height() / chunksize + 3;
+    blockswide = imageSize.width() / chunksize + 3;
+    blockstall = imageSize.height() / chunksize + 3;
 
 
-    double halfviewwidth = image.width() / 2 / zoom;
-    double halvviewheight = image.height() / 2 / zoom;
+    double halfviewwidth = imageSize.width() / 2 / zoom;
+    double halvviewheight = imageSize.height() / 2 / zoom;
     x1 = x - halfviewwidth;
     z1 = z - halvviewheight;
     x2 = x + halfviewwidth;
@@ -76,7 +76,7 @@ public:
   }
 
   explicit DrawHelper(MapView& parent)
-    : DrawHelper(parent.x, parent.z, parent.zoom, parent.imageChunks.rect())
+    : DrawHelper(parent.x, parent.z, parent.zoom, parent.imageChunks.size())
   {
 
   }
@@ -126,7 +126,7 @@ public:
 
     void drawChunkEntities(const RenderedChunk &chunk);
 
-    void drawEntitieMap(const Chunk::EntityMap& map);
+    void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, QImage depthImg);
 
     void drawOverlayItemToPlayersCanvas(const QVector<QSharedPointer<OverlayItem> >& items)
     {
@@ -599,6 +599,19 @@ void MapView::regularUpdata__checkRedraw()
   }
 }
 
+MapCamera CreateCameraForChunkGroup(const ChunkGroupID& cgid)
+{
+  const auto topLeft = cgid.topLeft();
+  QRectF groupRegionF(topLeft.x * 16, topLeft.z * 16, cgid.SIZE_N * 16, cgid.SIZE_N * 16);
+  const auto groupRegionCenter = groupRegionF.center();
+  QRect groupRegion = groupRegionF.toRect();
+
+  return MapCamera(groupRegionCenter.x(),
+                   groupRegionCenter.y(),
+                   groupRegion.size(),
+                   1.0);
+}
+
 void MapView::regularUpdate__drawChunkGroups()
 {
   auto renderdCacheLock = renderCache.lock();
@@ -606,22 +619,22 @@ void MapView::regularUpdate__drawChunkGroups()
 
   while (chunkGroupsToDraw.size() > 0)
   {
-    const auto cgid = chunkGroupsToDraw.dequeue();
-    auto& data = renderdChunkGroupLock()[cgid];
+    const ChunkGroupID cgid = chunkGroupsToDraw.dequeue();
+    RenderGroupData& data = renderdChunkGroupLock()[cgid];
     data.entities.clear();
 
-    const auto topLeft = cgid.topLeft();
-    QRectF groupRegionF(topLeft.x * 16, topLeft.z * 16, cgid.SIZE_N * 16, cgid.SIZE_N * 16);
-    const auto groupRegionCenter = groupRegionF.center();
-    QRect groupRegion = groupRegionF.toRect();
-    DrawHelper h(groupRegionCenter.x(), groupRegionCenter.y(),
-                 1.0, groupRegion);
+    const MapCamera cam = CreateCameraForChunkGroup(cgid);
+    DrawHelper h(cam.centerpos_blocks.x, cam.centerpos_blocks.z,
+                 cam.zoom, cam.size_pixels);
 
-    QImage image(groupRegion.size(), QImage::Format_RGB32);
-    QImage imageDepth(groupRegion.size(), QImage::Format_Indexed8);
+    QImage image(cam.size_pixels, QImage::Format_RGB32);
+    QImage imageDepth(cam.size_pixels, QImage::Format_Grayscale8);
+    imageDepth.fill(0);
 
     DrawHelper2 h2(h, image);
     DrawHelper2 h2_depth(h, imageDepth);
+
+    const auto topLeft = cgid.topLeft();
 
     for (size_t x = 0; x < cgid.SIZE_N; x++)
     {
@@ -638,9 +651,9 @@ void MapView::regularUpdate__drawChunkGroups()
           data.entities.push_back(renderedChunkData.renderedChunk->entities);
 
           QImage depthImg(renderedChunkData.renderedChunk->depth,
-                          groupRegion.width(),
-                          groupRegion.height(),
-                          QImage::Format_Indexed8);
+                          ChunkID::SIZE_N,
+                          ChunkID::SIZE_N,
+                          QImage::Format_Grayscale8);
 
           h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
         }
@@ -812,24 +825,28 @@ void DrawHelper3::drawChunkEntities(const RenderedChunk& rendered)
   }
 }
 
-void DrawHelper3::drawEntitieMap(const Chunk::EntityMap &map)
+void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID& cgID, QImage depthImg)
 {
+  const MapCamera depthImgCam = CreateCameraForChunkGroup(cgID);
+
   for (const auto &type : m_parent.overlayItemTypes)
   {
     auto range = map.equal_range(type);
     for (auto it = range.first; it != range.second; ++it) {
+      const auto midpoint = (*it)->midpoint();
       // don't show entities above our depth
-      int entityY = (*it)->midpoint().y;
       // everything below the current block,
       // but also inside the current block
-      if (entityY < m_parent.depth + 1) {
-        int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
-        int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
-        int index = entityX + (entityZ << 4);
-        /*int highY = rendered.depth[index];
-        if ( (entityY+10 >= highY) ||
-             (entityY+10 >= m_parent.depth) )
-          (*it)->draw(h.x1, h.z1, m_parent.zoom, &canvas_entities);*/
+      if (midpoint.y < m_parent.depth + 1) {
+
+        const QPointF depthImgPixelF = depthImgCam.getPixelFromBlockCoordinates(TopViewPosition(midpoint.x, midpoint.z));
+        const QPoint depthImgPixel(static_cast<int>(depthImgPixelF.x()), static_cast<int>(depthImgPixelF.y()));
+
+        const int highY = depthImg.pixel(depthImgPixel) & 0xff;
+
+        if ( (midpoint.y+10 >= highY) ||
+             (midpoint.y+10 >= m_parent.depth) )
+          (*it)->draw(h.x1, h.z1, m_parent.zoom, &canvas_entities);
       }
     }
   }
@@ -846,6 +863,8 @@ void MapView::redraw() {
     update();
     return;
   }
+
+  const bool displayDepthMap = QSettings().value("depthmapview", false).toBool();
 
   ChunkCache::Locker locker(*cache);
 
@@ -885,11 +904,16 @@ void MapView::redraw() {
                             topLeftInBlocks.z + 16 * ChunkGroupID::SIZE_N));
       QRectF targetRect(topLeftInPixeln, bottomRightInPixeln);
 
-      h2.getCanvas().drawImage(targetRect, renderedData.renderedImg.isNull() ? placeholderImg : renderedData.renderedImg);
+      const QImage& imageToDraw = displayDepthMap ? renderedData.depthImg : renderedData.renderedImg;
+
+      h2.getCanvas().drawImage(targetRect, imageToDraw.isNull() ? placeholderImg : imageToDraw);
 
       for (const auto& entityMap: renderedData.entities)
       {
-
+        if (entityMap)
+        {
+          h2.drawEntityMap(*entityMap, cgID, renderedData.depthImg);
+        }
       }
 
       /*

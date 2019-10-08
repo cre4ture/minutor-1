@@ -124,3 +124,10 @@ void Settings::on_checkBox_fine_zoom_toggled(bool checked)
   info.setValue("finezoom", checked);
   emit settingsUpdated();
 }
+
+void Settings::on_checkBox_display_depth_map_toggled(bool checked)
+{
+  QSettings info;
+  info.setValue("depthmapview", checked);
+  emit settingsUpdated();
+}
