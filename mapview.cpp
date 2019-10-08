@@ -1007,21 +1007,13 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk
 
 void DrawHelper2::drawChunk_Map_int(int x, int z, const QImage &srcImage)
 {
-  // this figures out where on the screen this chunk should be drawn
-
-  // and the center chunk screen coordinates
-  double centerx = h.imageSize.width() / 2;
-  double centery = h.imageSize.height() / 2;
-  // which need to be shifted to account for panning inside that chunk
-  centerx -= (h.x - centerchunkx * chunkSizeOrig) * h.zoom;
-  centery -= (h.z - centerchunkz * chunkSizeOrig) * h.zoom;
-  // centerx,y now points to the top left corner of the center chunk
-  // so now calculate our x,y in relation
   double chunksize = chunkSizeOrig * h.zoom;
-  centerx += (x - centerchunkx) * chunksize;
-  centery += (z - centerchunkz) * chunksize;
 
-  QRectF targetRect(centerx, centery, chunksize, chunksize);
+  // this figures out where on the screen this chunk should be drawn
+  const auto topLeft = ChunkID(x, z).topLeft();
+  const QPointF topLeftInPixel = h.cam.getPixelFromBlockCoordinates(TopViewPosition(topLeft.x, topLeft.z));
+
+  QRectF targetRect(topLeftInPixel, QSizeF(chunksize, chunksize));
 
   canvas.drawImage(targetRect, srcImage);
 }
