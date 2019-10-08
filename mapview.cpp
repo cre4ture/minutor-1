@@ -20,6 +20,7 @@
 class DrawHelper
 {
 public:
+  const MapCamera cam;
   const double x;
   const double z;
   const QRect imageSize;
@@ -42,7 +43,8 @@ public:
   double z2;
 
   DrawHelper(const double x_, const double z_, const double zoom_, const QRect image)
-    : x(x_)
+    : cam(x, z, image.size(), zoom_)
+    , x(x_)
     , z(z_)
     , imageSize(image)
     , zoom(zoom_)

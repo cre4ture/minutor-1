@@ -53,6 +53,14 @@ struct MapCamera
   QSize size_pixels;
   double zoom;
 
+  MapCamera() {}
+
+  MapCamera(double bx, double bz, const QSize& size_pixels_, double zoom_)
+    : centerpos_blocks(bx, bz)
+    , size_pixels(size_pixels_)
+    , zoom(zoom_)
+  {}
+
   TopViewPosition transformPixelToBlockCoordinates(QPoint pixel_pos) const;
 
   QPointF getPixelFromBlockCoordinates(TopViewPosition block_pos) const;
