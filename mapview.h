@@ -172,6 +172,8 @@ class MapView : public QWidget {
   {
     Bitset<RenderStateT, uint8_t> state;
     QImage renderedImg;
+    QImage depthImg;
+    QList<QSharedPointer<Chunk::EntityMap> > entities;
   };
 
   LockGuarded<QHash<ChunkGroupID, RenderGroupData>> renderedChunkGroupsCache;

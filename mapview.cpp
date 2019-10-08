@@ -94,6 +94,7 @@ public:
   }
 
   void drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk);
+  void drawChunk_Map_int(int x, int z, const QImage& renderedChunk);
 
   QPainter& getCanvas() { return canvas; }
 
@@ -122,6 +123,8 @@ public:
     }
 
     void drawChunkEntities(const RenderedChunk &chunk);
+
+    void drawEntitieMap(const Chunk::EntityMap& map);
 
     void drawOverlayItemToPlayersCanvas(const QVector<QSharedPointer<OverlayItem> >& items)
     {
@@ -477,19 +480,23 @@ void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
 {
     ChunkID id(chunk->chunkX, chunk->chunkZ);
-    auto lock = renderCache.lock();
+    {
+      auto lock = renderCache.lock();
 
-    auto& data = lock()[id];
-    data.renderedChunk = chunk->rendered;
-    data.state.unset(RenderStateT::RenderingRequested);
+      auto& data = lock()[id];
+      data.renderedChunk = chunk->rendered;
+      data.state.unset(RenderStateT::RenderingRequested);
+    }
 
     const auto cgID = ChunkGroupID::fromCoordinates(id.getX(), id.getZ());
-    auto cgLock = renderedChunkGroupsCache.lock();
-    auto& grData = cgLock()[cgID];
-    if (!grData.state.test(RenderStateT::RenderingRequested))
     {
-      grData.state.set(RenderStateT::RenderingRequested);
-      chunkGroupsToDraw.enqueue(cgID);
+      auto cgLock = renderedChunkGroupsCache.lock();
+      auto& grData = cgLock()[cgID];
+      if (!grData.state.test(RenderStateT::RenderingRequested))
+      {
+        grData.state.set(RenderStateT::RenderingRequested);
+        chunkGroupsToDraw.enqueue(cgID);
+      }
     }
 }
 
@@ -598,6 +605,8 @@ void MapView::regularUpdate__drawChunkGroups()
   while (chunkGroupsToDraw.size() > 0)
   {
     const auto cgid = chunkGroupsToDraw.dequeue();
+    auto& data = renderdChunkGroupLock()[cgid];
+    data.entities.clear();
 
     const auto topLeft = cgid.topLeft();
     QRectF groupRegionF(topLeft.x * 16, topLeft.z * 16, cgid.SIZE_N * 16, cgid.SIZE_N * 16);
@@ -607,7 +616,10 @@ void MapView::regularUpdate__drawChunkGroups()
                  1.0, groupRegion);
 
     QImage image(groupRegion.size(), QImage::Format_RGB32);
+    QImage imageDepth(groupRegion.size(), QImage::Format_Indexed8);
+
     DrawHelper2 h2(h, image);
+    DrawHelper2 h2_depth(h, imageDepth);
 
     for (size_t x = 0; x < cgid.SIZE_N; x++)
     {
@@ -618,12 +630,24 @@ void MapView::regularUpdate__drawChunkGroups()
         auto renderedChunkData = renderdCacheLock()[cid];
 
         h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunkData.renderedChunk); // can deal with nullptr!
+
+        if (renderedChunkData.renderedChunk)
+        {
+          data.entities.push_back(renderedChunkData.renderedChunk->entities);
+
+          QImage depthImg(renderedChunkData.renderedChunk->depth,
+                          groupRegion.width(),
+                          groupRegion.height(),
+                          QImage::Format_Indexed8);
+
+          h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
+        }
       }
     }
 
-    auto& data = renderdChunkGroupLock()[cgid];
     data.state.unset(RenderStateT::RenderingRequested);
     data.renderedImg = image;
+    data.depthImg = imageDepth;
   }
 }
 
@@ -786,6 +810,29 @@ void DrawHelper3::drawChunkEntities(const RenderedChunk& rendered)
   }
 }
 
+void DrawHelper3::drawEntitieMap(const Chunk::EntityMap &map)
+{
+  for (const auto &type : m_parent.overlayItemTypes)
+  {
+    auto range = map.equal_range(type);
+    for (auto it = range.first; it != range.second; ++it) {
+      // don't show entities above our depth
+      int entityY = (*it)->midpoint().y;
+      // everything below the current block,
+      // but also inside the current block
+      if (entityY < m_parent.depth + 1) {
+        int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
+        int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
+        int index = entityX + (entityZ << 4);
+        /*int highY = rendered.depth[index];
+        if ( (entityY+10 >= highY) ||
+             (entityY+10 >= m_parent.depth) )
+          (*it)->draw(h.x1, h.z1, m_parent.zoom, &canvas_entities);*/
+      }
+    }
+  }
+}
+
 void MapView::redraw() {
 
   image_players.fill(0);
@@ -837,6 +884,11 @@ void MapView::redraw() {
       QRectF targetRect(topLeftInPixeln, bottomRightInPixeln);
 
       h2.getCanvas().drawImage(targetRect, renderedData.renderedImg.isNull() ? placeholderImg : renderedData.renderedImg);
+
+      for (const auto& entityMap: renderedData.entities)
+      {
+
+      }
 
       /*
        * drawChunk3(cx, cz, renderedData.renderedChunk, h2);
@@ -922,6 +974,13 @@ void MapView::drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &rend
 
 void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk>& renderedChunk) {
 
+  const uchar* srcImageData = renderedChunk ? renderedChunk->image : MapView::getPlaceholder();
+  QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
+  drawChunk_Map_int(x, z, srcImage);
+}
+
+void DrawHelper2::drawChunk_Map_int(int x, int z, const QImage &srcImage)
+{
   // this figures out where on the screen this chunk should be drawn
 
   // and the center chunk screen coordinates
@@ -935,9 +994,6 @@ void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk
   double chunksize = chunkSizeOrig * h.zoom;
   centerx += (x - centerchunkx) * chunksize;
   centery += (z - centerchunkz) * chunksize;
-
-  const uchar* srcImageData = renderedChunk ? renderedChunk->image : MapView::getPlaceholder();
-  QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
 
   QRectF targetRect(centerx, centery, chunksize, chunksize);
 
