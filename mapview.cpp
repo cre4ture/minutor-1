@@ -28,9 +28,8 @@ public:
 
   const double chunksize;
 
-  const int centerchunkx;
-  const int centerchunkz;
-
+  const TopViewPosition topLeftBlock;
+  const ChunkID topLeftChunk;
   int startx; // first chunk left
   int startz; // first chunk top
 
@@ -49,26 +48,19 @@ public:
     , imageSize(size_)
     , zoom(zoom_)
     , chunksize(16* zoom)
-    // first find the center block position
-    , centerchunkx((int)floor(x / 16.0))
-    , centerchunkz((int)floor(z / 16.0))
-  {
-    // and the center of the screen
-    int centerx = imageSize.width() / 2;
-    int centery = imageSize.height() / 2;
-    // and align for panning
-    centerx -= (x - centerchunkx * 16) * zoom;
-    centery -= (z - centerchunkz * 16) * zoom;
     // now calculate the topleft block on the screen
-    startx = centerchunkx - floor(centerx / chunksize) - 1;
-    startz = centerchunkz - floor(centery / chunksize) - 1;
+    , topLeftBlock(cam.transformPixelToBlockCoordinates(QPoint(0,0)))
+    , topLeftChunk(ChunkID::fromCoordinates(topLeftBlock.x, topLeftBlock.z))
+  {
+    startx = topLeftChunk.getX() - 1;
+    startz = topLeftChunk.getZ() - 1;
     // and the dimensions of the screen in blocks
-    blockswide = imageSize.width() / chunksize + 3;
-    blockstall = imageSize.height() / chunksize + 3;
+    blockswide = cam.size_pixels.width() / chunksize + 3;
+    blockstall = cam.size_pixels.height() / chunksize + 3;
 
 
-    double halfviewwidth = imageSize.width() / 2 / zoom;
-    double halvviewheight = imageSize.height() / 2 / zoom;
+    double halfviewwidth = cam.size_pixels.width() / 2 / zoom;
+    double halvviewheight = cam.size_pixels.height() / 2 / zoom;
     x1 = x - halfviewwidth;
     z1 = z - halvviewheight;
     x2 = x + halfviewwidth;
