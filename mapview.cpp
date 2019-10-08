@@ -90,8 +90,6 @@ public:
   DrawHelper2(DrawHelper& h_, QImage& imageBuffer)
                 : h(h_)
                 , canvas(&imageBuffer)
-                , centerchunkx(floor(h.x / chunkSizeOrig))
-                , centerchunkz(floor(h.z / chunkSizeOrig))
   {
   }
 
@@ -103,10 +101,6 @@ public:
 protected:
   DrawHelper& h;
   QPainter canvas;
-
-  // first find the center chunk
-  const int centerchunkx;
-  const int centerchunkz;
 };
 
 
