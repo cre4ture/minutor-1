@@ -174,9 +174,17 @@ QString EntityEvaluator::describeReceipeItem(const QTreeWidgetItem &itemNode) co
                 auto* enchantmendIdNode = getNodeFromPath("id", *enchantmentNode);
                 if (enchantmendIdNode)
                 {
-                    int id = enchantmendIdNode->text(1).toInt();
+                  bool ok = false;
+                  int id = enchantmendIdNode->text(1).toInt(&ok);
+                  if (ok)
+                  {
                     QString name = m_config.definitions.enchantmentDefintions->getDescriptor(id).name;
                     value += name + " (" + enchantmendIdNode->text(1) + ")";
+                  }
+                  else
+                  {
+                    value = removeMinecraftPrefix(enchantmendIdNode->text(1));
+                  }
                 }
                 auto* enchantmendLevelNode = getNodeFromPath("lvl", *enchantmentNode);
                 if (enchantmendLevelNode)
