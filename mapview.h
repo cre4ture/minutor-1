@@ -167,7 +167,8 @@ class MapView : public QWidget {
     }
   };
 
-  LockGuarded<QHash<ChunkID, RenderData>> renderCache;
+  using RenderCacheT = LockGuarded<QHash<ChunkID, RenderData>>;
+  RenderCacheT renderCache;
 
   struct RenderGroupData
   {
@@ -177,7 +178,8 @@ class MapView : public QWidget {
     QList<QSharedPointer<Chunk::EntityMap> > entities;
   };
 
-  LockGuarded<QHash<ChunkGroupID, RenderGroupData>> renderedChunkGroupsCache;
+  using RenderedChunkGroupCacheT = LockGuarded<QHash<ChunkGroupID, RenderGroupData>>;
+  RenderedChunkGroupCacheT renderedChunkGroupsCache;
 
   QImage imageChunks;
   QImage imageOverlays;
@@ -212,6 +214,7 @@ private slots:
     void regularUpdate();
     void regularUpdata__checkRedraw();
     void regularUpdate__drawChunkGroups();
+    void regularUpdate__drawChunkGroup(RenderCacheT::Lock& renderdCacheLock, RenderedChunkGroupCacheT::Lock &lock, const ChunkGroupID cgid);
 };
 
 #endif  // MAPVIEW_H_
