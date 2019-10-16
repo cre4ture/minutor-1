@@ -79,7 +79,7 @@ class DrawHelper2
 public:
   static const int chunkSizeOrig = 16;
 
-  DrawHelper2(DrawHelper& h_, QImage& imageBuffer)
+  DrawHelper2(const DrawHelper& h_, QImage& imageBuffer)
                 : h(h_)
                 , canvas(&imageBuffer)
   {
@@ -91,7 +91,7 @@ public:
   QPainter& getCanvas() { return canvas; }
 
 protected:
-  DrawHelper& h;
+  const DrawHelper& h;
   QPainter canvas;
 };
 
@@ -608,53 +608,77 @@ void MapView::regularUpdate__drawChunkGroups()
   }
 }
 
-void MapView::regularUpdate__drawChunkGroup(RenderCacheT::Lock& renderdCacheLock, RenderedChunkGroupCacheT::Lock& renderdChunkGroupLock, const ChunkGroupID cgid)
+class MapView::ChunkGroupRendererC
 {
-  RenderGroupData& data = renderdChunkGroupLock()[cgid];
-  data.entities.clear();
+public:
+  ChunkGroupRendererC(RenderGroupData& data_, const ChunkGroupID cgid_)
+    : cgid(cgid_)
+    , data(data_)
+    , cam(CreateCameraForChunkGroup(cgid))
+    , h(cam.centerpos_blocks.x, cam.centerpos_blocks.z,
+        cam.zoom, cam.size_pixels)
+    , image(cam.size_pixels, QImage::Format_RGB32)
+    , imageDepth(cam.size_pixels, QImage::Format_Grayscale8)
+    , h2(h, image)
+    , h2_depth(h, imageDepth)
+  {}
 
-  const MapCamera cam = CreateCameraForChunkGroup(cgid);
-  DrawHelper h(cam.centerpos_blocks.x, cam.centerpos_blocks.z,
-               cam.zoom, cam.size_pixels);
-
-  QImage image(cam.size_pixels, QImage::Format_RGB32);
-  QImage imageDepth(cam.size_pixels, QImage::Format_Grayscale8);
-  imageDepth.fill(0);
-
-  DrawHelper2 h2(h, image);
-  DrawHelper2 h2_depth(h, imageDepth);
-
-  const auto topLeft = cgid.topLeft();
-
-  for (size_t x = 0; x < cgid.SIZE_N; x++)
+  void redraw(RenderCacheT::Lock& renderdCacheLock)
   {
-    for (size_t z = 0; z < cgid.SIZE_N; z++)
+    data.entities.clear();
+    imageDepth.fill(0);
+
+    const auto topLeft = cgid.topLeft();
+
+    for (size_t x = 0; x < cgid.SIZE_N; x++)
     {
-      const ChunkID cid(topLeft.x + x, topLeft.z + z);
-
-      auto renderedChunkData = renderdCacheLock()[cid];
-
-      h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunkData.renderedChunk); // can deal with nullptr!
-
-      if (renderedChunkData.renderedChunk)
+      for (size_t z = 0; z < cgid.SIZE_N; z++)
       {
-        data.entities.push_back(renderedChunkData.renderedChunk->entities);
-
-        QImage depthImg(renderedChunkData.renderedChunk->depth,
-                        ChunkID::SIZE_N,
-                        ChunkID::SIZE_N,
-                        QImage::Format_Grayscale8);
-
-        h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
+        const ChunkID cid(topLeft.x + x, topLeft.z + z);
+        auto renderedChunkData = renderdCacheLock()[cid];
+        drawChunk(cid, renderedChunkData);
       }
+    }
+
+    data.state.unset(RenderStateT::RenderingRequested);
+    data.renderedImg = image;
+    data.depthImg = imageDepth;
+  }
+
+  void drawChunk(const ChunkID cid, RenderData& renderedChunkData)
+  {
+    h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunkData.renderedChunk); // can deal with nullptr!
+
+    if (renderedChunkData.renderedChunk)
+    {
+      data.entities.push_back(renderedChunkData.renderedChunk->entities);
+
+      QImage depthImg(renderedChunkData.renderedChunk->depth,
+                      ChunkID::SIZE_N,
+                      ChunkID::SIZE_N,
+                      QImage::Format_Grayscale8);
+
+      h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
     }
   }
 
-  data.state.unset(RenderStateT::RenderingRequested);
-  data.renderedImg = image;
-  data.depthImg = imageDepth;
-}
+private:
+  const ChunkGroupID cgid;
+  RenderGroupData& data;
+  const MapCamera cam;
+  const DrawHelper h;
+  QImage image;
+  QImage imageDepth;
+  DrawHelper2 h2;
+  DrawHelper2 h2_depth;
+};
 
+void MapView::regularUpdate__drawChunkGroup(RenderCacheT::Lock& renderdCacheLock, RenderedChunkGroupCacheT::Lock& renderdChunkGroupLock, const ChunkGroupID cgid)
+{
+  RenderGroupData& data = renderdChunkGroupLock()[cgid];
+  ChunkGroupRendererC renderer(data, cgid);
+  renderer.redraw(renderdCacheLock);
+}
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
 {
     auto worldPos = getCamera().transformPixelToBlockCoordinates(QPoint(mouse_x, mouse_y)).floor();
