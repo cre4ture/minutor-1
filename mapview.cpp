@@ -110,8 +110,6 @@ public:
     {
     }
 
-    void drawChunkEntities(const RenderedChunk &chunk);
-
     void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, QImage depthImg);
 
     void drawOverlayItemToPlayersCanvas(const QVector<QSharedPointer<OverlayItem> >& items)
@@ -783,34 +781,6 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
-void DrawHelper3::drawChunkEntities(const RenderedChunk& rendered)
-{
-  if (!rendered.entities)
-  {
-    return;
-  }
-
-  for (const auto &type : m_parent.overlayItemTypes)
-  {
-    auto range = rendered.entities->equal_range(type);
-    for (auto it = range.first; it != range.second; ++it) {
-      // don't show entities above our depth
-      int entityY = (*it)->midpoint().y;
-      // everything below the current block,
-      // but also inside the current block
-      if (entityY < m_parent.depth + 1) {
-        int entityX = static_cast<int>((*it)->midpoint().x) & 0x0f;
-        int entityZ = static_cast<int>((*it)->midpoint().z) & 0x0f;
-        int index = entityX + (entityZ << 4);
-        int highY = rendered.depth[index];
-        if ( (entityY+10 >= highY) ||
-             (entityY+10 >= m_parent.depth) )
-          (*it)->draw(h.x1, h.z1, m_parent.zoom, &canvas_entities);
-      }
-    }
-  }
-}
-
 void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID& cgID, QImage depthImg)
 {
   const MapCamera depthImgCam = CreateCameraForChunkGroup(cgID);
@@ -972,16 +942,6 @@ bool MapView::redrawNeeded(const RenderedChunk &renderedChunk) const
 {
   return (renderedChunk.renderedAt != depth ||
           renderedChunk.renderedFlags != flags);
-}
-
-void MapView::drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk, DrawHelper3 &h)
-{
-    h.drawChunk_Map(x, z, renderedChunk);
-
-    if (renderedChunk)
-    {
-      h.drawChunkEntities(*renderedChunk);
-    }
 }
 
 void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk>& renderedChunk) {

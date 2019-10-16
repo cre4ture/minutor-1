@@ -119,7 +119,6 @@ class MapView : public QWidget {
  private:
   class AsyncRenderLock;
   bool redrawNeeded(const RenderedChunk& renderedChunk) const;
-  void drawChunk3(int x, int z, const QSharedPointer<RenderedChunk> &chunk, DrawHelper3 &h);
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   void getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk> &chunk);
