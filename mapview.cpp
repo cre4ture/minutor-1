@@ -190,6 +190,72 @@ private:
     QMap<ChunkID, QImage> m_blocks;
 };
 
+
+
+class MapView::ChunkGroupRendererC
+{
+public:
+  ChunkGroupRendererC(RenderGroupData& data_, const ChunkGroupID cgid_)
+    : cgid(cgid_)
+    , data(data_)
+    , cam(CreateCameraForChunkGroup(cgid))
+    , h(cam.centerpos_blocks.x, cam.centerpos_blocks.z,
+        cam.zoom, cam.size_pixels)
+    , image(data.renderedImg)
+    , imageDepth(data.depthImg)
+    , h2(h, image)
+    , h2_depth(h, imageDepth)
+  {
+  }
+
+  void redraw(RenderCacheT::Lock& renderdCacheLock)
+  {
+    data.clear();
+
+    const auto topLeft = cgid.topLeft();
+
+    for (size_t x = 0; x < cgid.SIZE_N; x++)
+    {
+      for (size_t z = 0; z < cgid.SIZE_N; z++)
+      {
+        const ChunkID cid(topLeft.x + x, topLeft.z + z);
+        auto renderedChunkData = renderdCacheLock()[cid];
+        drawChunk(cid, renderedChunkData.renderedChunk);
+      }
+    }
+
+    data.state.unset(RenderStateT::RenderingRequested);
+  }
+
+  void drawChunk(const ChunkID cid, const QSharedPointer<RenderedChunk>& renderedChunk)
+  {
+    h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunk); // can deal with nullptr!
+
+    if (renderedChunk)
+    {
+      data.entities.push_back(renderedChunk->entities);
+
+      QImage depthImg(renderedChunk->depth,
+                      ChunkID::SIZE_N,
+                      ChunkID::SIZE_N,
+                      QImage::Format_Grayscale8);
+
+      h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
+    }
+  }
+
+private:
+  const ChunkGroupID cgid;
+  RenderGroupData& data;
+  const MapCamera cam;
+  const DrawHelper h;
+  QImage& image;
+  QImage& imageDepth;
+  DrawHelper2 h2;
+  DrawHelper2 h2_depth;
+};
+
+
 MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidget *parent)
   : QWidget(parent)
   , cache(ChunkCache::Instance())
@@ -431,13 +497,12 @@ const QImage& MapView::getChunkGroupPlaceholder()
 {
   static QImage img;
   static bool initDone = false;
+
   if (!initDone)
   {
     const QImage placeholderImage(getPlaceholder(), ChunkID::SIZE_N, ChunkID::SIZE_N, QImage::Format_RGB32);
 
-    const int size1d = ChunkID::SIZE_N * ChunkGroupID::SIZE_N;
-    const QSize size2d(size1d, size1d);
-    img = QImage(size2d, QImage::Format_RGB32);
+    img = QImage(ChunkGroupID::getSize(), QImage::Format_RGB32);
     QPainter canvas(&img);
 
     for (int iy = 0; iy < ChunkGroupID::SIZE_N; iy++)
@@ -448,6 +513,8 @@ const QImage& MapView::getChunkGroupPlaceholder()
         canvas.drawImage(targetRect, placeholderImage);
       }
     }
+
+    initDone = true;
   }
 
   return img;
@@ -478,11 +545,9 @@ void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
     {
       auto cgLock = renderedChunkGroupsCache.lock();
       auto& grData = cgLock()[cgID];
-      if (!grData.state.test(RenderStateT::RenderingRequested))
-      {
-        grData.state.set(RenderStateT::RenderingRequested);
-        chunkGroupsToDraw.enqueue(cgID);
-      }
+
+      ChunkGroupRendererC renderer(grData, cgID);
+      renderer.drawChunk(id, chunk->rendered);
     }
 }
 
@@ -607,71 +672,6 @@ void MapView::regularUpdate__drawChunkGroups()
     regularUpdate__drawChunkGroup(renderdCacheLock, renderdChunkGroupLock, cgid);
   }
 }
-
-class MapView::ChunkGroupRendererC
-{
-public:
-  ChunkGroupRendererC(RenderGroupData& data_, const ChunkGroupID cgid_)
-    : cgid(cgid_)
-    , data(data_)
-    , cam(CreateCameraForChunkGroup(cgid))
-    , h(cam.centerpos_blocks.x, cam.centerpos_blocks.z,
-        cam.zoom, cam.size_pixels)
-    , image(cam.size_pixels, QImage::Format_RGB32)
-    , imageDepth(cam.size_pixels, QImage::Format_Grayscale8)
-    , h2(h, image)
-    , h2_depth(h, imageDepth)
-  {}
-
-  void redraw(RenderCacheT::Lock& renderdCacheLock)
-  {
-    data.entities.clear();
-    imageDepth.fill(0);
-
-    const auto topLeft = cgid.topLeft();
-
-    for (size_t x = 0; x < cgid.SIZE_N; x++)
-    {
-      for (size_t z = 0; z < cgid.SIZE_N; z++)
-      {
-        const ChunkID cid(topLeft.x + x, topLeft.z + z);
-        auto renderedChunkData = renderdCacheLock()[cid];
-        drawChunk(cid, renderedChunkData);
-      }
-    }
-
-    data.state.unset(RenderStateT::RenderingRequested);
-    data.renderedImg = image;
-    data.depthImg = imageDepth;
-  }
-
-  void drawChunk(const ChunkID cid, RenderData& renderedChunkData)
-  {
-    h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunkData.renderedChunk); // can deal with nullptr!
-
-    if (renderedChunkData.renderedChunk)
-    {
-      data.entities.push_back(renderedChunkData.renderedChunk->entities);
-
-      QImage depthImg(renderedChunkData.renderedChunk->depth,
-                      ChunkID::SIZE_N,
-                      ChunkID::SIZE_N,
-                      QImage::Format_Grayscale8);
-
-      h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
-    }
-  }
-
-private:
-  const ChunkGroupID cgid;
-  RenderGroupData& data;
-  const MapCamera cam;
-  const DrawHelper h;
-  QImage image;
-  QImage imageDepth;
-  DrawHelper2 h2;
-  DrawHelper2 h2_depth;
-};
 
 void MapView::regularUpdate__drawChunkGroup(RenderCacheT::Lock& renderdCacheLock, RenderedChunkGroupCacheT::Lock& renderdChunkGroupLock, const ChunkGroupID cgid)
 {
@@ -869,18 +869,16 @@ void MapView::redraw() {
 
   const QImage& placeholderImg = getChunkGroupPlaceholder();
 
+  RenderGroupData renderedDataDummy;
+
   for (int zi = 0; zi < chunkGroupsTall; zi++)
     for (int xi = 0; xi < chunkGroupsWide; xi++)
     {
       const auto cgID = ChunkGroupID(xi + rootTopLeftChunkGroupId.getX(), zi + rootTopLeftChunkGroupId.getZ());
       const auto topLeftChunk = ChunkID(cgID.topLeft().x, cgID.topLeft().z);
 
-      RenderGroupData renderedData;
       auto it = renderdCacheLock().find(cgID);
-      if (it != renderdCacheLock().end())
-      {
-        renderedData = *it;
-      }
+      RenderGroupData& renderedData = (it != renderdCacheLock().end()) ? *it : renderedDataDummy;
 
       const auto topLeftInBlocks = TopViewPosition(topLeftChunk.topLeft().x, topLeftChunk.topLeft().z);
       const auto topLeftInPixeln = camera.getPixelFromBlockCoordinates(topLeftInBlocks);
@@ -1201,4 +1199,18 @@ MapCamera MapView::getCamera() const
   camera.size_pixels = QSize(width(), height());
   camera.zoom = zoom;
   return camera;
+}
+
+MapView::RenderGroupData::RenderGroupData()
+  : renderedImg()
+  , depthImg(ChunkGroupID::getSize(), QImage::Format_Grayscale8)
+{
+  clear();
+}
+
+void MapView::RenderGroupData::clear()
+{
+  entities.clear();
+  renderedImg = getChunkGroupPlaceholder().copy();
+  depthImg.fill(0);
 }

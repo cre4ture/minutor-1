@@ -174,6 +174,10 @@ class MapView : public QWidget {
 
   struct RenderGroupData
   {
+    RenderGroupData();
+
+    void clear();
+
     Bitset<RenderStateT, uint8_t> state;
     QImage renderedImg;
     QImage depthImg;

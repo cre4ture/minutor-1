@@ -5,6 +5,7 @@
 
 #include <QSharedPointer>
 #include <QMap>
+#include <QSize>
 
 class CoordinateID
 {
@@ -72,6 +73,13 @@ class ChunkGroupID: public ChunkID_t<16, ChunkGroupID>
 {
 public:
   using ChunkID_t::ChunkID_t;
+
+  static QSize getSize()
+  {
+    const int size1d = ChunkID::SIZE_N * ChunkGroupID::SIZE_N;
+    const QSize size2d(size1d, size1d);
+    return size2d;
+  }
 };
 
 inline uint qHash(const CoordinateID &c) {
