@@ -7,6 +7,7 @@
 
 #include <QtCore>
 #include <QVector>
+#include <QImage>
 
 #include "./paletteentry.h"
 #include "./generatedstructure.h"
@@ -92,8 +93,9 @@ public:
   const int chunkZ;
   int renderedAt;
   int renderedFlags;
-  uchar depth[16 * 16];
-  uchar image[16 * 16 * 4];  // cached render
+
+  QImage depth;
+  QImage image;
 
   RenderedChunk(const QSharedPointer<Chunk>& chunk)
     : chunk(chunk)

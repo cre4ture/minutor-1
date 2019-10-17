@@ -181,7 +181,7 @@ class MapView : public QWidget {
     Bitset<RenderStateT, uint8_t> state;
     QImage renderedImg;
     QImage depthImg;
-    QList<QSharedPointer<Chunk::EntityMap> > entities;
+    QHash<ChunkID, QSharedPointer<Chunk::EntityMap> > entities;
   };
 
   using RenderedChunkGroupCacheT = LockGuarded<QHash<ChunkGroupID, RenderGroupData>>;
@@ -192,10 +192,9 @@ class MapView : public QWidget {
   QImage image_players;
   QQueue<ChunkID> chunksToLoad;
   QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
-  QQueue<ChunkGroupID> chunkGroupsToDraw;
   DefinitionManager *dm;
 
-  static uchar* getPlaceholder();
+  static const QImage &getPlaceholder();
   static const QImage &getChunkGroupPlaceholder();
 
   QSet<QString> overlayItemTypes;
@@ -219,8 +218,6 @@ private slots:
 
     void regularUpdate();
     void regularUpdata__checkRedraw();
-    void regularUpdate__drawChunkGroups();
-    void regularUpdate__drawChunkGroup(RenderCacheT::Lock& renderdCacheLock, RenderedChunkGroupCacheT::Lock &lock, const ChunkGroupID cgid);
 };
 
 #endif  // MAPVIEW_H_

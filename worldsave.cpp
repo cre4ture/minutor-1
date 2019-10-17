@@ -308,10 +308,10 @@ void WorldSave::drawChunk(uchar *scanlines, int stride, int x, QSharedPointer<Ch
   for (int y = 0; y < 16; y++, offset += stride) {
     int xofs = offset;
     for (int x = 0; x < 16; x++, xofs += 4) {
-      scanlines[xofs+2] = attenuation * chunk->rendered->image[ioffset++];
-      scanlines[xofs+1] = attenuation * chunk->rendered->image[ioffset++];
-      scanlines[xofs+0] = attenuation * chunk->rendered->image[ioffset++];
-      scanlines[xofs+3] = attenuation * chunk->rendered->image[ioffset++];
+      scanlines[xofs+2] = attenuation * chunk->rendered->image.bits()[ioffset++];
+      scanlines[xofs+1] = attenuation * chunk->rendered->image.bits()[ioffset++];
+      scanlines[xofs+0] = attenuation * chunk->rendered->image.bits()[ioffset++];
+      scanlines[xofs+3] = attenuation * chunk->rendered->image.bits()[ioffset++];
     }
   }
 }

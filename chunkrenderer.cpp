@@ -41,9 +41,14 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
     chunk->rendered = QSharedPointer<RenderedChunk>::create(chunk);
   }
 
+  RenderedChunk& renderData = *chunk->rendered;
+
+  renderData.image = QImage(ChunkID::getSize(), QImage::Format_RGB32);
+  renderData.depth = QImage(ChunkID::getSize(), QImage::Format_Grayscale8);
+
   int offset = 0;
-  uchar *bits = chunk->rendered->image;
-  uchar *depthbits = chunk->rendered->depth;
+  uchar *bits = renderData.image.bits();
+  uchar *depthbits = renderData.depth.bits();
   for (int z = 0; z < 16; z++) {  // n->s
     int lasty = -1;
     for (int x = 0; x < 16; x++, offset++) {  // e->w

@@ -233,14 +233,9 @@ public:
 
     if (renderedChunk)
     {
-      data.entities.push_back(renderedChunk->entities);
+      data.entities[cid] = renderedChunk->entities;
 
-      QImage depthImg(renderedChunk->depth,
-                      ChunkID::SIZE_N,
-                      ChunkID::SIZE_N,
-                      QImage::Format_Grayscale8);
-
-      h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), depthImg);
+      h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), renderedChunk->depth);
     }
   }
 
@@ -473,12 +468,15 @@ void MapView::adjustZoom(double steps)
   if (zoom > zoomMax) zoom = zoomMax;
 }
 
-uchar *MapView::getPlaceholder()
+const QImage& MapView::getPlaceholder()
 {
   static uchar placeholder[16 * 16 * 4];  // no chunk found placeholder
   static bool initDone = false;
+  static QImage img;
   if (!initDone)
   {
+    initDone = true;
+
     int offset = 0;
     for (int y = 0; y < 16; y++)
       for (int x = 0; x < 16; x++) {
@@ -488,9 +486,11 @@ uchar *MapView::getPlaceholder()
         placeholder[offset++] = color;
         placeholder[offset++] = 0xff;
       }
+
+    img = QImage(placeholder, ChunkID::SIZE_N, ChunkID::SIZE_N, QImage::Format_RGB32);
   }
 
-  return placeholder;
+  return img;
 }
 
 const QImage& MapView::getChunkGroupPlaceholder()
@@ -500,7 +500,9 @@ const QImage& MapView::getChunkGroupPlaceholder()
 
   if (!initDone)
   {
-    const QImage placeholderImage(getPlaceholder(), ChunkID::SIZE_N, ChunkID::SIZE_N, QImage::Format_RGB32);
+    initDone = true;
+
+    const QImage& placeholderImage = getPlaceholder();
 
     img = QImage(ChunkGroupID::getSize(), QImage::Format_RGB32);
     QPainter canvas(&img);
@@ -513,8 +515,6 @@ const QImage& MapView::getChunkGroupPlaceholder()
         canvas.drawImage(targetRect, placeholderImage);
       }
     }
-
-    initDone = true;
   }
 
   return img;
@@ -605,8 +605,6 @@ void MapView::regularUpdate()
     }
   }
 
-  regularUpdate__drawChunkGroups();
-
   redraw();
   update();
 }
@@ -661,24 +659,6 @@ MapCamera CreateCameraForChunkGroup(const ChunkGroupID& cgid)
                    1.0);
 }
 
-void MapView::regularUpdate__drawChunkGroups()
-{
-  auto renderdCacheLock = renderCache.lock();
-  auto renderdChunkGroupLock = renderedChunkGroupsCache.lock();
-
-  while (chunkGroupsToDraw.size() > 0)
-  {
-    const ChunkGroupID cgid = chunkGroupsToDraw.dequeue();
-    regularUpdate__drawChunkGroup(renderdCacheLock, renderdChunkGroupLock, cgid);
-  }
-}
-
-void MapView::regularUpdate__drawChunkGroup(RenderCacheT::Lock& renderdCacheLock, RenderedChunkGroupCacheT::Lock& renderdChunkGroupLock, const ChunkGroupID cgid)
-{
-  RenderGroupData& data = renderdChunkGroupLock()[cgid];
-  ChunkGroupRendererC renderer(data, cgid);
-  renderer.redraw(renderdCacheLock);
-}
 void MapView::getToolTipMousePos(int mouse_x, int mouse_y)
 {
     auto worldPos = getCamera().transformPixelToBlockCoordinates(QPoint(mouse_x, mouse_y)).floor();
@@ -973,8 +953,7 @@ bool MapView::redrawNeeded(const RenderedChunk &renderedChunk) const
 
 void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk>& renderedChunk) {
 
-  const uchar* srcImageData = renderedChunk ? renderedChunk->image : MapView::getPlaceholder();
-  QImage srcImage(srcImageData, chunkSizeOrig, chunkSizeOrig, QImage::Format_RGB32);
+  const QImage& srcImage = renderedChunk ? renderedChunk->image : MapView::getPlaceholder();
   drawChunk_Map_int(x, z, srcImage);
 }
 
@@ -1149,7 +1128,7 @@ int MapView::getY(int x, int z) {
   ChunkCache::Locker locked_cache(*cache);
   QSharedPointer<Chunk> chunk;
   locked_cache.fetch(chunk, ChunkID(cx, cz));
-  return chunk ? (chunk->rendered ? chunk->rendered->depth[(x & 0xf) + (z & 0xf) * 16] : -1) : -1;
+  return chunk ? (chunk->rendered ? chunk->rendered->depth.bits()[(x & 0xf) + (z & 0xf) * 16] : -1) : -1;
 }
 
 QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
