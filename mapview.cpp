@@ -208,25 +208,6 @@ public:
   {
   }
 
-  void redraw(RenderCacheT::Lock& renderdCacheLock)
-  {
-    data.clear();
-
-    const auto topLeft = cgid.topLeft();
-
-    for (size_t x = 0; x < cgid.SIZE_N; x++)
-    {
-      for (size_t z = 0; z < cgid.SIZE_N; z++)
-      {
-        const ChunkID cid(topLeft.x + x, topLeft.z + z);
-        auto renderedChunkData = renderdCacheLock()[cid];
-        drawChunk(cid, renderedChunkData.renderedChunk);
-      }
-    }
-
-    data.state.unset(RenderStateT::RenderingRequested);
-  }
-
   void drawChunk(const ChunkID cid, const QSharedPointer<RenderedChunk>& renderedChunk)
   {
     h2.drawChunk_Map(cid.getX(), cid.getZ(), renderedChunk); // can deal with nullptr!
