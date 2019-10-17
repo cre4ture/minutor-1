@@ -106,6 +106,12 @@ public:
     renderedAt = -1;  // impossible.
     renderedFlags = 0;  // no flags
   }
+
+  void freeImageData()
+  {
+    depth = QImage();
+    image = QImage();
+  }
 };
 
 #endif  // CHUNK_H_

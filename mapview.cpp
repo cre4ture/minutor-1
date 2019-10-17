@@ -548,6 +548,8 @@ void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
 
       ChunkGroupRendererC renderer(grData, cgID);
       renderer.drawChunk(id, chunk->rendered);
+
+      chunk->rendered->freeImageData();
     }
 }
 
