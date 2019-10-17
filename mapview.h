@@ -170,6 +170,7 @@ class MapView : public QWidget {
   using RenderCacheT = LockGuarded<QHash<ChunkID, RenderData>>;
   RenderCacheT renderCache;
 
+  class ChunkGroupCamC;
   class ChunkGroupRendererC;
 
   struct RenderGroupData

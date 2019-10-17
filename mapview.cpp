@@ -110,7 +110,7 @@ public:
     {
     }
 
-    void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, QImage depthImg);
+    void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, const MapView::RenderGroupData &depthImg);
 
     void drawOverlayItemToPlayersCanvas(const QVector<QSharedPointer<OverlayItem> >& items)
     {
@@ -190,19 +190,40 @@ private:
     QMap<ChunkID, QImage> m_blocks;
 };
 
-
-
-class MapView::ChunkGroupRendererC
+class MapView::ChunkGroupCamC
 {
 public:
-  ChunkGroupRendererC(RenderGroupData& data_, const ChunkGroupID cgid_)
+  const ChunkGroupID cgid;
+  const RenderGroupData& data;
+  const MapCamera cam;
+
+  ChunkGroupCamC(const RenderGroupData& data_, const ChunkGroupID cgid_)
     : cgid(cgid_)
     , data(data_)
     , cam(CreateCameraForChunkGroup(cgid))
+  {
+  }
+
+  int getHeightAt(const TopViewPosition& midpoint)
+  {
+    const QPointF depthImgPixelF = cam.getPixelFromBlockCoordinates(TopViewPosition(midpoint.x, midpoint.z));
+    const QPoint depthImgPixel(static_cast<int>(depthImgPixelF.x()), static_cast<int>(depthImgPixelF.y()));
+
+    const int highY = data.depthImg.pixel(depthImgPixel) & 0xff;
+    return highY;
+  }
+};
+
+class MapView::ChunkGroupRendererC: public ChunkGroupCamC
+{
+public:
+  ChunkGroupRendererC(RenderGroupData& data_, const ChunkGroupID cgid_)
+    : ChunkGroupCamC(data_, cgid_)
+    , ncdata(data_)
     , h(cam.centerpos_blocks.x, cam.centerpos_blocks.z,
         cam.zoom, cam.size_pixels)
-    , image(data.renderedImg)
-    , imageDepth(data.depthImg)
+    , image(ncdata.renderedImg)
+    , imageDepth(ncdata.depthImg)
     , h2(h, image)
     , h2_depth(h, imageDepth)
   {
@@ -214,16 +235,14 @@ public:
 
     if (renderedChunk)
     {
-      data.entities[cid] = renderedChunk->entities;
+      ncdata.entities[cid] = renderedChunk->entities;
 
       h2_depth.drawChunk_Map_int(cid.getX(), cid.getZ(), renderedChunk->depth);
     }
   }
 
 private:
-  const ChunkGroupID cgid;
-  RenderGroupData& data;
-  const MapCamera cam;
+  RenderGroupData& ncdata;
   const DrawHelper h;
   QImage& image;
   QImage& imageDepth;
@@ -771,9 +790,9 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
-void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID& cgID, QImage depthImg)
+void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID& cgID, const MapView::RenderGroupData &renderedData)
 {
-  const MapCamera depthImgCam = CreateCameraForChunkGroup(cgID);
+  MapView::ChunkGroupCamC cam(renderedData, cgID);
 
   for (const auto &type : m_parent.overlayItemTypes)
   {
@@ -785,10 +804,7 @@ void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID&
       // but also inside the current block
       if (midpoint.y < m_parent.depth + 1) {
 
-        const QPointF depthImgPixelF = depthImgCam.getPixelFromBlockCoordinates(TopViewPosition(midpoint.x, midpoint.z));
-        const QPoint depthImgPixel(static_cast<int>(depthImgPixelF.x()), static_cast<int>(depthImgPixelF.y()));
-
-        const int highY = depthImg.pixel(depthImgPixel) & 0xff;
+        const int highY = cam.getHeightAt(TopViewPosition(midpoint.x, midpoint.z));
 
         if ( (midpoint.y+10 >= highY) ||
              (midpoint.y+10 >= m_parent.depth) )
@@ -856,7 +872,7 @@ void MapView::redraw() {
       {
         if (entityMap)
         {
-          h2.drawEntityMap(*entityMap, cgID, renderedData.depthImg);
+          h2.drawEntityMap(*entityMap, cgID, renderedData);
         }
       }
 
@@ -1104,12 +1120,21 @@ QList<QSharedPointer<OverlayItem> > MapView::getOverlayItems(const QString &type
 }
 
 int MapView::getY(int x, int z) {
-  int cx = floor(x / 16.0);
-  int cz = floor(z / 16.0);
-  ChunkCache::Locker locked_cache(*cache);
-  QSharedPointer<Chunk> chunk;
-  locked_cache.fetch(chunk, ChunkID(cx, cz));
-  return chunk ? (chunk->rendered ? chunk->rendered->depth.bits()[(x & 0xf) + (z & 0xf) * 16] : -1) : -1;
+
+  ChunkID cid = ChunkID::fromCoordinates(x, z);
+  ChunkGroupID cgid = ChunkGroupID::fromCoordinates(cid.getX(), cid.getZ());
+
+  auto lock = renderedChunkGroupsCache.lock();
+
+  auto it = lock().find(cgid);
+  if (it == lock().end())
+  {
+    return -1;
+  }
+
+  ChunkGroupCamC cam(*it, cgid);
+
+  return cam.getHeightAt(TopViewPosition(x, z));
 }
 
 QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
