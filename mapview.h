@@ -169,21 +169,6 @@ class MapView : public QWidget {
     RenderingRequested,
   };
 
-  struct RenderData
-  {
-    Bitset<RenderStateT, uint8_t> state;
-    QSharedPointer<RenderedChunk> renderedChunk;
-
-    RenderData& setRenderedChunk(const QSharedPointer<RenderedChunk>& chunk)
-    {
-      renderedChunk = chunk;
-      return *this;
-    }
-  };
-
-  using RenderCacheT = LockGuarded<QHash<ChunkID, RenderData>>;
-  RenderCacheT renderCache;
-
   class ChunkGroupCamC;
   class ChunkGroupRendererC;
 

@@ -404,20 +404,13 @@ int MapView::getDepth() const {
 void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
   ChunkID id(x, z);
-  auto lock = renderCache.lock();
-  auto& data = lock()[id];
-
-  data.state.unset(RenderStateT::LoadingRequested);
 
   if (!chunk)
   {
-    data.state.set(RenderStateT::Empty);
-    data.state.unset(RenderStateT::RenderingRequested);
     return;
   }
 
   chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(ChunkID(x, z), chunk));
-  data.state.set(RenderStateT::RenderingRequested);
 
   if (havePendingToolTip && (id == pendingToolTipChunk))
   {
@@ -448,7 +441,6 @@ void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayIt
 void MapView::clearCache() {
   chunksToLoad.clear();
   chunksToRedraw.clear();
-  renderCache.lock()().clear();
   cache->clear();
   renderedChunkGroupsCache.lock()().clear();
 }
@@ -567,13 +559,6 @@ void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
 {
     ChunkID id(chunk->chunkX, chunk->chunkZ);
-    {
-      auto lock = renderCache.lock();
-
-      auto& data = lock()[id];
-      data.renderedChunk = chunk->rendered;
-      data.state.unset(RenderStateT::RenderingRequested);
-    }
 
     const auto cgID = ChunkGroupID::fromCoordinates(id.getX(), id.getZ());
     {
