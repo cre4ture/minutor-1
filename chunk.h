@@ -84,6 +84,27 @@ class Chunk : public QObject {
   friend class DrawHelper2;
 };
 
+struct RenderParams
+{
+  RenderParams()
+    : renderedAt(-1)
+    , renderedFlags(0)
+  {}
+
+  int renderedAt;
+  int renderedFlags;
+
+  bool operator==(const RenderParams& other) const
+  {
+    return (renderedAt == other.renderedAt) && (renderedFlags == other.renderedFlags);
+  }
+
+  bool operator!=(const RenderParams& other) const
+  {
+    return !(operator==(other));
+  }
+};
+
 class RenderedChunk
 {
 public:
@@ -91,8 +112,8 @@ public:
   QSharedPointer<Chunk::EntityMap> entities;
   const int chunkX;
   const int chunkZ;
-  int renderedAt;
-  int renderedFlags;
+
+  RenderParams renderedFor;
 
   QImage depth;
   QImage image;
@@ -102,9 +123,8 @@ public:
     , entities(chunk->getEntityMapSp())
     , chunkX(chunk->getChunkX())
     , chunkZ(chunk->getChunkZ())
+    , renderedFor()
   {
-    renderedAt = -1;  // impossible.
-    renderedFlags = 0;  // no flags
   }
 
   void freeImageData()

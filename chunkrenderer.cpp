@@ -232,8 +232,8 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
       *bits++ = 0xff;
     }
   }
-  chunk->rendered->renderedAt = depth;
-  chunk->rendered->renderedFlags = flags;
+  chunk->rendered->renderedFor.renderedAt = depth;
+  chunk->rendered->renderedFor.renderedFlags = flags;
 }
 
 

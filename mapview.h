@@ -118,7 +118,21 @@ class MapView : public QWidget {
 
  private:
   class AsyncRenderLock;
-  bool redrawNeeded(const RenderedChunk& renderedChunk) const;
+
+  RenderParams getCurrentRenderParams() const
+  {
+    RenderParams p;
+    p.renderedAt = depth;
+    p.renderedFlags = flags;
+    return p;
+  }
+
+  template<class dataT>
+  bool redrawNeeded(const dataT& renderedChunk) const
+  {
+    return (renderedChunk.renderedFor != getCurrentRenderParams());
+  }
+
   void getToolTipMousePos(int mouse_x, int mouse_y);
   void getToolTip(int x, int z);
   void getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk> &chunk);
@@ -179,10 +193,19 @@ class MapView : public QWidget {
 
     void clear();
 
-    Bitset<RenderStateT, uint8_t> state;
+    RenderParams renderedFor;
+
     QImage renderedImg;
     QImage depthImg;
     QHash<ChunkID, QSharedPointer<Chunk::EntityMap> > entities;
+
+    struct ChunkState
+    {
+      RenderParams renderedFor;
+      Bitset<RenderStateT, uint8_t> flags;
+    };
+
+    QHash<ChunkID, ChunkState> states;
   };
 
   using RenderedChunkGroupCacheT = LockGuarded<QHash<ChunkGroupID, RenderGroupData>>;
@@ -219,6 +242,7 @@ private slots:
 
     void regularUpdate();
     void regularUpdata__checkRedraw();
+    void regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID& cgid, RenderGroupData& data);
 };
 
 #endif  // MAPVIEW_H_

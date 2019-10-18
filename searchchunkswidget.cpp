@@ -251,8 +251,8 @@ bool SearchChunksWidget::villageFilter(ChunkID id) const
     const auto location = id.centerCoordinates();
     for (auto& village: m_villages)
     {
-        QVector2D vector(location.x - village->midpoint().x,
-                         location.z - village->midpoint().z);
+        QVector2D vector(location.getX() - village->midpoint().x,
+                         location.getZ() - village->midpoint().z);
         if (vector.lengthSquared() < limit_squared)
         {
             return true;
