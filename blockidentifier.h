@@ -29,21 +29,21 @@ class BlockInfo {
   bool canProvidePower() const;
 
   // special block type used during mob spawning detection
-  bool isBedrock();
-  bool isHopper();
-  bool isStairs();
-  bool isHalfSlab();
-  bool isSnow();
+  bool isBedrock() const;
+  bool isHopper() const;
+  bool isStairs() const;
+  bool isHalfSlab() const;
+  bool isSnow() const;
 
   // special blocks with Biome based Grass, Foliage and Water colors
-  bool biomeWater();
-  bool biomeGrass();
-  bool biomeFoliage();
+  bool biomeWater() const;
+  bool biomeGrass() const;
+  bool biomeFoliage() const;
 
   void setName(const QString &newname);
   void setBiomeGrass(bool value);
   void setBiomeFoliage(bool value);
-  const QString &getName();
+  const QString &getName() const;
 
   // enabled for complete definition pack
   bool    enabled;

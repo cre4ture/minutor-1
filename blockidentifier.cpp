@@ -62,16 +62,16 @@ void BlockInfo::setName(const QString & newname) {
   water   = this->name.contains("Water", Qt::CaseInsensitive);
 }
 
-const QString & BlockInfo::getName() { return name; }
+const QString & BlockInfo::getName() const { return name; }
 
 
-bool BlockInfo::isBedrock()  { return bedrock; }
-bool BlockInfo::isHopper()   { return hopper; }
-bool BlockInfo::isSnow()     { return snow; }
+bool BlockInfo::isBedrock() const  { return bedrock; }
+bool BlockInfo::isHopper() const   { return hopper; }
+bool BlockInfo::isSnow() const     { return snow; }
 
-bool BlockInfo::biomeWater()   { return water; }
-bool BlockInfo::biomeGrass()   { return grass; }
-bool BlockInfo::biomeFoliage() { return foliage; }
+bool BlockInfo::biomeWater() const   { return water; }
+bool BlockInfo::biomeGrass() const   { return grass; }
+bool BlockInfo::biomeFoliage() const { return foliage; }
 
 void BlockInfo::setBiomeGrass(bool value)   { grass = value; }
 void BlockInfo::setBiomeFoliage(bool value) { foliage = value; }

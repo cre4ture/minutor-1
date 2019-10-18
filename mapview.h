@@ -178,6 +178,8 @@ class MapView : public QWidget {
 
     void clear();
 
+    RenderGroupData& init();
+
     RenderParams renderedFor;
 
     QImage renderedImg;
@@ -193,7 +195,7 @@ class MapView : public QWidget {
     QHash<ChunkID, ChunkState> states;
   };
 
-  using RenderedChunkGroupCacheT = LockGuarded<QHash<ChunkGroupID, RenderGroupData>>;
+  using RenderedChunkGroupCacheT = LockGuarded<SafeCache<ChunkGroupID, RenderGroupData>>;
   RenderedChunkGroupCacheT renderedChunkGroupsCache;
 
   QImage imageChunks;
@@ -221,6 +223,8 @@ class MapView : public QWidget {
   ChunkIteratorC chunkRedrawIterator;
 
   void renderChunkAsync(const QSharedPointer<Chunk> &chunk);
+
+  void updateCacheSize();
 
 private slots:
     void renderingDone(const QSharedPointer<Chunk>& chunk);

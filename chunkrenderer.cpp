@@ -26,6 +26,11 @@ void ChunkRenderer::run()
 
 void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& chunk)
 {
+  if (!chunk)
+  {
+    return;
+  }
+
   int depth;
   int flags;
 
@@ -38,13 +43,15 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
 
   if (!chunk->rendered)
   {
-    chunk->rendered = QSharedPointer<RenderedChunk>::create(chunk);
+    return;
   }
 
   RenderedChunk& renderData = *chunk->rendered;
 
-  renderData.image = QImage(ChunkID::getSize(), QImage::Format_RGB32);
-  renderData.depth = QImage(ChunkID::getSize(), QImage::Format_Grayscale8);
+  if (renderData.image.isNull() || renderData.depth.isNull())
+  {
+    return;
+  }
 
   int offset = 0;
   uchar *bits = renderData.image.bits();
@@ -56,7 +63,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
       uchar r = 0, g = 0, b = 0;
       double alpha = 0.0;
       // get Biome
-      auto &biome = BiomeIdentifier::Instance().getBiome(chunk->biomes[offset]);
+      const auto &biome = BiomeIdentifier::Instance().getBiome(chunk->biomes[offset]);
       int top = depth;
       if (top > chunk->highest)
         top = chunk->highest;
@@ -79,7 +86,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
 
         // get BlockInfo from block value
         const auto& paletteEntry = section->getPaletteEntry(offset, y);
-        BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
+        const BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
         if (block.alpha == 0.0) continue;
 
         // get light value from one block above
@@ -149,10 +156,10 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
           if (sectionB) {
             blidB = sectionB->getPaletteEntry(offset, y-1).hid;
           }
-          BlockInfo &block2 = BlockIdentifier::Instance().getBlockInfo(blid2);
-          BlockInfo &block1 = BlockIdentifier::Instance().getBlockInfo(blid1);
-          BlockInfo &block0 = block;
-          BlockInfo &blockB = BlockIdentifier::Instance().getBlockInfo(blidB);
+          const BlockInfo &block2 = BlockIdentifier::Instance().getBlockInfo(blid2);
+          const BlockInfo &block1 = BlockIdentifier::Instance().getBlockInfo(blid1);
+          const BlockInfo &block0 = block;
+          const BlockInfo &blockB = BlockIdentifier::Instance().getBlockInfo(blidB);
           int light0 = section->getBlockLight(offset, y);
 
            // spawn check #1: on top of solid block
@@ -214,7 +221,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
           // get data value
           // int data = section->getData(offset, y);
           // get BlockInfo from block value
-          BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
+          const BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(section->getPaletteEntry(offset, y).hid);
           if (block.transparent) {
             cave_factor -= CaveShade::getShade(cave_test);
           }

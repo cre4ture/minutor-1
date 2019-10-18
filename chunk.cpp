@@ -5,6 +5,7 @@
 #include "./chunk.h"
 #include "./flatteningconverter.h"
 #include "./blockidentifier.h"
+#include "./chunkcachetypes.h"
 
 template<typename _ValueT>
 inline void* safeMemCpy(void* __dest, const std::vector<_ValueT>& __src, size_t __len)
@@ -331,4 +332,10 @@ quint8 ChunkSection::getBlockLight(int offset, int y) {
   int value = blockLight[(offset + yoffset) / 2];
   if (offset & 1) value >>= 4;
   return value & 0x0f;
+}
+
+void RenderedChunk::init()
+{
+  image = QImage(ChunkID::getSize(), QImage::Format_RGB32);
+  depth = QImage(ChunkID::getSize(), QImage::Format_Grayscale8);
 }

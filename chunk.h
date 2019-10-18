@@ -94,6 +94,11 @@ struct RenderParams
   int renderedAt;
   int renderedFlags;
 
+  void invalidate()
+  {
+    renderedAt = -1;
+  }
+
   bool operator==(const RenderParams& other) const
   {
     return (renderedAt == other.renderedAt) && (renderedFlags == other.renderedFlags);
@@ -126,6 +131,8 @@ public:
     , renderedFor()
   {
   }
+
+  void init();
 
   void freeImageData()
   {
