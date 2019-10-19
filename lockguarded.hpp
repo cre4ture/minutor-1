@@ -5,16 +5,22 @@
 #include <QMutexLocker>
 #include <QSharedPointer>
 
+#include <memory>
+
 template<class GuardedT>
 class LockGuarded
 {
 public:
   LockGuarded()
-    : protectedInstance()
+    : protectedInstance(std::make_unique<GuardedT>())
   {}
 
-  LockGuarded(LockGuarded&& instance)
-    : protectedInstance(instance)
+  LockGuarded(GuardedT&& instance)
+    : protectedInstance(std::make_unique<GuardedT>(std::move(instance)))
+  {}
+
+  LockGuarded(std::unique_ptr<GuardedT> instancePtr)
+    : protectedInstance(std::move(instancePtr))
   {}
 
   class Lock
@@ -36,7 +42,7 @@ public:
 
     GuardedT& operator()() const
     {
-      return parent.protectedInstance;
+      return *parent.protectedInstance;
     }
 
   private:
@@ -51,7 +57,7 @@ public:
 
 private:
   QMutex mutex;
-  GuardedT protectedInstance;
+  std::unique_ptr<GuardedT> protectedInstance;
 };
 
 #endif // LOCKGUARDED_HPP

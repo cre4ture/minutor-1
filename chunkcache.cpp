@@ -13,9 +13,14 @@
 #endif
 
 ChunkCache::ChunkCache()
-    : mutex(QMutex::Recursive)
+    : cache("chunks")
+    , chunkStates()
+    , mutex(QMutex::Recursive)
     , m_loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create())
+
 {
+  chunkStates.reserve(256*1024*1024);
+
   int chunks = 10000;  // 10% more than 1920x1200 blocks
 #if defined(__unix__) || defined(__unix) || defined(unix)
 #ifdef _SC_AVPHYS_PAGES
@@ -33,7 +38,7 @@ ChunkCache::ChunkCache()
   //cache.setMaxCost(chunks);
   maxcache = 2 * chunks;  // most chunks are less than half filled with sections
 
-  cache.setMaxCost(maxcache);
+  //cache.setMaxCost(maxcache);
 
   // determain optimal thread pool size for "loading"
   // as this contains disk access, use less than number of cores
@@ -85,7 +90,7 @@ int ChunkCache::getMaxCost() const {
 
 bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav)
 {
-  const bool cached = isCached_unprotected(id, chunk_out);
+  const bool cached = isCached_unprotected(id, &chunk_out);
 
   if ( (behav == FetchBehaviour::FORCE_UPDATE) ||
        (
@@ -101,18 +106,32 @@ bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id,
   return cached;
 }
 
-bool ChunkCache::isCached_unprotected(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out)
+bool ChunkCache::isCached_unprotected(ChunkID id, QSharedPointer<Chunk>* chunkPtr_out)
 {
   auto& chunkState = chunkStates[id];
   if (chunkState.test(ChunkState::NonExisting))
   {
-    chunkPtr_out = nullptr;
+    if (chunkPtr_out)
+    {
+      *chunkPtr_out = nullptr;
+    }
     return true; // state not existing is known -> cached that there is no chunk!
   }
   else
   {
-    chunkPtr_out = cache[id];
-    return (chunkPtr_out != nullptr);
+    if (cache.contains(id))
+    {
+      if (chunkPtr_out)
+      {
+        *chunkPtr_out = cache[id];
+      }
+
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 }
 

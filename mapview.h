@@ -195,7 +195,8 @@ class MapView : public QWidget {
     QHash<ChunkID, ChunkState> states;
   };
 
-  using RenderedChunkGroupCacheT = LockGuarded<SafeCache<ChunkGroupID, RenderGroupData>>;
+  using RenderedChunkGroupCacheUnprotectedT = SafeCache<ChunkGroupID, RenderGroupData>;
+  using RenderedChunkGroupCacheT = LockGuarded<RenderedChunkGroupCacheUnprotectedT>;
   RenderedChunkGroupCacheT renderedChunkGroupsCache;
 
   QImage imageChunks;

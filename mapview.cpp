@@ -291,9 +291,10 @@ private:
 
 MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidget *parent)
   : QWidget(parent)
-  , cache(ChunkCache::Instance())
   , zoom(1.0)
   , updateTimer()
+  , cache(ChunkCache::Instance())
+  , renderedChunkGroupsCache(std::make_unique<RenderedChunkGroupCacheUnprotectedT>("rendergroups"))
   , dragging(false)
   , m_asyncRendererPool(threadpool)
 {
@@ -596,7 +597,7 @@ void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
         renderer.drawChunk(id, chunk->rendered);
       }
 
-      //chunk->rendered->freeImageData();
+      chunk->rendered->freeImageData();
 
       auto& state = grData->states[id];
       state.flags.unset(RenderStateT::RenderingRequested);
@@ -903,8 +904,10 @@ void MapView::redraw() {
   }
 
   const bool displayDepthMap = QSettings().value("depthmapview", false).toBool();
+  const bool chunkgroupstatus = QSettings().value("chunkgroupstatus", false).toBool();
+  const bool chunkCacheSatus = QSettings().value("chunkcachestatus", false).toBool();
 
-  ChunkCache::Locker locker(*cache);
+  const auto locker = chunkCacheSatus ? std::make_unique<ChunkCache::Locker>(*cache) : nullptr;
 
   auto renderdCacheLock = renderedChunkGroupsCache.lock();
 
@@ -915,16 +918,26 @@ void MapView::redraw() {
 
   ChunkGroupDrawRegion cgit(h.cam);
 
-  const QImage& placeholderImg = getChunkGroupPlaceholder();
+  QImage placeholderImg = getChunkGroupPlaceholder().copy();
 
   RenderGroupData renderedDataDummy;
+  renderedDataDummy.renderedImg = placeholderImg.copy();
+
+  if (chunkgroupstatus)
+  {
+    renderedDataDummy.renderedImg.fill(Qt::red);
+    placeholderImg.fill(Qt::green);
+  }
+
+  QBrush b(Qt::Dense6Pattern);
+  h2.getCanvas().setPen(QPen(Qt::PenStyle::NoPen));
 
   for (auto point: cgit)
   {
-    const auto cgID = ChunkGroupID(point.getX(), point.getZ());
-    const auto topLeftChunk = ChunkID(cgID.topLeft().getX(), cgID.topLeft().getZ());
+    const auto cgid = ChunkGroupID(point.getX(), point.getZ());
+    const auto topLeftChunk = ChunkID(cgid.topLeft().getX(), cgid.topLeft().getZ());
 
-    auto it = renderdCacheLock()[cgID];
+    auto it = renderdCacheLock()[cgid];
     RenderGroupData& renderedData = it ? *it : renderedDataDummy;
 
     const auto topLeftInBlocks = TopViewPosition(topLeftChunk.topLeft().getX(), topLeftChunk.topLeft().getZ());
@@ -942,35 +955,31 @@ void MapView::redraw() {
     {
       if (entityMap)
       {
-        h2.drawEntityMap(*entityMap, cgID, renderedData);
+        h2.drawEntityMap(*entityMap, cgid, renderedData);
       }
     }
 
-    /*
-     * drawChunk3(cx, cz, renderedData.renderedChunk, h2);
-
-    if (false)
+    if (chunkCacheSatus)
     {
-      bool isCached = renderedData.state[RenderStateT::Empty];
-      if (!isCached && renderedData.renderedChunk)
+      const bool isActuallyChunkDataAvailable = (it && !imageToDraw.isNull());
+      if (isActuallyChunkDataAvailable)
       {
-        auto chunk = renderedData.renderedChunk->chunk.lock();
-        isCached = (chunk != nullptr);
-      }
+        for(auto coordinate : cgid)
+        {
+          const ChunkID cid(coordinate.getX(), coordinate.getZ());
+          const bool isCached = (*locker).isCached(cid);
+          b.setColor(isCached ? Qt::green : Qt::red);
 
-      QBrush b(Qt::Dense6Pattern);
-      b.setColor(renderedData.state[RenderStateT::RenderingRequested] ? Qt::yellow : (isCached ? Qt::green : Qt::red));
-      if (b.color() != Qt::green)
-      {
-        TopViewPosition b1(cx*DrawHelper2::chunkSizeOrig, cz*DrawHelper2::chunkSizeOrig);
-        TopViewPosition b2((cx+1)*DrawHelper2::chunkSizeOrig, (cz+1)*DrawHelper2::chunkSizeOrig);
-        QRectF rect(camera.getPixelFromBlockCoordinates(b1), camera.getPixelFromBlockCoordinates(b2));
-        h2.getCanvas().setBrush(b);
-        h2.getCanvas().setPen(QPen(Qt::PenStyle::NoPen));
-        h2.getCanvas().drawRect(rect);
+          CoordinateID b1 = cid.topLeft();
+          CoordinateID b2 = cid.bottomRight();
+          QRectF rect(camera.getPixelFromBlockCoordinates(TopViewPosition(b1.getX(), b1.getZ())),
+                      camera.getPixelFromBlockCoordinates(TopViewPosition(b2.getX(), b2.getZ())));
+
+          h2.getCanvas().setBrush(b);
+          h2.getCanvas().drawRect(rect);
+        }
       }
     }
-      */
   }
 
   // add on the entity layer
@@ -1049,6 +1058,13 @@ void MapView::getToolTip(int x, int z) {
   if (chunkValid)
   {
     getToolTip_withChunkAvailable(x, z, chunk);
+  }
+  else
+  {
+    QString hovertext = QString("X:%1 Z:%3 - data not cached -")
+                                .arg(x).arg(z);
+
+    emit hoverTextChanged(hovertext);
   }
 
   havePendingToolTip = !chunkValid;

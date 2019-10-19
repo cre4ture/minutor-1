@@ -43,6 +43,33 @@ protected:
   int cx, cz;
 };
 
+inline size_t convertTo16Bit(int value)
+{
+  const size_t uval = static_cast<size_t>(value);
+  return (uval >> 16) + uval;
+}
+
+inline uint qHash(const CoordinateID &c) {
+
+  static_assert(sizeof(c.getX()) == sizeof(uint), "");
+  static_assert(std::numeric_limits<uint>::max() == 0xFFFFFFFF, "");
+
+  const int halfbits = 16;
+  size_t n1 = convertTo16Bit(c.getX());
+  size_t n2 = convertTo16Bit(c.getZ());
+  uint result = 0;
+  for (size_t i = 0; i < halfbits; i++)
+  {
+    result |= (n1 & 0x1) << (i*2+0);
+    result |= (n2 & 0x1) << (i*2+1);
+
+    n1 >>= 1;
+    n2 >>= 1;
+  }
+
+  return result;
+}
+
 class RectangleIterator: public CoordinateID
 {
 public:
@@ -82,7 +109,7 @@ private:
 
 // ChunkID is the key used to identify entries in the Cache
 // Chunks are identified by their coordinates (CX,CZ) but a single key is needed to access a map like structure
-template <int _SizeN, typename _ThisT>
+template <int _SizeN, typename _ThisT = CoordinateID>
 class ChunkID_t: public CoordinateID
 {
  public:
@@ -113,9 +140,21 @@ class ChunkID_t: public CoordinateID
 
   CoordinateID bottomRight() const
   {
-    int x = cx*SIZE_N + SIZE_N-1;
-    int z = cz*SIZE_N + SIZE_N-1;
+    int x = cx*SIZE_N + SIZE_N;
+    int z = cz*SIZE_N + SIZE_N;
     return CoordinateID(x, z);
+  }
+
+  static CoordinateID relativeCoordinate(const CoordinateID& coordinate)
+  {
+    return CoordinateID(static_cast<unsigned int>(coordinate.getX()) % SIZE_N,
+                        static_cast<unsigned int>(coordinate.getZ()) % SIZE_N);
+  }
+
+  static size_t relativeIndex(const CoordinateID& coordinate)
+  {
+    auto relCoords = relativeCoordinate(coordinate);
+    return relCoords.getZ() * SIZE_N + relCoords.getX();
   }
 
   RectangleIterator begin() const
@@ -155,10 +194,6 @@ public:
     return size2d;
   }
 };
-
-inline uint qHash(const CoordinateID &c) {
-  return (c.getX() << 16) ^ (c.getZ() & 0xffff);  // safe way to hash a pair of integers
-}
 
 class ChunkIteratorC
 {

@@ -131,3 +131,17 @@ void Settings::on_checkBox_display_depth_map_toggled(bool checked)
   info.setValue("depthmapview", checked);
   emit settingsUpdated();
 }
+
+void Settings::on_checkBox_display_chunkgroup_status_toggled(bool checked)
+{
+  QSettings info;
+  info.setValue("chunkgroupstatus", checked);
+  emit settingsUpdated();
+}
+
+void Settings::on_checkBox_chunk_cache_status_toggled(bool checked)
+{
+  QSettings info;
+  info.setValue("chunkcachestatus", checked);
+  emit settingsUpdated();
+}

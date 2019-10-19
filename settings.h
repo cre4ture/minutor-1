@@ -38,6 +38,10 @@ class Settings : public QDialog {
 
   void on_checkBox_display_depth_map_toggled(bool checked);
 
+  void on_checkBox_display_chunkgroup_status_toggled(bool checked);
+
+  void on_checkBox_chunk_cache_status_toggled(bool checked);
+
 private:
   Ui::Settings m_ui;
 };

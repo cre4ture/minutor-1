@@ -13,6 +13,46 @@
 
 class ChunkLoaderThreadPool;
 
+template<class _Tp, int blockSizeBits>
+struct HashBlock
+{
+  _Tp value;
+};
+
+template<class _Tp, int blockSizeBits>
+inline uint qHash(const HashBlock<_Tp, blockSizeBits> &c) {
+  return qHash(c.value) >> blockSizeBits;
+}
+
+template<class _ValueT, int reduction = 16>
+class HashForSmallElements: public QHash<CoordinateID, std::array<_ValueT, reduction * reduction> >
+{
+public:
+  using KeyT = CoordinateID;
+  using KeyValueT = ChunkID_t<reduction, CoordinateID>;
+  enum
+  {
+    ArraySize = reduction * reduction
+  };
+  using ArrayValueT = std::array<_ValueT, ArraySize>;
+  using BaseT = QHash<CoordinateID, ArrayValueT>;
+
+  _ValueT& operator[](const KeyT& key)
+  {
+    const CoordinateID internalKey = KeyValueT::fromCoordinates(key.getX(), key.getZ());
+    ArrayValueT& valueblock = BaseT::operator[](internalKey);
+    const size_t subId = KeyValueT::relativeIndex(key);
+    return valueblock[subId];
+  }
+
+  void reserve(int asize)
+  {
+    const int blockedSize = asize / ArraySize;
+    BaseT::reserve(blockedSize);
+  }
+
+private:
+};
 
 class ChunkCache : public QObject {
   Q_OBJECT
@@ -52,7 +92,12 @@ class ChunkCache : public QObject {
 
       bool isCached(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out)
       {
-          return m_parent.isCached_unprotected(id, chunkPtr_out);
+          return m_parent.isCached_unprotected(id, &chunkPtr_out);
+      }
+
+      bool isCached(ChunkID id)
+      {
+          return m_parent.isCached_unprotected(id, nullptr);
       }
 
       bool fetch(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE)
@@ -87,7 +132,7 @@ class ChunkCache : public QObject {
   using ChunkInfoT = Bitset<ChunkState, uint8_t>;
 
   SafeCache<ChunkID, Chunk> cache;           // real Cache
-  QHash<ChunkID, ChunkInfoT> chunkStates;
+  HashForSmallElements<ChunkInfoT> chunkStates;
   QMutex mutex;                                   // Mutex for accessing the Cache
   int maxcache;                                   // number of Chunks that fit into Cache
   QThreadPool loaderThreadPool;                   // extra thread pool for loading
@@ -96,7 +141,7 @@ class ChunkCache : public QObject {
 
   void loadChunkAsync_unprotected(ChunkID id);
 
-  bool isCached_unprotected(ChunkID id, QSharedPointer<Chunk> &chunkPtr_out);
+  bool isCached_unprotected(ChunkID id, QSharedPointer<Chunk>* chunkPtr_out);
 
   bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, ChunkID id, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE);
 

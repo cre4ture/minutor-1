@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>467</height>
+    <height>530</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -118,6 +118,20 @@
          <widget class="QCheckBox" name="checkBox_display_depth_map">
           <property name="text">
            <string>Display depth map</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox_display_chunkgroup_status">
+          <property name="text">
+           <string>Display rendering cache status</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox_chunk_cache_status">
+          <property name="text">
+           <string>Display chunk cache status</string>
           </property>
          </widget>
         </item>
