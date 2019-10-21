@@ -558,6 +558,10 @@ void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
   if (!chunk->rendered)
   {
     chunk->rendered = QSharedPointer<RenderedChunk>::create(chunk);
+  }
+
+  if (chunk->rendered->image.isNull())
+  {
     chunk->rendered->init();
   }
 

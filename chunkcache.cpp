@@ -35,7 +35,7 @@ ChunkCache::ChunkCache()
   DWORDLONG available = qMin(status.ullAvailPhys, status.ullAvailVirtual);
   chunks = available / (sizeof(Chunk) + 16 * sizeof(ChunkSection));
 #endif
-  //cache.setMaxCost(chunks);
+  cache.setMaxCost(chunks);
   maxcache = 2 * chunks;  // most chunks are less than half filled with sections
 
   //cache.setMaxCost(maxcache);
