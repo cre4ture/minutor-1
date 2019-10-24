@@ -1291,6 +1291,7 @@ MapView::RenderGroupData& MapView::RenderGroupData::init()
   {
     renderedImg = getChunkGroupPlaceholder().copy();
     depthImg = QImage(ChunkGroupID::getSize(), QImage::Format_Grayscale8);
+    depthImg.fill(0);
   }
   return *this;
 }
