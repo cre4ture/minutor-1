@@ -225,7 +225,7 @@ class MapView : public QWidget {
 
   size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
 
-  void updateCacheSize();
+  void updateCacheSize(bool onlyIncrease);
 
 private slots:
     void renderingDone(const QSharedPointer<RenderedChunk> chunk);

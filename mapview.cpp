@@ -152,9 +152,14 @@ public:
     , chunkGroupsWide(2 + (static_cast<int>(cam_.size_pixels.width() / cam_.zoom / (ChunkID::SIZE_N * ChunkGroupID::SIZE_N))))
   {}
 
+  QRect getRect() const
+  {
+    return QRect(rootTopLeftChunkGroupId.getX(), rootTopLeftChunkGroupId.getZ(), chunkGroupsWide, chunkGroupsTall);
+  }
+
   RectangleIterator begin() const
   {
-    return RectangleIterator(QRect(rootTopLeftChunkGroupId.getX(), rootTopLeftChunkGroupId.getZ(), chunkGroupsWide, chunkGroupsTall));
+    return RectangleIterator(getRect());
   }
 
   RectangleIterator end() const
@@ -346,16 +351,28 @@ int MapView::getDepth() const {
 
 void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-  ChunkID id(x, z);
+  const ChunkID cid(x, z);
+  const ChunkGroupID cgid = ChunkGroupID::fromCoordinates(x, z);
 
   if (!chunk)
   {
     return;
   }
 
-  chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(ChunkID(x, z), chunk));
+  auto lock = renderedChunkGroupsCache.lock();
+  if (!lock().contains(cgid))
+  {
+    return;
+  }
 
-  if (havePendingToolTip && (id == pendingToolTipChunk))
+  /*
+  ChunkGroupDrawRegion cgit(getCamera());
+  const bool visible = (!cgit.getRect().contains(cgid.getX(), cgid.getZ()));
+  */
+
+  chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(cid, chunk));
+
+  if (havePendingToolTip && (cid == pendingToolTipChunk))
   {
     havePendingToolTip = false;
     getToolTip_withChunkAvailable(pendingToolTipPos.x(), pendingToolTipPos.y(), chunk);
@@ -435,8 +452,6 @@ void MapView::adjustZoom(double steps)
 
   if (zoom < zoomMin) zoom = zoomMin;
   if (zoom > zoomMax) zoom = zoomMax;
-
-  updateCacheSize();
 }
 
 const QImage& MapView::getPlaceholder()
@@ -504,11 +519,21 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
   });
 }
 
-void MapView::updateCacheSize()
+void MapView::updateCacheSize(bool onlyIncrease)
 {
   DrawHelper h(x, z, zoom * overscanZoomFactor, imageChunks.size());
   ChunkGroupDrawRegion region(h.cam);
-  renderedChunkGroupsCache.lock()().setMaxCost(static_cast<int>(region.count() * 3));
+
+  const int newCount = region.count() * 3;
+
+  auto lock = renderedChunkGroupsCache.lock();
+
+  if (onlyIncrease && (newCount < lock().maxCost()))
+  {
+    return;
+  }
+
+  lock().setMaxCost(newCount);
 }
 
 void MapView::renderingDone(const QSharedPointer<RenderedChunk> renderedChunk)
@@ -548,6 +573,8 @@ void MapView::regularUpdate()
   if (!this->isEnabled()) {
     return;
   }
+
+  updateCacheSize(true);
 
   regularUpdata__checkRedraw();
 
@@ -599,6 +626,8 @@ void MapView::regularUpdate()
 
   redraw();
   update();
+
+  updateCacheSize(false);
 }
 
 void MapView::regularUpdata__checkRedraw()
@@ -790,8 +819,6 @@ void MapView::resizeEvent(QResizeEvent *event) {
   {
     redraw(); // to initialize buffers
   }
-
-  updateCacheSize();
 }
 
 void MapView::paintEvent(QPaintEvent * /* event */) {
