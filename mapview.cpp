@@ -131,68 +131,6 @@ private:
     QPainter canvas_players;
 };
 
-class MapViewCache
-{
-public:
-    MapViewCache(QSize blockSize)
-        : m_blockSize(blockSize)
-    {}
-
-    class MyMath
-    {
-    public:
-        int first_block;
-        int block_count;
-        int first_block_offset;
-        int last_block_cutoff;
-
-        MyMath(const size_t blockSize, int start, int length)
-        {
-            first_block = start / blockSize;
-            block_count = 1 + length / blockSize;
-            first_block_offset = start - (first_block * blockSize);
-            last_block_cutoff = (first_block_offset + length) - (block_count * blockSize);
-        }
-    };
-
-    void drawTo(QPainter& canvas, const QRect& destination, const QRect& source)
-    {
-        double scale_x = (double)destination.width() / (double)source.width();
-        double scale_y = (double)destination.height() / (double)source.height();
-        MyMath math_x(m_blockSize.width(), source.left(), source.width());
-        MyMath math_y(m_blockSize.height(), source.top(), source.height());
-
-        for (size_t y = 0; y < math_y.block_count; y++)
-        {
-            for (size_t x = 0; x < math_x.block_count; x++)
-            {
-                ChunkID id(math_x.first_block + x, math_y.first_block + y);
-                auto it = m_blocks.find(id);
-                if (it != m_blocks.end())
-                {
-                    QImage& image = it.value();
-
-                    QRect source_image_rect(QPoint(0,0), m_blockSize);
-
-                    QRectF targetRect = source_image_rect;
-                    targetRect.moveTo(-math_x.first_block_offset, -math_y.first_block_offset);
-                    targetRect.setLeft(targetRect.left() * scale_x);
-                    targetRect.setRight(targetRect.right() * scale_x);
-                    targetRect.setTop(targetRect.top() * scale_y);
-                    targetRect.setBottom(targetRect.bottom() * scale_y);
-
-                    canvas.drawImage(targetRect, image, source_image_rect);
-                }
-            }
-        }
-    }
-
-private:
-    QSize m_blockSize;
-    QMap<ChunkID, QImage> m_blocks;
-};
-
-
 class ChunkGroupDrawRegion
 {
 public:
@@ -629,7 +567,7 @@ void MapView::regularUpdate()
         i++;
         if (i > maxIterLoadAndRender)
         {
-            break;
+          break;
         }
       }
     }
@@ -652,7 +590,7 @@ void MapView::regularUpdate()
           i++;
           if ((i > maxIterLoadAndRender) || (currentQueueLength > maxIterLoadAndRender))
           {
-              break;
+            break;
           }
         }
       }
