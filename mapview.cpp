@@ -553,12 +553,12 @@ const QImage& MapView::getChunkGroupPlaceholder()
   return img;
 }
 
-void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
+size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
   auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
   renderedChunk->init();
 
-  m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk](){
+  return m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk](){
       ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
       QMetaObject::invokeMethod(this, [this, renderedChunk](){
         renderingDone(renderedChunk);
@@ -648,9 +648,9 @@ void MapView::regularUpdate()
 
         if (chunk)
         {
-          renderChunkAsync(chunk);
+          size_t currentQueueLength = renderChunkAsync(chunk);
           i++;
-          if (i > maxIterLoadAndRender)
+          if ((i > maxIterLoadAndRender) || (currentQueueLength > maxIterLoadAndRender))
           {
               break;
           }

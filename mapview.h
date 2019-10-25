@@ -223,7 +223,7 @@ class MapView : public QWidget {
 
   ChunkIteratorC chunkRedrawIterator;
 
-  void renderChunkAsync(const QSharedPointer<Chunk> &chunk);
+  size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
 
   void updateCacheSize();
 

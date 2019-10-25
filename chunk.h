@@ -111,7 +111,6 @@ struct RenderParams
 class RenderedChunk
 {
 public:
-  const QWeakPointer<Chunk> chunk;
   QSharedPointer<Chunk::EntityMap> entities;
   const int chunkX;
   const int chunkZ;
@@ -122,8 +121,7 @@ public:
   QImage image;
 
   RenderedChunk(const QSharedPointer<Chunk>& chunk)
-    : chunk(chunk)
-    , entities(chunk->getEntityMapSp())
+    : entities(chunk->getEntityMapSp())
     , chunkX(chunk->getChunkX())
     , chunkZ(chunk->getChunkZ())
     , renderedFor()
