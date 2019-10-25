@@ -58,8 +58,6 @@ Chunk::~Chunk() {
 
 void Chunk::load(const NBT &nbt) {
 
-  rendered.reset();
-
   for (int i = 0; i < 16; i++)
     this->sections[i] = NULL;
   highest = 0;

@@ -555,20 +555,13 @@ const QImage& MapView::getChunkGroupPlaceholder()
 
 void MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  if (!chunk->rendered)
-  {
-    chunk->rendered = QSharedPointer<RenderedChunk>::create(chunk);
-  }
+  auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
+  renderedChunk->init();
 
-  if (chunk->rendered->image.isNull())
-  {
-    chunk->rendered->init();
-  }
-
-  m_asyncRendererPool->enqueueJob([this, chunk](){
-      ChunkRenderer::renderChunk(*this, chunk);
-      QMetaObject::invokeMethod(this, [this, chunk](){
-        renderingDone(chunk);
+  m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk](){
+      ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
+      QMetaObject::invokeMethod(this, [this, renderedChunk](){
+        renderingDone(renderedChunk);
       });
   });
 }
@@ -580,32 +573,32 @@ void MapView::updateCacheSize()
   renderedChunkGroupsCache.lock()().setMaxCost(static_cast<int>(region.count() * 3));
 }
 
-void MapView::renderingDone(const QSharedPointer<Chunk> &chunk)
+void MapView::renderingDone(const QSharedPointer<RenderedChunk> renderedChunk)
 {
-  if (!chunk || !chunk->rendered)
+  if (!renderedChunk)
   {
     return;
   }
 
-  ChunkID id(chunk->chunkX, chunk->chunkZ);
+  ChunkID id(renderedChunk->chunkX, renderedChunk->chunkZ);
 
   const auto cgID = ChunkGroupID::fromCoordinates(id.getX(), id.getZ());
   {
     auto cgLock = renderedChunkGroupsCache.lock();
     auto grData = cgLock().findOrCreate(cgID);
 
-    if (grData && chunk->rendered)
+    if (grData && renderedChunk)
     {
       {
         ChunkGroupRendererC renderer(*grData, cgID);
-        renderer.drawChunk(id, chunk->rendered);
+        renderer.drawChunk(id, renderedChunk);
       }
 
-      chunk->rendered->freeImageData();
+      renderedChunk->freeImageData();
 
       auto& state = grData->states[id];
       state.flags.unset(RenderStateT::RenderingRequested);
-      state.renderedFor = chunk->rendered->renderedFor;
+      state.renderedFor = renderedChunk->renderedFor;
 
       grData->renderedFor.invalidate();
     }

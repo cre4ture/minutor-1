@@ -73,8 +73,6 @@ class Chunk : public QObject {
   int chunkX;
   int chunkZ;
 
-  QSharedPointer<RenderedChunk> rendered;
-
   QList<QSharedPointer<GeneratedStructure> > structurelist;
 
   friend class MapView;

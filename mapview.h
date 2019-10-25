@@ -228,7 +228,7 @@ class MapView : public QWidget {
   void updateCacheSize();
 
 private slots:
-    void renderingDone(const QSharedPointer<Chunk>& chunk);
+    void renderingDone(const QSharedPointer<RenderedChunk> chunk);
 
     void regularUpdate();
     void regularUpdata__checkRedraw();

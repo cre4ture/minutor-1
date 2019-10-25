@@ -20,11 +20,9 @@ ChunkRenderer::~ChunkRenderer()
 
 void ChunkRenderer::run()
 {
-    renderChunk(m_parent, m_chunk);
-    emit chunkRenderingCompleted(m_chunk);
-  }
+}
 
-void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& chunk)
+void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& chunk, RenderedChunk &rendered_out)
 {
   if (!chunk)
   {
@@ -41,12 +39,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
       flags = parent.flags;
   }
 
-  if (!chunk->rendered)
-  {
-    return;
-  }
-
-  RenderedChunk& renderData = *chunk->rendered;
+  RenderedChunk& renderData = rendered_out;
 
   if (renderData.image.isNull() || renderData.depth.isNull())
   {
@@ -239,8 +232,8 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
       *bits++ = 0xff;
     }
   }
-  chunk->rendered->renderedFor.renderedAt = depth;
-  chunk->rendered->renderedFor.renderedFlags = flags;
+  renderData.renderedFor.renderedAt = depth;
+  renderData.renderedFor.renderedFlags = flags;
 }
 
 

@@ -301,17 +301,19 @@ void WorldSave::drawChunk(uchar *scanlines, int stride, int x, QSharedPointer<Ch
     attenuation *= 0.9f;
 
   // render chunk with current settings
-  ChunkRenderer::renderChunk(*map, chunk);
+  QSharedPointer<RenderedChunk> renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
+
+  ChunkRenderer::renderChunk(*map, chunk, *renderedChunk);
   // we can't memcpy each scanline because it's in BGRA format.
   int offset = x * 16 * 4 + 1;
   int ioffset = 0;
   for (int y = 0; y < 16; y++, offset += stride) {
     int xofs = offset;
     for (int x = 0; x < 16; x++, xofs += 4) {
-      scanlines[xofs+2] = attenuation * chunk->rendered->image.bits()[ioffset++];
-      scanlines[xofs+1] = attenuation * chunk->rendered->image.bits()[ioffset++];
-      scanlines[xofs+0] = attenuation * chunk->rendered->image.bits()[ioffset++];
-      scanlines[xofs+3] = attenuation * chunk->rendered->image.bits()[ioffset++];
+      scanlines[xofs+2] = attenuation * renderedChunk->image.bits()[ioffset++];
+      scanlines[xofs+1] = attenuation * renderedChunk->image.bits()[ioffset++];
+      scanlines[xofs+0] = attenuation * renderedChunk->image.bits()[ioffset++];
+      scanlines[xofs+3] = attenuation * renderedChunk->image.bits()[ioffset++];
     }
   }
 }
