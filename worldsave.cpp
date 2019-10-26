@@ -302,6 +302,7 @@ void WorldSave::drawChunk(uchar *scanlines, int stride, int x, QSharedPointer<Ch
 
   // render chunk with current settings
   QSharedPointer<RenderedChunk> renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
+  renderedChunk->init();
 
   ChunkRenderer::renderChunk(*map, chunk, *renderedChunk);
   // we can't memcpy each scanline because it's in BGRA format.
