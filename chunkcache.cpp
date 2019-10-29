@@ -50,7 +50,7 @@ ChunkCache::ChunkCache()
   qRegisterMetaType<QSharedPointer<Chunk> >("QSharedPointer<Chunk>");
   qRegisterMetaType<ChunkID>("ChunkID");
 
-  connect(m_loaderPool.get(), SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
+  connect(m_loaderPool.data(), SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
           this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
 }
 
@@ -99,7 +99,7 @@ bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id,
     )
   {
       loadChunkAsync_unprotected(id);
-      chunk_out = nullptr;
+      chunk_out.reset();
       return false;
   }
 
@@ -113,7 +113,7 @@ bool ChunkCache::isCached_unprotected(ChunkID id, QSharedPointer<Chunk>* chunkPt
   {
     if (chunkPtr_out)
     {
-      *chunkPtr_out = nullptr;
+      (*chunkPtr_out).reset();
     }
     return true; // state not existing is known -> cached that there is no chunk!
   }
@@ -149,7 +149,7 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
   if (!chunk)
   {
     chunkState.set(ChunkState::NonExisting);
-    emit chunkLoaded(nullptr, id.getX(), id.getZ()); // signal that chunk information about non existend chunk is available now
+    emit chunkLoaded(QSharedPointer<Chunk>(), id.getX(), id.getZ()); // signal that chunk information about non existend chunk is available now
     return;
   }
 

@@ -31,7 +31,7 @@ QSharedPointer<NBT> ChunkLoader::loadNbt()
 
     QFile f(filename);
   if (!f.open(QIODevice::ReadOnly)) {  // no chunks in this region
-      return nullptr;
+      return QSharedPointer<NBT>();
   }
   // map header into memory
   uchar *header = f.map(0, 4096);
@@ -43,13 +43,13 @@ QSharedPointer<NBT> ChunkLoader::loadNbt()
 
   if (coffset == 0) {  // no chunk
     f.close();
-    return nullptr;
+    return QSharedPointer<NBT>();
   }
 
   uchar *raw = f.map(coffset * 4096, numSectors * 4096);
     if (raw == nullptr) {
     f.close();
-    return nullptr;
+    return QSharedPointer<NBT>();
   }
 
   auto nbt = QSharedPointer<NBT>::create(raw);
@@ -66,7 +66,7 @@ QSharedPointer<Chunk> ChunkLoader::runInternal()
 
     if (nbt == nullptr)
     {
-        return nullptr;
+        return QSharedPointer<Chunk>();
     }
 
     auto chunk = QSharedPointer<Chunk>::create();

@@ -19,11 +19,13 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
 {
     ui->setupUi(this);
 
-    connect(m_input.cache.get(), SIGNAL(chunkLoaded(const QSharedPointer<Chunk>&,int,int)),
+    connect(m_input.cache.data(), SIGNAL(chunkLoaded(const QSharedPointer<Chunk>&,int,int)),
             this, SLOT(chunkLoaded(const QSharedPointer<Chunk>&,int,int)));
 
     ui->plugin_context->setLayout(new QHBoxLayout(ui->plugin_context));
     ui->plugin_context->layout()->addWidget(&m_input.searchPlugin->getWidget());
+
+    qRegisterMetaType<QSharedPointer<SearchPluginI::ResultListT> >("QSharedPointer<SearchPluginI::ResultListT>");
 }
 
 SearchChunksWidget::~SearchChunksWidget()
@@ -141,7 +143,7 @@ void SearchChunksWidget::trySearchChunk(ChunkID id)
 {
     m_chunksToSearchList.insert(id);
 
-    QSharedPointer<Chunk> chunk = nullptr;
+    QSharedPointer<Chunk> chunk;
     ChunkCache::Locker locked_cache(*m_input.cache);
 
     if (locked_cache.isCached(id, chunk)) // can return true and nullptr in case of inexistend chunk
@@ -233,16 +235,23 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
             }
         }
 
-        return std::function<void()>([this, id, results]()
-        {
-            for (const auto& result: *results)
-            {
-                ui->resultList->addResult(result);
-            }
-
-            oneChunkDoneNotify(id);
-        });
+        QMetaObject::invokeMethod(this, "displayResults",
+                                  Q_ARG(QSharedPointer<SearchPluginI::ResultListT>, results),
+                                  Q_ARG(ChunkID, id)
+                                  );
     });
+}
+
+
+void SearchChunksWidget::displayResults(QSharedPointer<SearchPluginI::ResultListT> results,
+                                        ChunkID id)
+{
+    for (const auto& result: *results)
+    {
+        ui->resultList->addResult(result);
+    }
+
+    oneChunkDoneNotify(id);
 }
 
 bool SearchChunksWidget::villageFilter(ChunkID id) const

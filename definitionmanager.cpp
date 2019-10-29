@@ -103,13 +103,13 @@ DefinitionManager::DefinitionManager(QWidget *parent) :
   setLayout(layout);
 
   enchantmentManager = QSharedPointer<GenericIdentifier>::create();
-  m_managers[Definition::Enchantment] = enchantmentManager.get();
+  m_managers[Definition::Enchantment] = enchantmentManager.data();
 
   professionManager = QSharedPointer<GenericIdentifier>::create();
-  m_managers[Definition::Profession] = professionManager.get();
+  m_managers[Definition::Profession] = professionManager.data();
 
   careerManager = QSharedPointer<GenericIdentifier>::create();
-  m_managers[Definition::Career] = careerManager.get();
+  m_managers[Definition::Career] = careerManager.data();
 
   // check & repair definition files
   this->checkAndRepair();

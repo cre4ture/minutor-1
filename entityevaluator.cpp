@@ -38,7 +38,7 @@ EntityEvaluator::EntityEvaluator(const EntityEvaluatorConfig& config)
     : m_config(config)
     , m_rootNode(QSharedPointer<QTreeWidgetItem>::create())
 {
-    m_creator.CreateTree(m_rootNode.get(), m_config.entity->properties());
+    m_creator.CreateTree(m_rootNode.data(), m_config.entity->properties());
 
     //searchProperties();
 

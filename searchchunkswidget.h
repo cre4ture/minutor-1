@@ -70,6 +70,8 @@ private slots:
     void on_resultList_jumpTo(const QVector3D &);
     void on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> >);
 
+    void displayResults(QSharedPointer<SearchPluginI::ResultListT> results, ChunkID id);
+
 private:
     Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;

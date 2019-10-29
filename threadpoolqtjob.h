@@ -11,14 +11,12 @@ class ThreadPoolQtJob : public QObject
 public:
     ThreadPoolQtJob(const QSharedPointer<AsyncTaskProcessorBase>& threadpool, QObject *parent);
 
-    typedef std::function<void()> ResultHandleFunctionT;
-    typedef std::function<ResultHandleFunctionT()> JobT;
+    typedef std::function<void()> JobT;
 
     void enqueueJob(const JobT& job);
 
 private:
     QSharedPointer<AsyncTaskProcessorBase> m_threadpool;
-
 };
 
 

@@ -114,7 +114,7 @@ public:
     }
     else
     {
-      return nullptr;
+      return QSharedPointer<_valueT>();
     }
   }
 

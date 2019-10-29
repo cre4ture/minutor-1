@@ -251,7 +251,7 @@ MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidg
 
   depth = 255;
   scale = 1;
-  connect(cache.get(), SIGNAL(structureFound(QSharedPointer<GeneratedStructure>)),
+  connect(cache.data(), SIGNAL(structureFound(QSharedPointer<GeneratedStructure>)),
           this,   SLOT  (addStructureFromChunk(QSharedPointer<GeneratedStructure>)));
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
@@ -267,6 +267,8 @@ MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidg
   for (int i=0; i<CAVE_DEPTH; i++) {
     caveshade[i] = 1.5 * caveshade[i] / cavesum;
   }
+
+  qRegisterMetaType<QSharedPointer<RenderedChunk> >("QSharedPointer<RenderedChunk>");
 }
 
 QSize MapView::minimumSizeHint() const {
@@ -284,7 +286,7 @@ void MapView::attach(QSharedPointer<ChunkCache> chunkCache_)
 {
     cache = chunkCache_;
 
-    connect(cache.get(), SIGNAL(chunkLoaded(const QSharedPointer<Chunk>&, int, int)),
+    connect(cache.data(), SIGNAL(chunkLoaded(const QSharedPointer<Chunk>&, int, int)),
             this, SLOT(chunkUpdated(const QSharedPointer<Chunk>&, int, int)));
 }
 
@@ -513,9 +515,7 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 
   return m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk](){
       ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-      QMetaObject::invokeMethod(this, [this, renderedChunk](){
-        renderingDone(renderedChunk);
-      });
+      QMetaObject::invokeMethod(this, "renderingDone", Q_ARG(QSharedPointer<RenderedChunk>, renderedChunk));
   });
 }
 
@@ -679,7 +679,7 @@ void MapView::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, Ma
 
     if (redrawNeeded(state))
     {
-      chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(cid, nullptr));
+      chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(cid, QSharedPointer<Chunk>()));
       state.flags.set(RenderStateT::RenderingRequested);
     }
   }
@@ -835,7 +835,7 @@ void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID&
 
   for (const auto &type : m_parent.overlayItemTypes)
   {
-    auto range = map.equal_range(type);
+    auto range = const_cast<Chunk::EntityMap&>(map).equal_range(type);
     for (auto it = range.first; it != range.second; ++it) {
       const auto midpoint = (*it)->midpoint();
       // don't show entities above our depth
