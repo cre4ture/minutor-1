@@ -7,7 +7,6 @@
 #include "searchplugininterface.h"
 #include "chunkcachetypes.h"
 #include "asynctaskprocessorbase.hpp"
-#include "threadpoolqtjob.h"
 
 #include <QWidget>
 #include <set>
@@ -75,7 +74,7 @@ private slots:
 private:
     Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;
-    ThreadPoolQtJob m_threadPoolWrapper;
+    QSharedPointer<AsyncTaskProcessorBase> m_threadPool;
     std::set<ChunkID> m_chunksToSearchList;
     std::set<ChunkID> m_chunksToSearchDoneList;
     QList<QSharedPointer<OverlayItem> > m_villages;

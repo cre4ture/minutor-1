@@ -26,7 +26,6 @@ HEADERS += \
   mapcamera.hpp \
   safecache.hpp \
     searchchunkswidget.h \
-    threadpoolqtjob.h \
     zlib/zlib.h \
     zlib/zconf.h \
 	  labelledslider.h \
@@ -93,7 +92,6 @@ SOURCES += \
     properties.cpp \
     searchchunkswidget.cpp \
     settings.cpp \
-    threadpoolqtjob.cpp \
     village.cpp \
     worldsave.cpp \
     zipreader.cpp \

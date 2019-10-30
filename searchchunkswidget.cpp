@@ -13,7 +13,7 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
   , ui(new Ui::SearchChunksWidget)
   , m_input(input)
-  , m_threadPoolWrapper(m_input.threadpool, this)
+  , m_threadPool(m_input.threadpool)
   , m_searchRunning(false)
   , m_requestCancel(false)
 {
@@ -220,7 +220,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
     const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
     const Range<float> range_z = helperRangeCreation(*ui->check_range_z, *ui->sb_z_start, *ui->sb_z_end);
 
-    m_threadPoolWrapper.enqueueJob([this, id, chunk, range_x, range_y, range_z]()
+    m_threadPool->enqueueJob([this, id, chunk, range_x, range_y, range_z]()
     {
         auto results_tmp = m_input.searchPlugin->searchChunk(*chunk);
         auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
