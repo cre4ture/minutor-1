@@ -3,6 +3,7 @@
 #include "./chunkloader.h"
 #include "./chunkcache.h"
 #include "./chunk.h"
+#include "./asynctaskprocessorbase.hpp"
 
 #include <future>
 
@@ -84,9 +85,15 @@ QString ChunkLoader::getRegionFilename(const QString& path, const ChunkID& id)
             QString::number(rz) + ".mca";
 }
 
+ChunkLoaderThreadPool::ChunkLoaderThreadPool(const QSharedPointer<AsyncTaskProcessorBase> &threadPool_)
+  : threadPool(threadPool_)
+{
+
+}
+
 void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
 {
-    m_queue.push([this, path, id](){
+    threadPool->enqueueJob([this, path, id](){
         ChunkLoader loader(path, id);
         auto chunk = loader.runInternal();
         emit chunkUpdated(chunk, id);

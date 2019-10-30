@@ -232,11 +232,13 @@ private:
 };
 
 
-MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool, QWidget *parent)
+MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool,
+                 const QSharedPointer<ChunkCache>& chunkcache,
+                 QWidget *parent)
   : QWidget(parent)
   , zoom(1.0)
   , updateTimer()
-  , cache(ChunkCache::Instance())
+  , cache(chunkcache)
   , renderedChunkGroupsCache(std::make_unique<RenderedChunkGroupCacheUnprotectedT>("rendergroups"))
   , dragging(false)
   , m_asyncRendererPool(threadpool)

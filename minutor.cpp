@@ -35,15 +35,15 @@
 #include <QVector3D>
 
 Minutor::Minutor()
-    : cache(ChunkCache::Instance())
+    : threadpool(QSharedPointer<AsyncTaskProcessorBase>::create())
+    , cache(QSharedPointer<ChunkCache>::create(threadpool))
     , searchMenu(nullptr)
     , searchEntityAction(nullptr)
     , searchBlockAction(nullptr)
     , listStructuresActionsMenu(nullptr)
     , periodicUpdateTimer()
 {
-  threadpool = QSharedPointer<AsyncTaskProcessorBase>::create();
-  mapview = new MapView(threadpool);
+  mapview = new MapView(threadpool, cache);
   mapview->attach(cache);
   connect(mapview, SIGNAL(hoverTextChanged(QString)),
           statusBar(), SLOT(showMessage(QString)));

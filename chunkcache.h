@@ -6,12 +6,11 @@
 #include "./chunkcachetypes.h"
 #include "safecache.hpp"
 #include "enumbitset.hpp"
+#include "chunkloader.h"
 
 #include <QObject>
 #include <QCache>
 #include <QSharedPointer>
-
-class ChunkLoaderThreadPool;
 
 template<class _Tp, int blockSizeBits>
 struct HashBlock
@@ -57,15 +56,13 @@ private:
 class ChunkCache : public QObject {
   Q_OBJECT
 
- public:
-  // singleton: access to global usable instance
-  static QSharedPointer<ChunkCache> Instance();
- private:
-  // singleton: prevent access to constructor and copyconstructor
-  ChunkCache();
+public:
+  ChunkCache(const QSharedPointer<AsyncTaskProcessorBase>& threadPool);
   ~ChunkCache();
-  ChunkCache(const ChunkCache &);
-  ChunkCache &operator=(const ChunkCache &);
+
+private:
+  ChunkCache(const ChunkCache &) = delete;
+  ChunkCache &operator=(const ChunkCache &) = delete;
 
  public:
   void clear();
@@ -137,7 +134,7 @@ class ChunkCache : public QObject {
   int maxcache;                                   // number of Chunks that fit into Cache
   QThreadPool loaderThreadPool;                   // extra thread pool for loading
 
-  QSharedPointer<ChunkLoaderThreadPool> m_loaderPool;
+  ChunkLoaderThreadPool m_loaderPool;
 
   void loadChunkAsync_unprotected(ChunkID id);
 

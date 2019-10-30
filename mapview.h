@@ -58,7 +58,9 @@ class MapView : public QWidget {
 
   } BlockLocation;
 
-  explicit MapView(const QSharedPointer<AsyncTaskProcessorBase>& threadpool, QWidget *parent = nullptr);
+  explicit MapView(const QSharedPointer<AsyncTaskProcessorBase>& threadpool,
+                   const QSharedPointer<ChunkCache> &chunkcache,
+                   QWidget *parent = nullptr);
 
   QSize minimumSizeHint() const;
   QSize sizeHint() const;

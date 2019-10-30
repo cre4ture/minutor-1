@@ -22,7 +22,7 @@ public:
       return m_queue.getCurrentQueueLength();
     }
 
-protected:
+private:
     class ImplC;
 
     QSharedPointer<ImplC> m_impl;
