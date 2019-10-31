@@ -783,6 +783,10 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
+enum {
+  BELOW_GROUND_VALUE = 10
+};
+
 void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map,
                                 const ChunkGroupID& cgID,
                                 const RenderGroupData &renderedData,
@@ -804,8 +808,8 @@ void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map,
 
         const int highY = cam.getHeightAt(TopViewPosition(midpoint.x, midpoint.z));
 
-        if ( (midpoint.y+10 >= highY) ||
-             (midpoint.y+10 >= depth) )
+        if ( (midpoint.y+BELOW_GROUND_VALUE >= highY) ||
+             (midpoint.y+BELOW_GROUND_VALUE >= depth) )
           (*it)->draw(h.x1, h.z1, zoom, &canvas_entities);
       }
     }
@@ -1163,7 +1167,7 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
       auto itemRange = chunk->entities->equal_range(type);
       for (auto itItem = itemRange.first; itItem != itemRange.second;
           ++itItem) {
-        double ymin = y - 4;
+        double ymin = y - BELOW_GROUND_VALUE;
         double ymax = depth + 4;
 
         if ((*itItem)->intersects(
