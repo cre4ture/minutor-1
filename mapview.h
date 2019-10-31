@@ -167,7 +167,6 @@ class MapView : public QWidget {
   QImage imageChunks;
   QImage imageOverlays;
   QImage image_players;
-  QQueue<ChunkID> chunksToLoad;
   QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
   DefinitionManager *dm;
 

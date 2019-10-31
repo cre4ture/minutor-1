@@ -33,10 +33,10 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
   int flags;
 
   {
-      QReadLocker locker(&parent.m_readWriteLock);
+    QReadLocker locker(&parent.m_readWriteLock);
 
-      depth = parent.depth;
-      flags = parent.flags;
+    depth = parent.depth;
+    flags = parent.flags;
   }
 
   RenderedChunk& renderData = rendered_out;

@@ -57,8 +57,8 @@ public:
     startx = topLeftChunk.getX() - 1;
     startz = topLeftChunk.getZ() - 1;
     // and the dimensions of the screen in blocks
-    blockswide = cam.size_pixels.width() / chunksize + 3;
-    blockstall = cam.size_pixels.height() / chunksize + 3;
+    blockswide = static_cast<int>(ceil(cam.size_pixels.width() / chunksize)) + 2;
+    blockstall = static_cast<int>(ceil(cam.size_pixels.height() / chunksize)) + 2;
 
 
     double halfviewwidth = cam.size_pixels.width() / 2 / zoom;
@@ -372,7 +372,6 @@ void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayIt
 }
 
 void MapView::clearCache() {
-  chunksToLoad.clear();
   chunksToRedraw.clear();
   cache->clear();
   renderedChunkGroupsCache.lock()().clear();
@@ -553,22 +552,6 @@ void MapView::regularUpdate()
 
   {
     ChunkCache::Locker locker(*cache);
-
-    {
-      size_t i = 0;
-      while (chunksToLoad.size() > 0)
-      {
-        const ChunkID id = chunksToLoad.dequeue();
-
-        QSharedPointer<Chunk> chunk;
-        locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
-        i++;
-        if (i > maxIterLoadAndRender)
-        {
-          break;
-        }
-      }
-    }
 
     {
       size_t i = 0;
