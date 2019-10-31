@@ -1,7 +1,7 @@
 #ifndef THREADSAFEQUEUE_HPP
 #define THREADSAFEQUEUE_HPP
 
-#include <queue>
+#include <deque>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -26,30 +26,40 @@ class ThreadSafeQueue
         if (result)
         {
             item = queue_.front();
-            queue_.pop();
+            queue_.pop_front();
         }
 
         return result;
     }
 
-    size_t push(const T& item)
+    size_t push(const T& item, bool back = true)
     {
       size_t currentSize;
       {
         std::unique_lock<std::mutex> mlock(mutex_);
-        queue_.push(item);
+
+        if(back)
+          queue_.push_back(item);
+        else
+          queue_.push_front(item);
+
         currentSize = queue_.size();
       }
       cond_.notify_one();
       return currentSize;
     }
 
-    size_t push(T&& item)
+    size_t push(T&& item, bool back = true)
     {
       size_t currentSize;
       {
         std::unique_lock<std::mutex> mlock(mutex_);
-        queue_.push(std::move(item));
+
+        if(back)
+          queue_.push_back(std::move(item));
+        else
+          queue_.push_front(std::move(item));
+
         currentSize = queue_.size();
       }
       cond_.notify_one();
@@ -72,7 +82,7 @@ class ThreadSafeQueue
 
     private:
         bool alive_;
-        std::queue<T> queue_;
+        std::deque<T> queue_;
         mutable std::mutex mutex_;
         std::condition_variable cond_;
 };

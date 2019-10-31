@@ -24,6 +24,7 @@ HEADERS += \
     location.h \
     lockguarded.hpp \
   mapcamera.hpp \
+  mapviewrenderer.h \
   safecache.hpp \
     searchchunkswidget.h \
     zlib/zlib.h \

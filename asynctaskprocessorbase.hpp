@@ -12,9 +12,9 @@ public:
 
     AsyncTaskProcessorBase();
 
-    size_t enqueueJob(const JobT& job)
+    size_t enqueueJob(const JobT& job, bool back = true)
     {
-      return m_queue.push(job);
+      return m_queue.push(job, back);
     }
 
     size_t getQueueLength() const

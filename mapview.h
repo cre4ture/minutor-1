@@ -4,10 +4,11 @@
 
 #include "./chunkcache.h"
 #include "./playerinfos.h"
-#include "mapcamera.hpp"
+#include "./mapcamera.hpp"
 
-#include "lockguarded.hpp"
-#include "enumbitset.hpp"
+#include "./lockguarded.hpp"
+#include "./enumbitset.hpp"
+#include "./mapviewrenderer.h"
 
 #include <QtWidgets/QWidget>
 #include <QSharedPointer>
@@ -25,15 +26,10 @@ class DrawHelper3;
 class ChunkRenderer;
 class AsyncTaskProcessorBase;
 
-MapCamera CreateCameraForChunkGroup(const ChunkGroupID& cgid);
-
 class MapView : public QWidget {
   Q_OBJECT
 
-    friend class DrawHelper;
     friend class ChunkRenderer;
-    friend class DrawHelper2;
-    friend class DrawHelper3;
 
  public:
   /// Values for the individual flags
@@ -164,39 +160,6 @@ class MapView : public QWidget {
   ChunkID pendingToolTipChunk;
   QPoint pendingToolTipPos;
 
-  enum class RenderStateT
-  {
-    Empty,
-    LoadingRequested,
-    RenderingRequested,
-  };
-
-  class ChunkGroupCamC;
-  class ChunkGroupRendererC;
-
-  struct RenderGroupData
-  {
-    RenderGroupData();
-
-    void clear();
-
-    RenderGroupData& init();
-
-    RenderParams renderedFor;
-
-    QImage renderedImg;
-    QImage depthImg;
-    QHash<ChunkID, QSharedPointer<Chunk::EntityMap> > entities;
-
-    struct ChunkState
-    {
-      RenderParams renderedFor;
-      Bitset<RenderStateT, uint8_t> flags;
-    };
-
-    QHash<ChunkID, ChunkState> states;
-  };
-
   using RenderedChunkGroupCacheUnprotectedT = SafeCache<ChunkGroupID, RenderGroupData>;
   using RenderedChunkGroupCacheT = LockGuarded<RenderedChunkGroupCacheUnprotectedT>;
   RenderedChunkGroupCacheT renderedChunkGroupsCache;
@@ -207,9 +170,6 @@ class MapView : public QWidget {
   QQueue<ChunkID> chunksToLoad;
   QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
   DefinitionManager *dm;
-
-  static const QImage &getPlaceholder();
-  static const QImage &getChunkGroupPlaceholder();
 
   QSet<QString> overlayItemTypes;
   QMap<QString, QList<QSharedPointer<OverlayItem>>> overlayItems;

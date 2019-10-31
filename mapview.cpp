@@ -68,12 +68,6 @@ public:
     x2 = x + halfviewwidth;
     z2 = z + halvviewheight;
   }
-
-  explicit DrawHelper(MapView& parent)
-    : DrawHelper(parent.x, parent.z, parent.zoom, parent.imageChunks.size())
-  {
-
-  }
 };
 
 class DrawHelper2
@@ -104,15 +98,17 @@ class DrawHelper3: public DrawHelper2
 public:
   static const int chunkSizeOrig = 16;
 
-  DrawHelper3(DrawHelper& h_, MapView& parent)
-                : DrawHelper2(h_, parent.imageChunks)
-                , m_parent(parent)
-                , canvas_entities(&parent.imageOverlays)
-                , canvas_players(&parent.image_players)
+  DrawHelper3(DrawHelper& h_,
+              QImage& imageChunks,
+              QImage& imageOverlays,
+              QImage& imagePlayers)
+                : DrawHelper2(h_, imageChunks)
+                , canvas_entities(&imageOverlays)
+                , canvas_players(&imagePlayers)
     {
     }
 
-    void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, const MapView::RenderGroupData &depthImg);
+    void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, const RenderGroupData &depthImg, const QSet<QString> &overlayItemTypes, const int depth, const double zoom);
 
     void drawOverlayItemToPlayersCanvas(const QVector<QSharedPointer<OverlayItem> >& items)
     {
@@ -126,7 +122,6 @@ public:
     }
 
 private:
-    MapView& m_parent;
     QPainter canvas_entities;
     QPainter canvas_players;
 };
@@ -170,32 +165,7 @@ public:
   int count() const { return chunkGroupsWide * chunkGroupsTall;  }
 };
 
-
-class MapView::ChunkGroupCamC
-{
-public:
-  const ChunkGroupID cgid;
-  const RenderGroupData& data;
-  const MapCamera cam;
-
-  ChunkGroupCamC(const RenderGroupData& data_, const ChunkGroupID cgid_)
-    : cgid(cgid_)
-    , data(data_)
-    , cam(CreateCameraForChunkGroup(cgid))
-  {
-  }
-
-  int getHeightAt(const TopViewPosition& midpoint)
-  {
-    const QPointF depthImgPixelF = cam.getPixelFromBlockCoordinates(TopViewPosition(midpoint.x, midpoint.z));
-    const QPoint depthImgPixel(static_cast<int>(depthImgPixelF.x()), static_cast<int>(depthImgPixelF.y()));
-
-    const int highY = data.depthImg.pixel(depthImgPixel) & 0xff;
-    return highY;
-  }
-};
-
-class MapView::ChunkGroupRendererC: public ChunkGroupCamC
+class ChunkGroupRendererC: public ChunkGroupCamC
 {
 public:
   ChunkGroupRendererC(RenderGroupData& data_, const ChunkGroupID cgid_)
@@ -230,7 +200,6 @@ private:
   DrawHelper2 h2;
   DrawHelper2 h2_depth;
 };
-
 
 MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool,
                  const QSharedPointer<ChunkCache>& chunkcache,
@@ -458,7 +427,7 @@ void MapView::adjustZoom(double steps)
   if (zoom > zoomMax) zoom = zoomMax;
 }
 
-const QImage& MapView::getPlaceholder()
+const QImage& getPlaceholder()
 {
   static uchar placeholder[16 * 16 * 4];  // no chunk found placeholder
   static bool initDone = false;
@@ -483,7 +452,7 @@ const QImage& MapView::getPlaceholder()
   return img;
 }
 
-const QImage& MapView::getChunkGroupPlaceholder()
+const QImage& getChunkGroupPlaceholder()
 {
   static QImage img;
   static bool initDone = false;
@@ -518,7 +487,7 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
   return m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk](){
       ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
       QMetaObject::invokeMethod(this, "renderingDone", Q_ARG(QSharedPointer<RenderedChunk>, renderedChunk));
-  });
+  }, false);
 }
 
 void MapView::updateCacheSize(bool onlyIncrease)
@@ -665,7 +634,7 @@ void MapView::regularUpdata__checkRedraw()
   }
 }
 
-void MapView::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, MapView::RenderGroupData &data)
+void MapView::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, RenderGroupData &data)
 {
   data.renderedFor = getCurrentRenderParams();
 
@@ -831,11 +800,16 @@ void MapView::paintEvent(QPaintEvent * /* event */) {
   p.end();
 }
 
-void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID& cgID, const MapView::RenderGroupData &renderedData)
+void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map,
+                                const ChunkGroupID& cgID,
+                                const RenderGroupData &renderedData,
+                                const QSet<QString>& overlayItemTypes,
+                                const int depth,
+                                const double zoom)
 {
-  MapView::ChunkGroupCamC cam(renderedData, cgID);
+  ChunkGroupCamC cam(renderedData, cgID);
 
-  for (const auto &type : m_parent.overlayItemTypes)
+  for (const auto &type : overlayItemTypes)
   {
     auto range = const_cast<Chunk::EntityMap&>(map).equal_range(type);
     for (auto it = range.first; it != range.second; ++it) {
@@ -843,13 +817,13 @@ void DrawHelper3::drawEntityMap(const Chunk::EntityMap &map, const ChunkGroupID&
       // don't show entities above our depth
       // everything below the current block,
       // but also inside the current block
-      if (midpoint.y < m_parent.depth + 1) {
+      if (midpoint.y < depth + 1) {
 
         const int highY = cam.getHeightAt(TopViewPosition(midpoint.x, midpoint.z));
 
         if ( (midpoint.y+10 >= highY) ||
-             (midpoint.y+10 >= m_parent.depth) )
-          (*it)->draw(h.x1, h.z1, m_parent.zoom, &canvas_entities);
+             (midpoint.y+10 >= depth) )
+          (*it)->draw(h.x1, h.z1, zoom, &canvas_entities);
       }
     }
   }
@@ -875,8 +849,8 @@ void MapView::redraw() {
 
   auto renderdCacheLock = renderedChunkGroupsCache.lock();
 
-  DrawHelper h(*this);
-  DrawHelper3 h2(h, *this);
+  DrawHelper h(x,z,zoom,imageChunks.size());
+  DrawHelper3 h2(h, imageChunks, imageOverlays, image_players);
 
   const auto camera = h.cam;
 
@@ -919,7 +893,7 @@ void MapView::redraw() {
     {
       if (entityMap)
       {
-        h2.drawEntityMap(*entityMap, cgid, renderedData);
+        h2.drawEntityMap(*entityMap, cgid, renderedData, overlayItemTypes, depth, zoom);
       }
     }
 
@@ -987,7 +961,7 @@ void MapView::redraw() {
 
 void DrawHelper2::drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk>& renderedChunk) {
 
-  const QImage& srcImage = renderedChunk ? renderedChunk->image : MapView::getPlaceholder();
+  const QImage& srcImage = renderedChunk ? renderedChunk->image : getPlaceholder();
   drawChunk_Map_int(x, z, srcImage);
 }
 
@@ -1230,14 +1204,14 @@ MapCamera MapView::getCamera() const
   return camera;
 }
 
-MapView::RenderGroupData::RenderGroupData()
+RenderGroupData::RenderGroupData()
   : renderedImg()
   , depthImg()
 {
   clear();
 }
 
-void MapView::RenderGroupData::clear()
+void RenderGroupData::clear()
 {
   entities.clear();
   renderedImg = QImage();
@@ -1245,7 +1219,7 @@ void MapView::RenderGroupData::clear()
   renderedFor = RenderParams();
 }
 
-MapView::RenderGroupData& MapView::RenderGroupData::init()
+RenderGroupData& RenderGroupData::init()
 {
   if (renderedImg.isNull())
   {
