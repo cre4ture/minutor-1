@@ -32,11 +32,6 @@ public:
 
   const TopViewPosition topLeftBlock;
   const ChunkID topLeftChunk;
-  int startx; // first chunk left
-  int startz; // first chunk top
-
-  int blockswide; // width in chunks
-  int blockstall; // height in chunks
 
   double x1; // first coordinate left
   double z1; // first coordinate top
@@ -54,19 +49,12 @@ public:
     , topLeftBlock(cam.transformPixelToBlockCoordinates(QPoint(0,0)))
     , topLeftChunk(ChunkID::fromCoordinates(topLeftBlock.x, topLeftBlock.z))
   {
-    startx = topLeftChunk.getX() - 1;
-    startz = topLeftChunk.getZ() - 1;
-    // and the dimensions of the screen in blocks
-    blockswide = static_cast<int>(ceil(cam.size_pixels.width() / chunksize)) + 2;
-    blockstall = static_cast<int>(ceil(cam.size_pixels.height() / chunksize)) + 2;
-
-
-    double halfviewwidth = cam.size_pixels.width() / 2 / zoom;
-    double halvviewheight = cam.size_pixels.height() / 2 / zoom;
-    x1 = x - halfviewwidth;
-    z1 = z - halvviewheight;
-    x2 = x + halfviewwidth;
-    z2 = z + halvviewheight;
+    double halfviewwidth_blocks = cam.size_pixels.width() / 2 / zoom;
+    double halvviewheight_blocks = cam.size_pixels.height() / 2 / zoom;
+    x1 = x - halfviewwidth_blocks;
+    z1 = z - halvviewheight_blocks;
+    x2 = x + halfviewwidth_blocks;
+    z2 = z + halvviewheight_blocks;
   }
 };
 
@@ -910,11 +898,13 @@ void MapView::redraw() {
   // add on the entity layer
   // done as part of drawChunk
 
+  const OverlayItem::Point p1(h.x1 - 1, 0, h.z1 - 1);
+  const OverlayItem::Point p2(h.x2 + 1, depth, h.z2 + 1);
+
   // draw the generated structures 
   for (auto &type : overlayItemTypes) {
     for (auto &item : overlayItems[type]) {
-      if (item->intersects(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
-                           OverlayItem::Point(h.x2 + 1, depth, h.z2 + 1))) {
+      if (item->intersects(p1, p2)) {
         item->draw(h.x1, h.z1, zoom, &h2.getCanvas());
       }
     }
