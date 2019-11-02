@@ -2,7 +2,7 @@
 #define MAPVIEWRENDERER_H
 
 #include "chunk.h"
-#include "chunkcachetypes.h"
+#include "coordinateid.h"
 #include "enumbitset.hpp"
 #include "mapcamera.hpp"
 

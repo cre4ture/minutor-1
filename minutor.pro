@@ -20,6 +20,8 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
+  coordinatehashmap.h \
+  coordinateid.h \
   enumbitset.hpp \
     location.h \
     lockguarded.hpp \
@@ -27,6 +29,7 @@ HEADERS += \
   mapviewrenderer.h \
   safecache.hpp \
     searchchunkswidget.h \
+  value_initialized.h \
     zlib/zlib.h \
     zlib/zconf.h \
 	  labelledslider.h \
@@ -62,7 +65,6 @@ HEADERS += \
     genericidentifier.h \
     identifierinterface.h \
     playerinfos.h \
-    chunkcachetypes.h \
     chunkrenderer.h \
     careeridentifier.h \
     entityevaluator.h \

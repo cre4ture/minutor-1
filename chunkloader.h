@@ -2,7 +2,7 @@
 #ifndef CHUNKLOADER_H_
 #define CHUNKLOADER_H_
 
-#include "chunkcachetypes.h"
+#include "coordinateid.h"
 
 #include <QObject>
 #include <QRunnable>

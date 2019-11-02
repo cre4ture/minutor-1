@@ -16,6 +16,7 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   , m_threadPool(m_input.threadpool)
   , m_searchRunning(false)
   , m_requestCancel(false)
+  , m_currentSearchId(0)
 {
     ui->setupUi(this);
 
@@ -41,107 +42,92 @@ void SearchChunksWidget::setVillageLocations(const QList<QSharedPointer<OverlayI
 
 void SearchChunksWidget::on_pb_search_clicked()
 {
-    class SearchStateResetGuard: public boost::noncopyable
+  class SearchStateResetGuard: public boost::noncopyable
+  {
+  public:
+    SearchStateResetGuard(SearchChunksWidget& parent)
+      : m_parent(parent)
     {
-    public:
-        SearchStateResetGuard(SearchChunksWidget& parent)
-            : m_parent(parent)
-        {
-            m_parent.m_searchRunning = true;
-            m_parent.ui->pb_search->setText("Cancel");
-        }
-
-        ~SearchStateResetGuard()
-        {
-            m_parent.m_searchRunning = false;
-            m_parent.ui->pb_search->setText("Search");
-        }
-
-    private:
-        SearchChunksWidget& m_parent;
-    };
-
-    if (m_searchRunning)
-    {
-        m_requestCancel = true;
-        ui->pb_search->setText("Cancelling ...");
-        return;
+      m_parent.m_searchRunning = true;
+      m_parent.ui->pb_search->setText("Cancel");
     }
 
-    SearchStateResetGuard searchRunningGuard(*this);
-    m_requestCancel = false;
-
-    m_chunksToSearchList.clear();
-
-    ui->resultList->clearResults();
-    ui->resultList->setPointOfInterest(m_input.posOfInterestProvider());
-
-    const int radius = 1 + (ui->sb_radius->value() / CHUNK_SIZE);
-    ui->progressBar->reset();
-    ui->progressBar->setMaximum(radius * radius * 4);
-
-    const bool successfull_init = m_input.searchPlugin->initSearch();
-    if (!successfull_init)
+    ~SearchStateResetGuard()
     {
-        return;
+      m_parent.m_searchRunning = false;
+      m_parent.ui->pb_search->setText("Search");
     }
 
-    const QVector2D poi = getChunkCoordinates(m_input.posOfInterestProvider());
+  private:
+    SearchChunksWidget& m_parent;
+  };
 
-    for (int z= -radius; z <= radius; z++)
+  if (m_searchRunning)
+  {
+    m_requestCancel = true;
+    ui->pb_search->setText("Cancelling ...");
+    return;
+  }
+
+  m_currentSearchId++;
+  SearchStateResetGuard searchRunningGuard(*this);
+  m_requestCancel = false;
+
+  m_chunksRequestedToSearchList.clear();
+
+  ui->resultList->clearResults();
+  ui->resultList->setPointOfInterest(m_input.posOfInterestProvider());
+
+  const int radius = 1 + (ui->sb_radius->value() / CHUNK_SIZE);
+  ui->progressBar->reset();
+  ui->progressBar->setMaximum(radius * radius * 4);
+
+  const bool successfull_init = m_input.searchPlugin->initSearch();
+  if (!successfull_init)
+  {
+      return;
+  }
+
+  const QVector2D poi = getChunkCoordinates(m_input.posOfInterestProvider());
+
+  for (int z= -radius; z <= radius; z++)
+  {
+    for (int x = -radius; x <= radius; x++)
     {
-        for (int x = -radius; x <= radius; x++)
-        {
-            checkLocationAndTrySearchChunk(ChunkID(poi.x() + x, poi.y() + z));
+      const ChunkID id(poi.x() + x, poi.y() + z);
+      const bool searchNeeded = checkLocationIfSearchIsNeeded(id);
+      if (searchNeeded)
+      {
+        requestSearchingOfChunk(id);
+      }
+      else
+      {
+        addOneToProgress(id);
+      }
 
-            if (m_requestCancel)
-            {
-                return;
-            }
-        }
-        QApplication::processEvents();
+      if (m_requestCancel)
+      {
+          return;
+      }
     }
+    QApplication::processEvents();
+  }
 }
 
-void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
+bool SearchChunksWidget::checkLocationIfSearchIsNeeded(ChunkID id)
 {
-    if (m_requestCancel)
-    {
-        return;
-    }
+  bool searchThisChunk = true;
+  if (ui->check_villages->isChecked())
+  {
+      searchThisChunk = searchThisChunk && villageFilter(id);
+  }
 
-    if (chunk)
-    {
-        searchLoadedChunk(chunk);
-    }
-    else
-    {
-        oneChunkDoneNotify(ChunkID(x, z));
-    }
+  return searchThisChunk;
 }
 
-void SearchChunksWidget::checkLocationAndTrySearchChunk(ChunkID id)
+void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
 {
-    m_chunksToSearchDoneList.insert(id);
-
-    bool searchThisChunk = true;
-    if (ui->check_villages->isChecked())
-    {
-        searchThisChunk = searchThisChunk && villageFilter(id);
-    }
-
-    if (!searchThisChunk)
-    {
-        oneChunkDoneNotify(id);
-        return;
-    }
-
-    trySearchChunk(id);
-}
-
-void SearchChunksWidget::trySearchChunk(ChunkID id)
-{
-    m_chunksToSearchList.insert(id);
+    m_chunksRequestedToSearchList[id] = true;
 
     QSharedPointer<Chunk> chunk;
     ChunkCache::Locker locked_cache(*m_input.cache);
@@ -156,6 +142,33 @@ void SearchChunksWidget::trySearchChunk(ChunkID id)
     {
         chunkLoaded(chunk, id.getX(), id.getZ());
         return;
+    }
+}
+
+void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
+{
+    if (m_requestCancel)
+    {
+        return;
+    }
+
+    const ChunkID id(x, z);
+
+    bool& isChunkToSearch = m_chunksRequestedToSearchList[id];
+    if (!isChunkToSearch)
+    {
+        return; // already searched or not of interest
+    }
+
+    isChunkToSearch = false; // mark as done
+
+    if (chunk)
+    {
+        searchLoadedChunk(chunk);
+    }
+    else
+    {
+        addOneToProgress(id);
     }
 }
 
@@ -206,39 +219,36 @@ Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1,
 
 void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 {
-    ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
-
-    auto it = m_chunksToSearchList.find(id);
-    if (it == m_chunksToSearchList.end())
-    {
-        return; // already searched or not of interest
-    }
-
-    m_chunksToSearchList.erase(it);
-
     const Range<float> range_x = helperRangeCreation(*ui->check_range_x, *ui->sb_x_start, *ui->sb_x_end);
     const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
     const Range<float> range_z = helperRangeCreation(*ui->check_range_z, *ui->sb_z_start, *ui->sb_z_end);
 
-    m_threadPool->enqueueJob([this, id, chunk, range_x, range_y, range_z]()
+    m_threadPool->enqueueJob([this, chunk, range_x, range_y, range_z, currentSearchId = m_currentSearchId, searchPlug = m_input.searchPlugin]()
     {
-        auto results_tmp = m_input.searchPlugin->searchChunk(*chunk);
-        auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
+      if (m_currentSearchId != currentSearchId)
+      {
+        return; // search criterion outdated!
+      }
 
-        for (const auto& result: results_tmp)
-        {
-            if (range_x.isInsideRange(result.pos.x()) &&
-                range_y.isInsideRange(result.pos.y()) &&
-                range_z.isInsideRange(result.pos.z()))
-            {
-                results->push_back(result);
-            }
-        }
+      ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
-        QMetaObject::invokeMethod(this, "displayResults",
-                                  Q_ARG(QSharedPointer<SearchPluginI::ResultListT>, results),
-                                  Q_ARG(ChunkID, id)
-                                  );
+      auto results_tmp = searchPlug->searchChunk(*chunk);
+      auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
+
+      for (const auto& result: results_tmp)
+      {
+          if (range_x.isInsideRange(result.pos.x()) &&
+              range_y.isInsideRange(result.pos.y()) &&
+              range_z.isInsideRange(result.pos.z()))
+          {
+              results->push_back(result);
+          }
+      }
+
+      QMetaObject::invokeMethod(this, "displayResults",
+                                Q_ARG(QSharedPointer<SearchPluginI::ResultListT>, results),
+                                Q_ARG(ChunkID, id)
+                                );
     });
 }
 
@@ -251,7 +261,7 @@ void SearchChunksWidget::displayResults(QSharedPointer<SearchPluginI::ResultList
         ui->resultList->addResult(result);
     }
 
-    oneChunkDoneNotify(id);
+    addOneToProgress(id);
 }
 
 bool SearchChunksWidget::villageFilter(ChunkID id) const
@@ -271,12 +281,11 @@ bool SearchChunksWidget::villageFilter(ChunkID id) const
     return false;
 }
 
-void SearchChunksWidget::oneChunkDoneNotify(ChunkID id)
+void SearchChunksWidget::addOneToProgress(ChunkID /* id */)
 {
   ui->progressBar->setValue(ui->progressBar->value() + 1);
 
-  const size_t erased = m_chunksToSearchDoneList.erase(id);
-  if (!m_searchRunning && (erased == 1) && (m_chunksToSearchDoneList.empty()))
+  if (ui->progressBar->maximum() == ui->progressBar->value())
   {
     ui->resultList->searchDone();
   }

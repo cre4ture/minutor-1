@@ -5,8 +5,9 @@
 #include "overlayitem.h"
 #include "entityevaluator.h"
 #include "searchplugininterface.h"
-#include "chunkcachetypes.h"
+#include "coordinatehashmap.h"
 #include "asynctaskprocessorbase.hpp"
+#include "value_initialized.h"
 
 #include <QWidget>
 #include <set>
@@ -75,21 +76,21 @@ private:
     Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;
     QSharedPointer<AsyncTaskProcessorBase> m_threadPool;
-    std::set<ChunkID> m_chunksToSearchList;
-    std::set<ChunkID> m_chunksToSearchDoneList;
+    CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     QList<QSharedPointer<OverlayItem> > m_villages;
     bool m_searchRunning;
     bool m_requestCancel;
+    size_t m_currentSearchId;
 
-    void checkLocationAndTrySearchChunk(ChunkID id);
+    bool checkLocationIfSearchIsNeeded(ChunkID id);
 
-    void trySearchChunk(ChunkID id);
+    void requestSearchingOfChunk(ChunkID id);
 
     void searchLoadedChunk(const QSharedPointer<Chunk> &chunk);
 
     bool villageFilter(ChunkID id) const;
 
-    void oneChunkDoneNotify(ChunkID id);
+    void addOneToProgress(ChunkID id);
 };
 
 #endif // SEARCHENTITYWIDGET_H

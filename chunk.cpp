@@ -5,7 +5,7 @@
 #include "./chunk.h"
 #include "./flatteningconverter.h"
 #include "./blockidentifier.h"
-#include "./chunkcachetypes.h"
+#include "./coordinateid.h"
 
 template<typename _ValueT>
 inline void* safeMemCpy(void* __dest, const std::vector<_ValueT>& __src, size_t __len)
