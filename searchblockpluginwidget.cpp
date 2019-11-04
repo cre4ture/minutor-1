@@ -2,34 +2,38 @@
 #include "searchblockpluginwidget.h"
 #include "searchresultwidget.h"
 #include "ui_searchblockpluginwidget.h"
+#include "searchtextwidget.h"
 
 #include <set>
 #include <algorithm>
 
 SearchBlockPluginWidget::SearchBlockPluginWidget(const SearchBlockPluginWidgetConfigT& config)
-    : QWidget(config.parent)
-    , ui(new Ui::SearchBlockPluginWidget)
-    , m_config(config)
+  : QWidget(config.parent)
+  , ui(new Ui::SearchBlockPluginWidget)
+  , m_config(config)
 {
-    ui->setupUi(this);
+  ui->setupUi(this);
 
-    auto idList = m_config.blockIdentifier->getKnownIds();
+  auto idList = m_config.blockIdentifier->getKnownIds();
 
-    QStringList nameList;
-    nameList.reserve(idList.size());
+  QStringList nameList;
+  nameList.reserve(idList.size());
 
-    for (auto id: idList)
-    {
-        auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
-        nameList.push_back(blockInfo.getName());
-    }
+  for (auto id: idList)
+  {
+      auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
+      nameList.push_back(blockInfo.getName());
+  }
 
-    nameList.sort(Qt::CaseInsensitive);
+  nameList.sort(Qt::CaseInsensitive);
 
-    for (auto name: nameList)
-    {
-        ui->cb_Name->addItem(name);
-    }
+  ui->verticalLayout->addWidget(stw_blockId = new SearchTextWidget("block id"));
+  ui->verticalLayout->addWidget(stw_blockName = new SearchTextWidget("block name"));
+
+  for (auto name: nameList)
+  {
+    stw_blockName->addSuggestion(name);
+  }
 }
 
 SearchBlockPluginWidget::~SearchBlockPluginWidget()
@@ -44,31 +48,32 @@ QWidget &SearchBlockPluginWidget::getWidget()
 
 bool SearchBlockPluginWidget::initSearch()
 {
-    const bool checkId = ui->check_blockId->isChecked();
-    const bool checkName = ui->check_Name->isChecked();
-
     m_searchForIds.clear();
 
-    if (checkId)
+    if (stw_blockId->isActive())
     {
-        m_searchForIds.insert(ui->sb_id->value());
+      bool ok = true;
+      m_searchForIds.insert(stw_blockId->getSearchText().toUInt());
+      if (!ok)
+      {
+        return false;
+      }
     }
 
-    if (checkName)
+    if (stw_blockName->isActive())
     {
-        const QString searchForName = ui->cb_Name->currentText();
         auto idList = m_config.blockIdentifier->getKnownIds();
         for (auto id: idList)
         {
             auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
-            if (blockInfo.getName().contains(searchForName, Qt::CaseInsensitive))
+            if (stw_blockName->matches(blockInfo.getName()))
             {
                 m_searchForIds.insert(id);
             }
         }
     }
 
-    return m_searchForIds.size() > 0;
+    return (m_searchForIds.size() > 0);
 }
 
 SearchPluginI::ResultListT SearchBlockPluginWidget::searchChunk(Chunk &chunk)

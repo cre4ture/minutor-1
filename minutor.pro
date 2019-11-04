@@ -23,92 +23,96 @@ HEADERS += \
   coordinatehashmap.h \
   coordinateid.h \
   enumbitset.hpp \
-    location.h \
-    lockguarded.hpp \
+  location.h \
+  lockguarded.hpp \
   mapcamera.hpp \
   mapviewrenderer.h \
   safecache.hpp \
-    searchchunkswidget.h \
+  searchchunkswidget.h \
   value_initialized.h \
-    zlib/zlib.h \
-    zlib/zconf.h \
-	  labelledslider.h \
-    biomeidentifier.h \
-    blockidentifier.h \
-    chunk.h \
-    chunkcache.h \
-    chunkloader.h \
-    chunkrenderer.h \
-    definitionmanager.h \
-    definitionupdater.h \
-    dimensionidentifier.h \
-    entity.h \
-    entityidentifier.h \
-    generatedstructure.h \
-    json.h \
-    mapview.h \
-    minutor.h \
-    nbt.h \
-    overlayitem.h \
-    properties.h \
-    settings.h \
-    village.h \
-    worldsave.h \
-    zipreader.h \
-    clamp.h \
-    jumpto.h \
-    pngexport.h \
-    flatteningconverter.h \
-    paletteentry.h \
-    searchresultwidget.h \
-    propertietreecreator.h \
-    genericidentifier.h \
-    identifierinterface.h \
-    playerinfos.h \
-    chunkrenderer.h \
-    careeridentifier.h \
-    entityevaluator.h \
-    searchentitypluginwidget.h \
-    searchplugininterface.h \
-    searchblockpluginwidget.h \
-    threadsafequeue.hpp \
-    asynctaskprocessorbase.hpp \
-    chunkmath.hpp
+  zlib/zlib.h \
+  zlib/zconf.h \
+  labelledslider.h \
+  biomeidentifier.h \
+  blockidentifier.h \
+  chunk.h \
+  chunkcache.h \
+  chunkloader.h \
+  chunkrenderer.h \
+  definitionmanager.h \
+  definitionupdater.h \
+  dimensionidentifier.h \
+  entity.h \
+  entityidentifier.h \
+  generatedstructure.h \
+  json.h \
+  mapview.h \
+  minutor.h \
+  nbt.h \
+  overlayitem.h \
+  properties.h \
+  settings.h \
+  village.h \
+  worldsave.h \
+  zipreader.h \
+  clamp.h \
+  jumpto.h \
+  pngexport.h \
+  flatteningconverter.h \
+  paletteentry.h \
+  searchresultwidget.h \
+  propertietreecreator.h \
+  genericidentifier.h \
+  identifierinterface.h \
+  playerinfos.h \
+  chunkrenderer.h \
+  careeridentifier.h \
+  entityevaluator.h \
+  searchentitypluginwidget.h \
+  searchplugininterface.h \
+  searchblockpluginwidget.h \
+  threadsafequeue.hpp \
+  asynctaskprocessorbase.hpp \
+  chunkmath.hpp\
+  searchtextwidget.h
+
 SOURCES += \
-	  labelledslider.cpp \
-    biomeidentifier.cpp \
-    blockidentifier.cpp \
-    chunk.cpp \
-    chunkcache.cpp \
-    chunkloader.cpp \
-    chunkrenderer.cpp \
-    definitionmanager.cpp \
-    definitionupdater.cpp \
-    dimensionidentifier.cpp \
-    entity.cpp \
-    entityidentifier.cpp \
-    generatedstructure.cpp \
-    json.cpp \
-    mapview.cpp \
-    minutor.cpp \
-    nbt.cpp \
-    properties.cpp \
-    searchchunkswidget.cpp \
-    settings.cpp \
-    village.cpp \
-    worldsave.cpp \
-    zipreader.cpp \
-    jumpto.cpp \
-    pngexport.cpp \
-    flatteningconverter.cpp \
-    searchresultwidget.cpp \
-    propertietreecreator.cpp \
-    genericidentifier.cpp \
-    playerinfos.cpp \
-    entityevaluator.cpp \
-    searchentitypluginwidget.cpp \
-    searchblockpluginwidget.cpp \
-    asynctaskprocessorbase.cpp
+  labelledslider.cpp \
+  biomeidentifier.cpp \
+  blockidentifier.cpp \
+  chunk.cpp \
+  chunkcache.cpp \
+  chunkloader.cpp \
+  chunkrenderer.cpp \
+  definitionmanager.cpp \
+  definitionupdater.cpp \
+  dimensionidentifier.cpp \
+  entity.cpp \
+  entityidentifier.cpp \
+  generatedstructure.cpp \
+  json.cpp \
+  mapview.cpp \
+  minutor.cpp \
+  nbt.cpp \
+  properties.cpp \
+  searchchunkswidget.cpp \
+  settings.cpp \
+  village.cpp \
+  worldsave.cpp \
+  zipreader.cpp \
+  jumpto.cpp \
+  pngexport.cpp \
+  flatteningconverter.cpp \
+  searchresultwidget.cpp \
+  propertietreecreator.cpp \
+  genericidentifier.cpp \
+  playerinfos.cpp \
+  entityevaluator.cpp \
+  searchentitypluginwidget.cpp \
+  searchblockpluginwidget.cpp \
+  asynctaskprocessorbase.cpp \
+  searchtextwidget.cpp
+
 RESOURCES = minutor.qrc
 
 win32:SOURCES += zlib/adler32.c \
@@ -142,6 +146,7 @@ FORMS += \
     pngexport.ui \
     searchresultwidget.ui \
     searchentitypluginwidget.ui \
-    searchblockpluginwidget.ui
+    searchblockpluginwidget.ui\
+    searchtextwidget.ui
 
 DISTFILES +=

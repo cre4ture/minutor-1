@@ -11,6 +11,8 @@ namespace Ui {
 class SearchBlockPluginWidget;
 }
 
+class SearchTextWidget;
+
 struct SearchBlockPluginWidgetConfigT
 {
     SearchBlockPluginWidgetConfigT(BlockIdentifier& blockIdentifier_)
@@ -36,6 +38,10 @@ public:
 
 private:
     Ui::SearchBlockPluginWidget *ui;
+
+    SearchTextWidget* stw_blockId;
+    SearchTextWidget* stw_blockName;
+
     SearchBlockPluginWidgetConfigT m_config;
     std::set<quint32> m_searchForIds;
 };

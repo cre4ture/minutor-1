@@ -4,6 +4,7 @@
 #include "./careeridentifier.h"
 #include "chunk.h"
 #include "searchresultwidget.h"
+#include "searchtextwidget.h"
 
 SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidgetConfigT& config)
     : QWidget(config.parent)
@@ -12,10 +13,16 @@ SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidge
 {
     ui->setupUi(this);
 
+    ui->verticalLayout->addWidget(stw_sells = new SearchTextWidget("sells"));
+    ui->verticalLayout->addWidget(stw_buys = new SearchTextWidget("buys"));
+    ui->verticalLayout->addWidget(stw_entityType = new SearchTextWidget("entity type"));
+    ui->verticalLayout->addWidget(stw_villagerType = new SearchTextWidget("villager type"));
+    ui->verticalLayout->addWidget(stw_special = new SearchTextWidget("special"));
+
     for (const auto& id: m_config.definitions.careerDefinitions->getKnownIds())
     {
         auto desc = m_config.definitions.careerDefinitions->getDescriptor(id);
-        ui->cb_villager_type->addItem(desc.name);
+        stw_villagerType->addSuggestion(desc.name);
     }
 }
 
@@ -54,46 +61,45 @@ bool SearchEntityPluginWidget::evaluateEntity(EntityEvaluator &entity)
 {
     bool result = true;
 
-    if (ui->check_villager_type->isChecked())
+    if (stw_villagerType->isActive())
     {
-        QString searchFor = ui->cb_villager_type->currentText();
+        QString searchFor = stw_villagerType->getSearchText();
         QString career = entity.getCareerName();
         result = result && (career.contains(searchFor, Qt::CaseInsensitive));
     }
 
-    if (ui->check_buys->isChecked())
+    if (stw_buys->isActive())
     {
-        result = result && findBuyOrSell(entity, ui->cb_buys->currentText(), 0);
+        result = result && findBuyOrSell(entity, *stw_buys, 0);
     }
 
-    if (ui->check_sells->isChecked())
+    if (stw_sells->isActive())
     {
-        result = result && findBuyOrSell(entity, ui->cb_sells->currentText(), 1);
+        result = result && findBuyOrSell(entity, *stw_sells, 1);
     }
 
-    if (ui->check_entity_type->isChecked())
+    if (stw_entityType->isActive())
     {
-        QString searchFor = ui->cb_entity_type->currentText();
         QString id = entity.getTypeId();
-        result = result && (id.contains(searchFor, Qt::CaseInsensitive));
+        result = result && stw_entityType->matches(id);
     }
 
-    if (ui->check_special_param->isChecked())
+    if (stw_special->isActive())
     {
-        result = result && findSpecialParam(entity, ui->cb_special_param->currentText());
+        result = result && stw_special->matches(entity.getSpecialParams());
     }
 
     return result;
 }
 
-bool SearchEntityPluginWidget::findBuyOrSell(EntityEvaluator &entity, QString searchText, int index)
+bool SearchEntityPluginWidget::findBuyOrSell(EntityEvaluator &entity, SearchTextWidget& searchText, int index)
 {
     bool foundBuy = false;
     auto offers = entity.getOffers();
     for (const auto& offer: offers)
     {
-        auto splitOffer = offer.split("=>");
-        foundBuy = (splitOffer.count() > index) && splitOffer[index].contains(searchText, Qt::CaseInsensitive);
+        auto splitOffer = offer.split(" => ");
+        foundBuy = (splitOffer.count() > index) && searchText.matches(splitOffer[index]);
         if (foundBuy)
         {
             break;
@@ -103,9 +109,4 @@ bool SearchEntityPluginWidget::findBuyOrSell(EntityEvaluator &entity, QString se
     return foundBuy;
 }
 
-bool SearchEntityPluginWidget::findSpecialParam(EntityEvaluator &entity, QString searchText)
-{
-    QString special_params = entity.getSpecialParams();
-    return special_params.contains(searchText, Qt::CaseInsensitive);
-}
 

@@ -6,6 +6,8 @@
 
 #include <QWidget>
 
+class SearchTextWidget;
+
 namespace Ui {
 class SearchEntityPluginWidget;
 }
@@ -36,11 +38,16 @@ public:
 private:
     Ui::SearchEntityPluginWidget *ui;
 
+    SearchTextWidget* stw_sells;
+    SearchTextWidget* stw_buys;
+    SearchTextWidget* stw_entityType;
+    SearchTextWidget* stw_villagerType;
+    SearchTextWidget* stw_special;
+
     SearchEntityPluginWidgetConfigT m_config;
 
     bool evaluateEntity(EntityEvaluator &entity);
-    bool findBuyOrSell(EntityEvaluator& entity, QString searchText, int index);
-    bool findSpecialParam(EntityEvaluator& entity, QString searchText);
+    bool findBuyOrSell(EntityEvaluator& entity, SearchTextWidget &searchText, int index);
 };
 
 #endif // SEARCHENTITYPLUGINWIDGET_H

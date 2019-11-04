@@ -1,7 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SearchBlockPluginWidget</class>
- <widget class="QWidget" name="SearchBlockPluginWidget">
+ <author/>
+ <comment/>
+ <exportmacro/>
+ <class>SearchTextWidget</class>
+ <widget name="SearchTextWidget" class="QWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -13,8 +15,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout"/>
  </widget>
- <resources/>
+ <pixmapfunction/>
  <connections/>
 </ui>

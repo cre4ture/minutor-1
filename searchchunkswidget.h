@@ -21,6 +21,7 @@ class Chunk;
 class SearchResultWidget;
 class GenericIdentifier;
 class AsyncTaskProcessorBase;
+class SearchTextWidget;
 
 struct SearchEntityWidgetInputC
 {

@@ -62,6 +62,8 @@ void SearchChunksWidget::on_pb_search_clicked()
     SearchChunksWidget& m_parent;
   };
 
+  m_currentSearchId++; // also inc in abort case to invalidated already running search jobs
+
   if (m_searchRunning)
   {
     m_requestCancel = true;
@@ -69,7 +71,6 @@ void SearchChunksWidget::on_pb_search_clicked()
     return;
   }
 
-  m_currentSearchId++;
   SearchStateResetGuard searchRunningGuard(*this);
   m_requestCancel = false;
 
