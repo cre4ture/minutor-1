@@ -67,6 +67,8 @@ public:
                 : h(h_)
                 , canvas(&imageBuffer)
   {
+    if (h.zoom < 1.0)
+        canvas.setRenderHint(QPainter::SmoothPixmapTransform);
   }
 
   void drawChunk_Map(int x, int z, const QSharedPointer<RenderedChunk> &renderedChunk);
@@ -757,10 +759,8 @@ void MapView::resizeEvent(QResizeEvent *event) {
   //imageOverlays = QImage(event->size(), QImage::Format_RGBA8888);
   imageOverlays = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
   image_players = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
-  if (!isEnabled())
-  {
-    redraw(); // to initialize buffers
-  }
+
+  redraw();
 }
 
 void MapView::paintEvent(QPaintEvent * /* event */) {
