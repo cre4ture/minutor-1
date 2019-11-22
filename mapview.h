@@ -41,7 +41,7 @@ class MapView : public QWidget {
     flgShowEntities = 1 << 4,
     flgSingleLayer  = 1 << 5,
     flgBiomeColors  = 1 << 6,
-    flgOceanGround  = 1 << 7
+    flgSeaGround    = 1 << 7
   };
 
   typedef struct {

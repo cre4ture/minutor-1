@@ -82,7 +82,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
         const BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
         if (block.alpha == 0.0) continue;
 
-        if (flags & MapView::flgOceanGround && block.isLiquid()) continue;
+        if (flags & MapView::flgSeaGround && block.isLiquid()) continue;
 
         // get light value from one block above
         int light = 0;
