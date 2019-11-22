@@ -99,7 +99,7 @@ SearchPluginI::ResultListT SearchBlockPluginWidget::searchChunk(Chunk &chunk)
 
                     SearchResultItem item;
                     item.name = info.getName() + " (" + QString::number(bi.id) + ")";
-                    item.pos = QVector3D(chunk.getChunkX() * 16 + x, y, chunk.getChunkZ() * 16 + z);
+                    item.pos = QVector3D(chunk.getChunkX() * 16 + x, y, chunk.getChunkZ() * 16 + z) + QVector3D(0.5,0.5,0.5); // mark center of block, not origin
                     item.entity = QSharedPointer<Entity>::create(item.pos);
                     results.push_back(item);
                 }
