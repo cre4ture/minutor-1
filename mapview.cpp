@@ -1014,6 +1014,8 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
       auto & block = BlockIdentifier::Instance().getBlockInfo(pdata.hid);
       if (block.alpha == 0.0) continue;
 
+      if (flags & MapView::flgSeaGround && block.isLiquid()) continue;
+
       blockId = QString::number(pdata.hid) + "/" + QString::number(chunk->getBlockData(x,y,z).id);
 
       //block = chunk->getBlockData(x,y,z);
