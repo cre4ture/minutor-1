@@ -82,6 +82,8 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
         const BlockInfo &block = BlockIdentifier::Instance().getBlockInfo(paletteEntry.hid);
         if (block.alpha == 0.0) continue;
 
+        if (flags & MapView::flgOceanGround && block.isLiquid()) continue;
+
         // get light value from one block above
         int light = 0;
         ChunkSection *section1 = NULL;
@@ -131,6 +133,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
           colg = colg - qMin(shade, colg);
           colb = colb - qMin(shade, colb);
         }
+
         if (flags & MapView::flgMobSpawn) {
           // get block info from 1 and 2 above and 1 below
           uint blid1(0), blid2(0), blidB(0);  // default to legacy air (todo: better handling of block above)
@@ -203,7 +206,9 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
         // finish depth (Y) scanning when color is saturated enough
         if (block.alpha == 1.0 || alpha > 0.9)
           break;
-      }
+
+      } // top -> down
+
       if (flags & MapView::flgCaveMode) {
         float cave_factor = 1.0;
         int cave_test = 0;
@@ -225,6 +230,7 @@ void ChunkRenderer::renderChunk(MapView &parent, const QSharedPointer<Chunk>& ch
         g = (quint8)(cave_factor * g);
         b = (quint8)(cave_factor * b);
       }
+
       *depthbits++ = lasty = highest;
       *bits++ = b;
       *bits++ = g;
