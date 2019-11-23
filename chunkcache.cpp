@@ -83,7 +83,7 @@ int ChunkCache::getMaxCost() const {
   return cache.maxCost();
 }
 
-QSharedPointer<Chunk> ChunkCache::getChunkSync(ChunkID id)
+QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(ChunkID id)
 {
   {
     QMutexLocker locker(&mutex);

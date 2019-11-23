@@ -67,7 +67,7 @@ private:
       QMutexLocker m_locker;
   };
 
-  QSharedPointer<Chunk> getChunkSync(ChunkID id);
+  QSharedPointer<Chunk> getChunkSynchronously(ChunkID id);
 
  signals:
   void chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z);

@@ -127,7 +127,7 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
   m_threadPool->enqueueJob([this, id, myCancellation](){
     if (!myCancellation.isCanceled())
     {
-      auto chunk = m_input.cache->getChunkSync(id);
+      auto chunk = m_input.cache->getChunkSynchronously(id);
       QMetaObject::invokeMethod(this, "chunkLoaded",
                                 Q_ARG(QSharedPointer<Chunk>, chunk),
                                 Q_ARG(int, id.getX()),
