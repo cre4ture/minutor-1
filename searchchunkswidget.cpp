@@ -139,29 +139,29 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
 
 void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-    if (!cancellation || cancellation->isCanceled())
-    {
-        return;
-    }
+  if (!cancellation || cancellation->isCanceled())
+  {
+    return;
+  }
 
-    const ChunkID id(x, z);
+  const ChunkID id(x, z);
 
-    bool& isChunkToSearch = m_chunksRequestedToSearchList[id];
-    if (!isChunkToSearch)
-    {
-        return; // already searched or not of interest
-    }
+  bool& isChunkToSearch = m_chunksRequestedToSearchList[id];
+  if (!isChunkToSearch)
+  {
+    return; // already searched or not of interest
+  }
 
-    isChunkToSearch = false; // mark as done
+  isChunkToSearch = false; // mark as done
 
-    if (chunk)
-    {
-        searchLoadedChunk(chunk);
-    }
-    else
-    {
-        addOneToProgress(id);
-    }
+  if (chunk)
+  {
+    searchLoadedChunk(chunk);
+  }
+  else
+  {
+    addOneToProgress(id);
+  }
 }
 
 template <typename _ValueT>
