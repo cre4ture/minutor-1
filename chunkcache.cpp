@@ -83,6 +83,29 @@ int ChunkCache::getMaxCost() const {
   return cache.maxCost();
 }
 
+QSharedPointer<Chunk> ChunkCache::getChunkSync(ChunkID id)
+{
+  {
+    QMutexLocker locker(&mutex);
+
+    QSharedPointer<Chunk> chunk;
+    if (isCached_unprotected(id, &chunk))
+    {
+      return chunk;
+    }
+
+    auto& chunkState = chunkStates[id];
+    chunkState << ChunkState::Loading;
+  }
+
+  ChunkLoader loader(path, id);
+  auto chunk = loader.runInternal();
+
+  gotChunk(chunk, id);
+
+  return chunk;
+}
+
 bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav)
 {
   const bool cached = isCached_unprotected(id, &chunk_out);
@@ -176,7 +199,7 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
       chunkState << ChunkState::Loading;
     }
 
-    m_loaderPool.enqueueChunkLoading(path, id);
+  m_loaderPool.enqueueChunkLoading(path, id);
 }
 
 void ChunkCache::adaptCacheToWindow(int wx, int wy) {

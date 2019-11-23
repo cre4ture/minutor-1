@@ -12,15 +12,23 @@ public:
 
     AsyncTaskProcessorBase();
 
-    size_t enqueueJob(const JobT& job, bool back = true)
+    enum class JobPrio
     {
-      return m_queue.push(job, back);
+      low,
+      high
+    };
+
+    size_t enqueueJob(const JobT& job, JobPrio prio = JobPrio::low)
+    {
+      return m_queue.push(job, prio == JobPrio::low ? true : false);
     }
 
     size_t getQueueLength() const
     {
       return m_queue.getCurrentQueueLength();
     }
+
+    size_t getNumberOfThreads() const;
 
 private:
     class ImplC;

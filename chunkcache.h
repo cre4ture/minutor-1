@@ -67,6 +67,8 @@ private:
       QMutexLocker m_locker;
   };
 
+  QSharedPointer<Chunk> getChunkSync(ChunkID id);
+
  signals:
   void chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z);
   void structureFound(QSharedPointer<GeneratedStructure> structure);
@@ -82,8 +84,8 @@ private:
   QString path;                                   // path to folder with region files
 
   enum class ChunkState {
-      Loading,
-      NonExisting,
+    Loading,
+    NonExisting,
   };
 
   using ChunkInfoT = Bitset<ChunkState, uint8_t>;

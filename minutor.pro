@@ -20,6 +20,7 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
+  cancellation.hpp \
   coordinatehashmap.h \
   coordinateid.h \
   enumbitset.hpp \

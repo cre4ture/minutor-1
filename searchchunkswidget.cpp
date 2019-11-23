@@ -15,8 +15,7 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   , m_input(input)
   , m_threadPool(m_input.threadpool)
   , m_searchRunning(false)
-  , m_requestCancel(false)
-  , m_currentSearchId(0)
+  , cancellation()
 {
     ui->setupUi(this);
 
@@ -55,24 +54,23 @@ void SearchChunksWidget::on_pb_search_clicked()
     ~SearchStateResetGuard()
     {
       m_parent.m_searchRunning = false;
-      m_parent.ui->pb_search->setText("Search");
     }
 
   private:
     SearchChunksWidget& m_parent;
   };
 
-  m_currentSearchId++; // also inc in abort case to invalidated already running search jobs
-
-  if (m_searchRunning)
+  if (cancellation)
   {
-    m_requestCancel = true;
-    ui->pb_search->setText("Cancelling ...");
+    cancellation->cancel();
+    cancellation.reset();
+    ui->pb_search->setText("Search");
     return;
   }
 
   SearchStateResetGuard searchRunningGuard(*this);
-  m_requestCancel = false;
+  auto myCancellation = QSharedPointer<Cancellation>::create();
+  cancellation = myCancellation;
 
   m_chunksRequestedToSearchList.clear();
 
@@ -90,27 +88,29 @@ void SearchChunksWidget::on_pb_search_clicked()
   }
 
   const QVector2D poi = getChunkCoordinates(m_input.posOfInterestProvider());
+  const QVector2D radius2d(radius, radius);
 
-  for (int z= -radius; z <= radius; z++)
+  QRect searchRange((poi - radius2d).toPoint(), (poi + radius2d).toPoint());
+
+  for (RectangleIterator it(searchRange); it != it.end(); ++it)
   {
-    for (int x = -radius; x <= radius; x++)
-    {
-      const ChunkID id(poi.x() + x, poi.y() + z);
-      const bool searchNeeded = checkLocationIfSearchIsNeeded(id);
-      if (searchNeeded)
-      {
-        requestSearchingOfChunk(id);
-      }
-      else
-      {
-        addOneToProgress(id);
-      }
+    const ChunkID id(it.getX(), it.getZ());
 
-      if (m_requestCancel)
-      {
-          return;
-      }
+    const bool searchNeeded = checkLocationIfSearchIsNeeded(id);
+    if (searchNeeded)
+    {
+      requestSearchingOfChunk(id);
     }
+    else
+    {
+      addOneToProgress(id);
+    }
+
+    if (myCancellation->isCanceled())
+    {
+        return;
+    }
+
     QApplication::processEvents();
   }
 }
@@ -128,27 +128,34 @@ bool SearchChunksWidget::checkLocationIfSearchIsNeeded(ChunkID id)
 
 void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
 {
-    m_chunksRequestedToSearchList[id] = true;
+  m_chunksRequestedToSearchList[id] = true;
 
-    QSharedPointer<Chunk> chunk;
-    ChunkCache::Locker locked_cache(*m_input.cache);
+  ChunkCache::Locker locked_cache(*m_input.cache);
 
-    if (locked_cache.isCached(id, chunk)) // can return true and nullptr in case of inexistend chunk
+  QSharedPointer<Chunk> chunk;
+  if (locked_cache.isCached(id, chunk)) // can return true and nullptr in case of inexistend chunk
+  {
+      chunkLoaded(chunk, id.getX(), id.getZ());
+      return;
+  }
+
+  CancellationTokenPtr myCancellation = cancellation;
+  m_threadPool->enqueueJob([this, id, myCancellation](){
+    if (!myCancellation.isCanceled())
     {
-        chunkLoaded(chunk, id.getX(), id.getZ());
-        return;
+      auto chunk = m_input.cache->getChunkSync(id);
+      QMetaObject::invokeMethod(this, "chunkLoaded",
+                                Q_ARG(QSharedPointer<Chunk>, chunk),
+                                Q_ARG(int, id.getX()),
+                                Q_ARG(int, id.getZ())
+                                );
     }
-
-    if (locked_cache.fetch(chunk, id)) // normally schedules async loading and return false. But it can happen in rare cases that chunk has been loaded since isCached() check returned
-    {
-        chunkLoaded(chunk, id.getX(), id.getZ());
-        return;
-    }
+  });
 }
 
 void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-    if (m_requestCancel)
+    if (!cancellation || cancellation->isCanceled())
     {
         return;
     }
@@ -224,11 +231,11 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
     const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
     const Range<float> range_z = helperRangeCreation(*ui->check_range_z, *ui->sb_z_start, *ui->sb_z_end);
 
-    m_threadPool->enqueueJob([this, chunk, range_x, range_y, range_z, currentSearchId = m_currentSearchId, searchPlug = m_input.searchPlugin]()
+    auto job = [this, chunk, range_x, range_y, range_z, myCancellation = cancellation, searchPlug = m_input.searchPlugin]()
     {
-      if (m_currentSearchId != currentSearchId)
+      if (!myCancellation || myCancellation->isCanceled())
       {
-        return; // search criterion outdated!
+        return;
       }
 
       ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
@@ -250,7 +257,9 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
                                 Q_ARG(QSharedPointer<SearchPluginI::ResultListT>, results),
                                 Q_ARG(ChunkID, id)
                                 );
-    });
+    };
+
+    m_threadPool->enqueueJob(job, AsyncTaskProcessorBase::JobPrio::high);
 }
 
 
@@ -289,6 +298,8 @@ void SearchChunksWidget::addOneToProgress(ChunkID /* id */)
   if (ui->progressBar->maximum() == ui->progressBar->value())
   {
     ui->resultList->searchDone();
+    cancellation.reset();
+    ui->pb_search->setText("Search");
   }
 }
 

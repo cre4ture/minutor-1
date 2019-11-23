@@ -476,7 +476,7 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
   return m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk](){
       ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
       QMetaObject::invokeMethod(this, "renderingDone", Q_ARG(QSharedPointer<RenderedChunk>, renderedChunk));
-  }, false);
+  }, AsyncTaskProcessorBase::JobPrio::high);
 }
 
 void MapView::updateCacheSize(bool onlyIncrease)

@@ -8,6 +8,7 @@
 #include "coordinatehashmap.h"
 #include "asynctaskprocessorbase.hpp"
 #include "value_initialized.h"
+#include "cancellation.hpp"
 
 #include <QWidget>
 #include <set>
@@ -80,8 +81,7 @@ private:
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     QList<QSharedPointer<OverlayItem> > m_villages;
     bool m_searchRunning;
-    bool m_requestCancel;
-    size_t m_currentSearchId;
+    QSharedPointer<Cancellation> cancellation;
 
     bool checkLocationIfSearchIsNeeded(ChunkID id);
 

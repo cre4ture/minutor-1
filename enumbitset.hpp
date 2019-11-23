@@ -33,6 +33,16 @@ public:
         return *this;
     }
 
+    Bitset& setState(EnumT position, bool flagState)
+    {
+        if (flagState)
+          set(position);
+        else
+          unset(position);
+
+        return *this;
+    }
+
     bool test(EnumT position) const
     {
         return (m_raw & (1 << (int)position)) != 0;

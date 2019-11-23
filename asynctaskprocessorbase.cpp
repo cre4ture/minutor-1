@@ -40,3 +40,8 @@ AsyncTaskProcessorBase::AsyncTaskProcessorBase()
   : m_impl(QSharedPointer<ImplC>::create(*this))
   , m_queue(m_impl->m_queue)
 {}
+
+size_t AsyncTaskProcessorBase::getNumberOfThreads() const
+{
+  return m_impl->m_futures.size();
+}

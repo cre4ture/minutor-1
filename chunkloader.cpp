@@ -94,9 +94,9 @@ ChunkLoaderThreadPool::ChunkLoaderThreadPool(const QSharedPointer<AsyncTaskProce
 void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
 {
     threadPool->enqueueJob([this, path, id](){
-        ChunkLoader loader(path, id);
-        auto chunk = loader.runInternal();
-        emit chunkUpdated(chunk, id);
+      ChunkLoader loader(path, id);
+      auto chunk = loader.runInternal();
+      emit chunkUpdated(chunk, id);
     });
 }
 
