@@ -266,12 +266,12 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 void SearchChunksWidget::displayResults(QSharedPointer<SearchPluginI::ResultListT> results,
                                         ChunkID id)
 {
-    for (const auto& result: *results)
-    {
-        ui->resultList->addResult(result);
-    }
+  for (const auto& result: *results)
+  {
+    ui->resultList->addResult(result);
+  }
 
-    addOneToProgress(id);
+  addOneToProgress(id);
 }
 
 bool SearchChunksWidget::villageFilter(ChunkID id) const

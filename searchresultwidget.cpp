@@ -10,6 +10,8 @@ SearchResultWidget::SearchResultWidget(QWidget *parent) :
     ui(new Ui::SearchResultWidget)
 {
     ui->setupUi(this);
+
+    ui->treeWidget->sortByColumn(1, Qt::SortOrder::AscendingOrder);
 }
 
 SearchResultWidget::~SearchResultWidget()
@@ -40,24 +42,29 @@ class MyTreeWidgetItem : public QTreeWidgetItem {
 
 void SearchResultWidget::addResult(const SearchResultItem &result)
 {
-    auto text = QString("%1")
-            .arg(result.name)
-            ;
+  if (ui->treeWidget->topLevelItemCount() > 16000)
+  {
+    return;
+  }
 
-    auto item = new MyTreeWidgetItem(nullptr);
-    item->setData(0, Qt::UserRole, QVariant::fromValue(result));
+  auto text = QString("%1")
+          .arg(result.name)
+          ;
 
-    QVector3D distance = m_pointOfInterest - result.pos;
-    float airDistance = distance.length();
+  auto item = new MyTreeWidgetItem(nullptr);
+  item->setData(0, Qt::UserRole, QVariant::fromValue(result));
 
-    int c = 0;
-    item->setText(c++, text);
-    item->setText(c++, QString::number(std::roundf(airDistance)));
-    item->setText(c++, QString("%1,%2,%3").arg(result.pos.x()).arg(result.pos.y()).arg(result.pos.z()));
-    item->setText(c++, result.buys);
-    item->setText(c++, result.sells);
+  QVector3D distance = m_pointOfInterest - result.pos;
+  float airDistance = distance.length();
 
-    ui->treeWidget->addTopLevelItem(item);
+  int c = 0;
+  item->setText(c++, text);
+  item->setText(c++, QString::number(std::roundf(airDistance)));
+  item->setText(c++, QString("%1,%2,%3").arg(result.pos.x()).arg(result.pos.y()).arg(result.pos.z()));
+  item->setText(c++, result.buys);
+  item->setText(c++, result.sells);
+
+  ui->treeWidget->addTopLevelItem(item);
 }
 
 void SearchResultWidget::searchDone()
