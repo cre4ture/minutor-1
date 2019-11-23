@@ -41,25 +41,6 @@ void SearchChunksWidget::setVillageLocations(const QList<QSharedPointer<OverlayI
 
 void SearchChunksWidget::on_pb_search_clicked()
 {
-  class SearchStateResetGuard: public boost::noncopyable
-  {
-  public:
-    SearchStateResetGuard(SearchChunksWidget& parent)
-      : m_parent(parent)
-    {
-      m_parent.m_searchRunning = true;
-      m_parent.ui->pb_search->setText("Cancel");
-    }
-
-    ~SearchStateResetGuard()
-    {
-      m_parent.m_searchRunning = false;
-    }
-
-  private:
-    SearchChunksWidget& m_parent;
-  };
-
   if (cancellation)
   {
     cancellation->cancel();
@@ -68,7 +49,8 @@ void SearchChunksWidget::on_pb_search_clicked()
     return;
   }
 
-  SearchStateResetGuard searchRunningGuard(*this);
+  ui->pb_search->setText("Cancel");
+
   auto myCancellation = QSharedPointer<Cancellation>::create();
   cancellation = myCancellation;
 
@@ -92,6 +74,7 @@ void SearchChunksWidget::on_pb_search_clicked()
 
   QRect searchRange((poi - radius2d).toPoint(), (poi + radius2d).toPoint());
 
+  size_t count = 0;
   for (RectangleIterator it(searchRange); it != it.end(); ++it)
   {
     const ChunkID id(it.getX(), it.getZ());
@@ -111,7 +94,8 @@ void SearchChunksWidget::on_pb_search_clicked()
         return;
     }
 
-    QApplication::processEvents();
+    if ((count++ % 100) == 0)
+      QApplication::processEvents();
   }
 }
 
