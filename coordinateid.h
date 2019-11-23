@@ -51,20 +51,23 @@ inline size_t convertTo16Bit(int value)
 
 inline uint qHash(const CoordinateID &c) {
 
+  static_assert(sizeof(int) == 4, "");
+  static_assert(sizeof(size_t) == 8, "");
+  static_assert(sizeof(c.getX()) == 4, "");
   static_assert(sizeof(c.getX()) == sizeof(uint), "");
   static_assert(std::numeric_limits<uint>::max() == 0xFFFFFFFF, "");
 
   const int halfbits = 16;
-  size_t n1 = convertTo16Bit(c.getX());
-  size_t n2 = convertTo16Bit(c.getZ());
+  const size_t n1 = convertTo16Bit(c.getX());
+  const size_t n2 = convertTo16Bit(c.getZ());
   uint result = 0;
   for (size_t i = 0; i < halfbits; i++)
   {
-    result |= (n1 & 0x1) << (i*2+0);
-    result |= (n2 & 0x1) << (i*2+1);
+    size_t bitA = (n1 & (1 << i)) << (i+0);
+    size_t bitB = (n2 & (1 << i)) << (i+1);
 
-    n1 >>= 1;
-    n2 >>= 1;
+    result |= bitA;
+    result |= bitB;
   }
 
   return result;
