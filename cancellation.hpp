@@ -1,6 +1,7 @@
 #ifndef CANCELLATION_HPP
 #define CANCELLATION_HPP
 
+#include <boost/noncopyable.hpp>
 #include <QSharedPointer>
 
 class CancellationTokenI
@@ -20,7 +21,7 @@ public:
   }
 };
 
-class Cancellation: public CancellationTokenI
+class Cancellation: public CancellationTokenI, public boost::noncopyable
 {
 public:
   Cancellation()

@@ -231,9 +231,10 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
     const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
     const Range<float> range_z = helperRangeCreation(*ui->check_range_z, *ui->sb_z_start, *ui->sb_z_end);
 
-    auto job = [this, chunk, range_x, range_y, range_z, myCancellation = cancellation, searchPlug = m_input.searchPlugin]()
+    CancellationTokenPtr myCancellation = cancellation;
+    auto job = [this, chunk, range_x, range_y, range_z, myCancellation, searchPlug = m_input.searchPlugin]()
     {
-      if (!myCancellation || myCancellation->isCanceled())
+      if (myCancellation.isCanceled())
       {
         return;
       }
