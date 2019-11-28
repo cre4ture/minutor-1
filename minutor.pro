@@ -28,7 +28,9 @@ HEADERS += \
   lockguarded.hpp \
   mapcamera.hpp \
   mapviewrenderer.h \
+  range.h \
   safecache.hpp \
+  safeinvoker.h \
   searchchunkswidget.h \
   value_initialized.h \
   zlib/zlib.h \
@@ -96,6 +98,7 @@ SOURCES += \
   minutor.cpp \
   nbt.cpp \
   properties.cpp \
+  safeinvoker.cpp \
   searchchunkswidget.cpp \
   settings.cpp \
   village.cpp \

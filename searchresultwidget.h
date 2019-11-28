@@ -57,6 +57,8 @@ private:
     Ui::SearchResultWidget *ui;
 
     QVector3D m_pointOfInterest;
+
+    void updateStatusText();
 };
 
 #endif // SEARCHRESULTWIDGET_H

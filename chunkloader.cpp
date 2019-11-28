@@ -86,14 +86,26 @@ QString ChunkLoader::getRegionFilename(const QString& path, const ChunkID& id)
 }
 
 ChunkLoaderThreadPool::ChunkLoaderThreadPool(const QSharedPointer<AsyncTaskProcessorBase> &threadPool_)
-  : threadPool(threadPool_)
+  : asyncGuard()
+  , threadPool(threadPool_)
+{
+
+}
+
+ChunkLoaderThreadPool::~ChunkLoaderThreadPool()
 {
 
 }
 
 void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
 {
-    threadPool->enqueueJob([this, path, id](){
+    threadPool->enqueueJob([this, path, id, cancelToken = asyncGuard.getToken()](){
+
+      if (cancelToken.isCanceled())
+      {
+        return;
+      }
+
       ChunkLoader loader(path, id);
       auto chunk = loader.runInternal();
       emit chunkUpdated(chunk, id);

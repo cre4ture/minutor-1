@@ -59,6 +59,8 @@ class MapView : public QWidget {
                    const QSharedPointer<ChunkCache> &chunkcache,
                    QWidget *parent = nullptr);
 
+  ~MapView();
+
   QSize minimumSizeHint() const;
   QSize sizeHint() const;
 
@@ -182,6 +184,7 @@ class MapView : public QWidget {
   QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
   QSharedPointer<AsyncTaskProcessorBase> m_asyncRendererPool;
+  AsyncExecutionCancelGuard cancellationGuard;
 
   ChunkIteratorC chunkRedrawIterator;
 

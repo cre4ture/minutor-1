@@ -869,7 +869,7 @@ SearchChunksWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPlugin
     ));
 
     auto villageList = mapview->getOverlayItems("Structure.Village");
-    form->setVillageLocations(villageList);
+    form->setAttribute(Qt::WA_DeleteOnClose);
 
     connect(form, SIGNAL(jumpTo(QVector3D)),
             this, SLOT(triggerJumpToPosition(QVector3D))

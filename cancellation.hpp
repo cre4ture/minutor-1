@@ -4,10 +4,31 @@
 #include <boost/noncopyable.hpp>
 #include <QSharedPointer>
 
+#include <future>
+
 class CancellationTokenI
 {
 public:
   virtual bool isCanceled() const = 0;
+
+  CancellationTokenI()
+  {
+    cancelationDoneSharedFuture = cancelationDonePromise.get_future().share();
+  }
+
+  virtual ~CancellationTokenI()
+  {
+    cancelationDonePromise.set_value();
+  }
+
+  auto getCancellationFuture()
+  {
+    return cancelationDoneSharedFuture;
+  }
+
+private:
+  std::promise<void> cancelationDonePromise;
+  std::shared_future<void> cancelationDoneSharedFuture;
 };
 
 class CancellationTokenPtr : public QSharedPointer<CancellationTokenI>
@@ -17,7 +38,20 @@ public:
 
   bool isCanceled() const
   {
-    return !isNull() && data()->isCanceled();
+    return isNull() || data()->isCanceled();
+  }
+};
+
+
+class CancellationTokenWeakPtr : public QWeakPointer<CancellationTokenI>
+{
+public:
+  using QWeakPointer::QWeakPointer;
+
+  bool isCanceled() const
+  {
+    auto strongPtr = lock();
+    return (!strongPtr) || strongPtr->isCanceled();
   }
 };
 
@@ -40,6 +74,50 @@ public:
 
 private:
   volatile bool cancelled;
+};
+
+class CancellationPtr : public QSharedPointer<Cancellation>
+{
+public:
+  using QSharedPointer::QSharedPointer;
+
+  void cancelAndWait()
+  {
+    if (data() == nullptr)
+      return;
+
+    data()->cancel();
+
+    auto future = data()->getCancellationFuture();
+    reset();
+    future.wait();
+  }
+
+  CancellationTokenPtr getToken() const
+  {
+    return *this;
+  }
+};
+
+class AsyncExecutionCancelGuard: public boost::noncopyable
+{
+public:
+  AsyncExecutionCancelGuard()
+    : cancellation(CancellationPtr::create())
+  {}
+
+  ~AsyncExecutionCancelGuard()
+  {
+    cancellation.cancelAndWait();
+  }
+
+  CancellationTokenPtr getToken() const
+  {
+    return cancellation;
+  }
+
+private:
+  CancellationPtr cancellation;
 };
 
 

@@ -9,6 +9,7 @@
 #include "asynctaskprocessorbase.hpp"
 #include "value_initialized.h"
 #include "cancellation.hpp"
+#include "safeinvoker.h"
 
 #include <QWidget>
 #include <set>
@@ -58,8 +59,6 @@ public:
     explicit SearchChunksWidget(const SearchEntityWidgetInputC& input);
     ~SearchChunksWidget();
 
-    void setVillageLocations(const QList<QSharedPointer<OverlayItem> > &villages);
-
 signals:
     void jumpTo(QVector3D pos);
     void highlightEntities(QVector<QSharedPointer<OverlayItem> >);
@@ -77,21 +76,19 @@ private slots:
 private:
     Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;
+    SafeInvoker m_invoker;
     QSharedPointer<AsyncTaskProcessorBase> m_threadPool;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
-    QList<QSharedPointer<OverlayItem> > m_villages;
     bool m_searchRunning;
-    QSharedPointer<Cancellation> cancellation;
-
-    bool checkLocationIfSearchIsNeeded(ChunkID id);
+    CancellationPtr cancellation;
 
     void requestSearchingOfChunk(ChunkID id);
 
     void searchLoadedChunk(const QSharedPointer<Chunk> &chunk);
 
-    bool villageFilter(ChunkID id) const;
-
     void addOneToProgress(ChunkID id);
+
+    void cancelSearch();
 };
 
 #endif // SEARCHENTITYWIDGET_H

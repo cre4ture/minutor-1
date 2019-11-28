@@ -17,6 +17,7 @@ public:
         while (m_queue.pop(job))
         {
             job();
+            job = AsyncTaskProcessorBase::JobT(); // directly delete functor after execution and before blocking for wait.
         }
       }));
     }

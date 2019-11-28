@@ -3,6 +3,7 @@
 #define CHUNKLOADER_H_
 
 #include "coordinateid.h"
+#include "cancellation.hpp"
 
 #include <QObject>
 #include <QRunnable>
@@ -19,6 +20,7 @@ class ChunkLoaderThreadPool : public QObject
 
 public:
   ChunkLoaderThreadPool(const QSharedPointer<AsyncTaskProcessorBase>& threadPool);
+  ~ChunkLoaderThreadPool();
 
   void enqueueChunkLoading(QString path, ChunkID id);
 
@@ -26,6 +28,7 @@ signals:
   void chunkUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 
 private:
+  AsyncExecutionCancelGuard asyncGuard;
   QSharedPointer<AsyncTaskProcessorBase> threadPool;
 
   void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);

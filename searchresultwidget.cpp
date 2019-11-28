@@ -9,19 +9,19 @@ SearchResultWidget::SearchResultWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SearchResultWidget)
 {
-    ui->setupUi(this);
+  ui->setupUi(this);
 
-    ui->treeWidget->sortByColumn(1, Qt::SortOrder::AscendingOrder);
+  ui->treeWidget->sortByColumn(1, Qt::SortOrder::AscendingOrder);
 }
 
 SearchResultWidget::~SearchResultWidget()
 {
-    delete ui;
+  delete ui;
 }
 
 void SearchResultWidget::clearResults()
 {
-    ui->treeWidget->clear();
+  ui->treeWidget->clear();
 }
 
 class MyTreeWidgetItem : public QTreeWidgetItem {
@@ -29,14 +29,14 @@ class MyTreeWidgetItem : public QTreeWidgetItem {
   MyTreeWidgetItem(QTreeWidget* parent):QTreeWidgetItem(parent){}
   private:
   bool operator<(const QTreeWidgetItem &other)const {
-     int column = treeWidget()->sortColumn();
-     switch (column)
-     {
-     case 1:
-         return text(column).toDouble() < other.text(column).toDouble();
-     default:
-         return QTreeWidgetItem::operator<(other);
-     }
+    int column = treeWidget()->sortColumn();
+    switch (column)
+    {
+    case 1:
+      return text(column).toDouble() < other.text(column).toDouble();
+    default:
+      return QTreeWidgetItem::operator<(other);
+    }
   }
 };
 
@@ -48,8 +48,8 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
   }
 
   auto text = QString("%1")
-          .arg(result.name)
-          ;
+                .arg(result.name)
+    ;
 
   auto item = new MyTreeWidgetItem(nullptr);
   item->setData(0, Qt::UserRole, QVariant::fromValue(result));
@@ -69,63 +69,73 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
 
 void SearchResultWidget::searchDone()
 {
-    on_check_display_all_stateChanged(0);
+  on_check_display_all_stateChanged(0);
+  updateStatusText();
 }
 
 void SearchResultWidget::setPointOfInterest(const QVector3D &centerPoint)
 {
-    m_pointOfInterest = centerPoint;
-    ui->lbl_location->setText(QString("Results around position: %1,%2,%3").arg(m_pointOfInterest.x()).arg(m_pointOfInterest.y()).arg(m_pointOfInterest.z()));
+  m_pointOfInterest = centerPoint;
+  updateStatusText();
 }
 
 void SearchResultWidget::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
 {
-    auto properties = new Properties();
+  auto properties = new Properties();
 
-    auto props = item->data(0, Qt::UserRole).value<SearchResultItem>().properties;
-    properties->DisplayProperties(props);
-    properties->showNormal();
+  auto props = item->data(0, Qt::UserRole).value<SearchResultItem>().properties;
+  properties->DisplayProperties(props);
+  properties->showNormal();
 }
 
 void SearchResultWidget::on_treeWidget_itemSelectionChanged()
 {
-    auto list = ui->treeWidget->selectedItems();
-    if (list.size() > 0)
+  auto list = ui->treeWidget->selectedItems();
+  if (list.size() > 0)
+  {
+    auto item = list[0];
+    auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
+    emit jumpTo(data.pos);
+
+    if (!ui->check_display_all->isChecked())
     {
-        auto item = list[0];
-        auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
-        emit jumpTo(data.pos);
+      QVector<QSharedPointer<OverlayItem> > items;
+      items.push_back(data.entity);
 
-        if (!ui->check_display_all->isChecked())
-        {
-            QVector<QSharedPointer<OverlayItem> > items;
-            items.push_back(data.entity);
-
-            emit highlightEntities(items);
-        }
+      emit highlightEntities(items);
     }
+  }
 }
 
 void SearchResultWidget::on_treeWidget_itemClicked(QTreeWidgetItem *item, int column)
 {
-    on_treeWidget_itemSelectionChanged();
+  on_treeWidget_itemSelectionChanged();
 }
 
 void SearchResultWidget::on_check_display_all_stateChanged(int arg1)
 {
-    QVector<QSharedPointer<OverlayItem> > items;
+  QVector<QSharedPointer<OverlayItem> > items;
 
-    if (ui->check_display_all->isChecked())
+  if (ui->check_display_all->isChecked())
+  {
+    const int count = ui->treeWidget->topLevelItemCount();
+    for (int i = 0; i < count; i++)
     {
-        const int count = ui->treeWidget->topLevelItemCount();
-        for (int i = 0; i < count; i++)
-        {
-            auto item = ui->treeWidget->topLevelItem(i);
-            auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
+      auto item = ui->treeWidget->topLevelItem(i);
+      auto data = item->data(0, Qt::UserRole).value<SearchResultItem>();
 
-            items.push_back(data.entity);
-        }
+      items.push_back(data.entity);
     }
+  }
 
-    emit highlightEntities(items);
+  emit highlightEntities(items);
+}
+
+void SearchResultWidget::updateStatusText()
+{
+  ui->lbl_location->setText(QString("%4 results around position: %1,%2,%3")
+                              .arg(m_pointOfInterest.x())
+                              .arg(m_pointOfInterest.y())
+                              .arg(m_pointOfInterest.z())
+                              .arg(ui->treeWidget->topLevelItemCount()));
 }
