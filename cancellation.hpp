@@ -31,18 +31,6 @@ private:
   std::shared_future<void> cancelationDoneSharedFuture;
 };
 
-class CancellationTokenPtr : public QSharedPointer<CancellationTokenI>
-{
-public:
-  using QSharedPointer::QSharedPointer;
-
-  bool isCanceled() const
-  {
-    return isNull() || data()->isCanceled();
-  }
-};
-
-
 class CancellationTokenWeakPtr : public QWeakPointer<CancellationTokenI>
 {
 public:
@@ -54,6 +42,23 @@ public:
     return (!strongPtr) || strongPtr->isCanceled();
   }
 };
+
+class CancellationTokenPtr : public QSharedPointer<CancellationTokenI>
+{
+public:
+  using QSharedPointer::QSharedPointer;
+
+  bool isCanceled() const
+  {
+    return isNull() || data()->isCanceled();
+  }
+
+  CancellationTokenWeakPtr toWeakToken() const
+  {
+    return *this;
+  }
+};
+
 
 class Cancellation: public CancellationTokenI, public boost::noncopyable
 {
