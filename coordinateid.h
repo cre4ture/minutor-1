@@ -110,6 +110,115 @@ private:
   const QRect rect;
 };
 
+class RectangleInnerToOuterIterator
+{
+public:
+  RectangleInnerToOuterIterator(const QRect& rect_)
+    : rect(rect_)
+    , center(rect_.center())
+    , currentPos(0,0)
+    , shellNr(0)
+    , subNr(0)
+    , stepNr(0)
+  {
+    reset();
+  }
+
+  void reset()
+  {
+    currentPos = CoordinateID(center.x(), center.y());
+    shellNr = 1;
+    subNr = 1;
+    stepNr = 0;
+  }
+
+  RectangleInnerToOuterIterator end()
+  {
+    RectangleInnerToOuterIterator it(*this);
+    it.stepNr = rect.size().width() * rect.size().height();
+    return it;
+  }
+
+  RectangleInnerToOuterIterator& operator++()
+  {
+    stepNr++;
+
+    do {
+      inc();
+      getCoordinate();
+    } while(((*this) != end()) && !rect.contains(QPoint(currentPos.getX(), currentPos.getZ())));
+
+    return (*this);
+  }
+
+  const CoordinateID& operator*() const
+  {
+    return currentPos;
+  }
+
+  const CoordinateID* operator->() const
+  {
+    return &currentPos;
+  }
+
+  bool operator==(const RectangleInnerToOuterIterator& other) const
+  {
+    return (stepNr == other.stepNr);
+  }
+
+  bool operator!=(const RectangleInnerToOuterIterator& other) const
+  {
+    return !operator==(other);
+  }
+
+  const QRect& currentRect() const
+  {
+    return rect;
+  }
+
+private:
+  QRect rect;
+  QPoint center;
+  CoordinateID currentPos;
+  int shellNr;
+  int subNr;
+  int stepNr;
+
+  void inc()
+  {
+    subNr++;
+    const int lastValidSub = (((shellNr-1) * 2) + 1);
+    if (subNr > lastValidSub)
+    {
+      shellNr++;
+      subNr=1;
+    }
+  }
+
+  void getCoordinate()
+  {
+    const int shellSign   = ((shellNr & 0x1) != 0) ? -1 : 1;
+    const int shellRadius = (shellNr >> 1);
+
+    const bool subNrBit1      = ((subNr & 0x1) != 0);
+    const int  subNrRemaining = (subNr >> 1);
+
+    int ncx = center.x() + (shellRadius * shellSign);
+    int ncz = center.y() + (shellRadius * shellSign);
+
+    if (subNrBit1)
+    {
+      ncz -= subNrRemaining * shellSign;
+    }
+    else
+    {
+      ncx -= subNrRemaining * shellSign;
+    }
+
+    currentPos = CoordinateID(ncx, ncz);
+  }
+};
+
 // ChunkID is the key used to identify entries in the Cache
 // Chunks are identified by their coordinates (CX,CZ) but a single key is needed to access a map like structure
 template <int _SizeN, typename _ThisT = CoordinateID>
@@ -202,39 +311,34 @@ class ChunkIteratorC
 {
 public:
   ChunkIteratorC()
-    : cx(0)
-    , cz(0)
+    : it(QRect())
   {}
 
-  void setRange(int newRangeX, int newRangeZ)
+  void setRange(int newRangeX, int newRangeZ, bool forceRestart)
   {
-    range_x = newRangeX;
-    range_z = newRangeZ;
+    if (forceRestart ||
+        newRangeX != it.currentRect().width() ||
+        newRangeZ != it.currentRect().height())
+    {
+      it = RectangleInnerToOuterIterator(QRect(0, 0, newRangeX, newRangeZ));
+    }
   }
 
   std::pair<int, int> getNext(int startx, int startz)
   {
-    cx++;
-    if (cx >= range_x)
+    std::pair<int, int> pos(startx + it->getX(), startz + it->getZ());
+
+    ++it;
+    if (it == it.end())
     {
-      cx = 0;
-      cz++;
+      it.reset();
     }
 
-    if (cz >= range_z)
-    {
-      cx = 0;
-      cz = 0;
-    }
-
-    return std::pair<int, int>(startx + cx, startz + cz);
+    return pos;
   }
 
 private:
-  int cx;
-  int cz;
-  int range_x;
-  int range_z;
+  RectangleInnerToOuterIterator it;
 };
 
 #endif // CHUNKCACHETYPES_H

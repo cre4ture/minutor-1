@@ -33,7 +33,7 @@ public:
   }
 
   AsyncTaskProcessorBase& m_parent;
-  ThreadSafeQueue<AsyncTaskProcessorBase::JobT> m_queue;
+  AsyncTaskProcessorBase::QueueType m_queue;
   std::list<std::future<void> > m_futures;
 };
 

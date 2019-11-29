@@ -52,6 +52,7 @@ void SearchChunksWidget::on_pb_search_clicked()
   ui->pb_search->setText("Cancel");
 
   cancellation = CancellationPtr::create();
+  auto weakCancel = cancellation.getWeakToken();
 
   m_chunksRequestedToSearchList.clear();
 
@@ -74,19 +75,19 @@ void SearchChunksWidget::on_pb_search_clicked()
   QRect searchRange((poi - radius2d).toPoint(), (poi + radius2d).toPoint());
 
   size_t count = 0;
-  for (RectangleIterator it(searchRange); it != it.end(); ++it)
+  for (RectangleInnerToOuterIterator it(searchRange); it != it.end(); ++it)
   {
-    const ChunkID id(it.getX(), it.getZ());
+    const ChunkID id(it->getX(), it->getZ());
 
     requestSearchingOfChunk(id);
 
-    if (cancellation->isCanceled())
+    if ((count++ % 100) == 0)
+      QApplication::processEvents();
+
+    if (weakCancel.isCanceled())
     {
       return;
     }
-
-    if ((count++ % 100) == 0)
-      QApplication::processEvents();
   }
 }
 

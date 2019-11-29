@@ -20,7 +20,7 @@ public:
 
     size_t enqueueJob(const JobT& job, JobPrio prio = JobPrio::low)
     {
-      return m_queue.push(job, prio == JobPrio::low ? true : false);
+      return m_queue.push(job, (prio == JobPrio::low) ? 1 : 0);
     }
 
     size_t getQueueLength() const
@@ -32,9 +32,10 @@ public:
 
 private:
     class ImplC;
+    using QueueType = ThreadSafePriorityQueue<JobT>;
 
     QSharedPointer<ImplC> m_impl;
-    ThreadSafeQueue<JobT>& m_queue;
+    QueueType& m_queue;
 };
 
 #endif // ASYNCTASKPROCESSORBASE_HPP

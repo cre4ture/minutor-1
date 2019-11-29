@@ -594,11 +594,10 @@ void MapView::regularUpdata__checkRedraw()
 
   ChunkGroupDrawRegion cgit(h.cam);
 
-  chunkRedrawIterator.setRange(cgit.chunkGroupsWide, cgit.chunkGroupsTall);
+  chunkRedrawIterator.setRange(cgit.chunkGroupsWide, cgit.chunkGroupsTall, true);
   const int maxIters = cgit.chunkGroupsWide * cgit.chunkGroupsTall;
-  const int iters = std::min(maxIters, maxIterLoadAndRender);
 
-  for (int i = 0; i < iters; i++)
+  for (int i = 0; i < maxIters; i++)
   {
     std::pair<int, int> id = chunkRedrawIterator.getNext(cgit.rootTopLeftChunkGroupId.getX(), cgit.rootTopLeftChunkGroupId.getZ());
     ChunkGroupID cgid(id.first, id.second);
