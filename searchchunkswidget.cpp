@@ -179,7 +179,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
       }
     }
 
-    m_invoker.invoke([this, cancelToken = cancellation.getToken(), results, id](){
+    m_invoker.invoke([this, cancelToken = cancellation.getWeakToken(), results, id](){
       if (cancelToken.isCanceled())
       {
         return;

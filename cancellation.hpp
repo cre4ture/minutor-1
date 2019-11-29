@@ -81,6 +81,11 @@ class CancellationPtr : public QSharedPointer<Cancellation>
 public:
   using QSharedPointer::QSharedPointer;
 
+  static CancellationPtr create()
+  {
+    return QSharedPointer<Cancellation>::create();
+  }
+
   void cancelAndWait()
   {
     if (data() == nullptr)
@@ -94,6 +99,11 @@ public:
   }
 
   CancellationTokenPtr getToken() const
+  {
+    return *this;
+  }
+
+  CancellationTokenWeakPtr getWeakToken() const
   {
     return *this;
   }
