@@ -24,7 +24,7 @@ class DrawHelper;
 class DrawHelper2;
 class DrawHelper3;
 class ChunkRenderer;
-class AsyncTaskProcessorBase;
+class PriorityThreadPool;
 
 class MapView : public QWidget {
   Q_OBJECT
@@ -55,7 +55,7 @@ class MapView : public QWidget {
 
   } BlockLocation;
 
-  explicit MapView(const QSharedPointer<AsyncTaskProcessorBase>& threadpool,
+  explicit MapView(const QSharedPointer<PriorityThreadPool>& threadpool,
                    const QSharedPointer<ChunkCache> &chunkcache,
                    QWidget *parent = nullptr);
 
@@ -183,7 +183,7 @@ class MapView : public QWidget {
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
   QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
-  QSharedPointer<AsyncTaskProcessorBase> m_asyncRendererPool;
+  QSharedPointer<PriorityThreadPool> m_asyncRendererPool;
   AsyncExecutionCancelGuard cancellationGuard;
 
   ChunkIteratorC chunkRedrawIterator;

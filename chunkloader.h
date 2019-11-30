@@ -12,14 +12,14 @@ class Chunk;
 class ChunkID;
 class QMutex;
 class NBT;
-class AsyncTaskProcessorBase;
+class PriorityThreadPool;
 
 class ChunkLoaderThreadPool : public QObject
 {
   Q_OBJECT
 
 public:
-  ChunkLoaderThreadPool(const QSharedPointer<AsyncTaskProcessorBase>& threadPool);
+  ChunkLoaderThreadPool(const QSharedPointer<PriorityThreadPool>& threadPool);
   ~ChunkLoaderThreadPool();
 
   void enqueueChunkLoading(QString path, ChunkID id);
@@ -29,7 +29,7 @@ signals:
 
 private:
   AsyncExecutionCancelGuard asyncGuard;
-  QSharedPointer<AsyncTaskProcessorBase> threadPool;
+  QSharedPointer<PriorityThreadPool> threadPool;
 
   void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 };

@@ -17,7 +17,7 @@ class ChunkCache : public QObject {
   Q_OBJECT
 
 public:
-  ChunkCache(const QSharedPointer<AsyncTaskProcessorBase>& threadPool);
+  ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool);
   ~ChunkCache();
 
 private:

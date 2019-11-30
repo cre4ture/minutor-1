@@ -12,7 +12,7 @@
 #include <windows.h>
 #endif
 
-ChunkCache::ChunkCache(const QSharedPointer<AsyncTaskProcessorBase>& threadPool)
+ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool)
     : cache("chunks")
     , chunkStates()
     , mutex(QMutex::Recursive)

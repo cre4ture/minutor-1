@@ -18,7 +18,7 @@
 #include "./playerinfos.h"
 #include "searchentitypluginwidget.h"
 #include "searchblockpluginwidget.h"
-#include "asynctaskprocessorbase.hpp"
+#include "prioritythreadpool.h"
 #include "searchresultwidget.h"
 
 #include <QtWidgets/QVBoxLayout>
@@ -35,7 +35,7 @@
 #include <QVector3D>
 
 Minutor::Minutor()
-    : threadpool(QSharedPointer<AsyncTaskProcessorBase>::create())
+    : threadpool(QSharedPointer<PriorityThreadPool>::create())
     , cache(QSharedPointer<ChunkCache>::create(threadpool))
     , searchMenu(nullptr)
     , searchEntityAction(nullptr)

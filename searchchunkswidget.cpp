@@ -3,7 +3,7 @@
 
 #include "./chunkcache.h"
 #include "./chunkmath.hpp"
-#include "./asynctaskprocessorbase.hpp"
+#include "./prioritythreadpool.h"
 #include "./range.h"
 
 #include <QVariant>
@@ -190,7 +190,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
     });
   };
 
-  m_threadPool->enqueueJob(job, AsyncTaskProcessorBase::JobPrio::high);
+  m_threadPool->enqueueJob(job, PriorityThreadPool::JobPrio::high);
 }
 
 

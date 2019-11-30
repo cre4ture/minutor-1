@@ -6,7 +6,7 @@
 #include "entityevaluator.h"
 #include "searchplugininterface.h"
 #include "coordinatehashmap.h"
-#include "asynctaskprocessorbase.hpp"
+#include "prioritythreadpool.h"
 #include "value_initialized.h"
 #include "cancellation.hpp"
 #include "safeinvoker.h"
@@ -22,14 +22,14 @@ class ChunkCache;
 class Chunk;
 class SearchResultWidget;
 class GenericIdentifier;
-class AsyncTaskProcessorBase;
+class PriorityThreadPool;
 class SearchTextWidget;
 
 struct SearchEntityWidgetInputC
 {
     typedef std::function<QVector3D()> PositionProviderT;
 
-    SearchEntityWidgetInputC(const QSharedPointer<AsyncTaskProcessorBase>& threadpool_,
+    SearchEntityWidgetInputC(const QSharedPointer<PriorityThreadPool>& threadpool_,
                              const QSharedPointer<ChunkCache>& cache_,
 //                             EntityDefitionsConfig definitions_,
                              PositionProviderT posOfInterestProvider_,
@@ -43,7 +43,7 @@ struct SearchEntityWidgetInputC
         , parent(parent_)
     {}
 
-    QSharedPointer<AsyncTaskProcessorBase> threadpool;
+    QSharedPointer<PriorityThreadPool> threadpool;
     QSharedPointer<ChunkCache> cache;
 //    EntityDefitionsConfig definitions;
     PositionProviderT posOfInterestProvider;
@@ -77,7 +77,7 @@ private:
     Ui::SearchChunksWidget *ui;
     SearchEntityWidgetInputC m_input;
     SafeInvoker m_invoker;
-    QSharedPointer<AsyncTaskProcessorBase> m_threadPool;
+    QSharedPointer<PriorityThreadPool> m_threadPool;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
     CancellationPtr cancellation;

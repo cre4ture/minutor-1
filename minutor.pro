@@ -28,6 +28,7 @@ HEADERS += \
   lockguarded.hpp \
   mapcamera.hpp \
   mapviewrenderer.h \
+  prioritythreadpool.h \
   range.h \
   safecache.hpp \
   safeinvoker.h \
@@ -75,7 +76,6 @@ HEADERS += \
   searchplugininterface.h \
   searchblockpluginwidget.h \
   threadsafequeue.hpp \
-  asynctaskprocessorbase.hpp \
   chunkmath.hpp\
   searchtextwidget.h
 
@@ -97,6 +97,7 @@ SOURCES += \
   mapview.cpp \
   minutor.cpp \
   nbt.cpp \
+  prioritythreadpool.cpp \
   properties.cpp \
   safeinvoker.cpp \
   searchchunkswidget.cpp \
@@ -114,7 +115,6 @@ SOURCES += \
   entityevaluator.cpp \
   searchentitypluginwidget.cpp \
   searchblockpluginwidget.cpp \
-  asynctaskprocessorbase.cpp \
   searchtextwidget.cpp
 
 RESOURCES = minutor.qrc

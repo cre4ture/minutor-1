@@ -30,7 +30,7 @@ class JumpTo;
 class SearchChunksWidget;
 class ChunkCache;
 class SearchPluginI;
-class AsyncTaskProcessorBase;
+class PriorityThreadPool;
 
 class Minutor : public QMainWindow {
   Q_OBJECT
@@ -108,7 +108,7 @@ signals:
   QString getWorldName(QDir path);
   void getWorldList();
 
-  QSharedPointer<AsyncTaskProcessorBase> threadpool;
+  QSharedPointer<PriorityThreadPool> threadpool;
   QSharedPointer<ChunkCache> cache;
   MapView *mapview;
   LabelledSlider *depth;

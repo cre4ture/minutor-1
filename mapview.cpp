@@ -8,7 +8,7 @@
 #include "./biomeidentifier.h"
 #include "./clamp.h"
 #include "./chunkrenderer.h"
-#include "asynctaskprocessorbase.hpp"
+#include "prioritythreadpool.h"
 
 #include <QObject>
 #include <QRunnable>
@@ -191,7 +191,7 @@ private:
   DrawHelper2 h2_depth;
 };
 
-MapView::MapView(const QSharedPointer<AsyncTaskProcessorBase> &threadpool,
+MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool,
                  const QSharedPointer<ChunkCache>& chunkcache,
                  QWidget *parent)
   : QWidget(parent)
@@ -485,7 +485,7 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 
     ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
     QMetaObject::invokeMethod(this, "renderingDone", Q_ARG(QSharedPointer<RenderedChunk>, renderedChunk));
-  }, AsyncTaskProcessorBase::JobPrio::high);
+  }, PriorityThreadPool::JobPrio::high);
 }
 
 void MapView::updateCacheSize(bool onlyIncrease)
