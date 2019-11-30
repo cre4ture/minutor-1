@@ -9,6 +9,7 @@
 #include "./lockguarded.hpp"
 #include "./enumbitset.hpp"
 #include "./mapviewrenderer.h"
+#include "./safeinvoker.h"
 
 #include <QtWidgets/QWidget>
 #include <QSharedPointer>
@@ -183,6 +184,7 @@ class MapView : public QWidget {
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
   QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
+  SafeInvoker m_invoker;
   QSharedPointer<PriorityThreadPool> m_asyncRendererPool;
   AsyncExecutionCancelGuard cancellationGuard;
 

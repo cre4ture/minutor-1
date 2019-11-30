@@ -339,7 +339,7 @@ void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
   const bool visible = (!cgit.getRect().contains(cgid.getX(), cgid.getZ()));
   */
 
-  chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(cid, chunk));
+  renderChunkAsync(chunk);
 
   if (havePendingToolTip && (cid == pendingToolTipChunk))
   {
@@ -484,7 +484,12 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
       return;
 
     ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-    QMetaObject::invokeMethod(this, "renderingDone", Q_ARG(QSharedPointer<RenderedChunk>, renderedChunk));
+    m_invoker.invoke([this, renderedChunk, cancelToken = cancelToken.toWeakToken()](){
+      if (cancelToken.isCanceled())
+        return;
+
+      renderingDone(renderedChunk);
+    });
   }, PriorityThreadPool::JobPrio::high);
 }
 

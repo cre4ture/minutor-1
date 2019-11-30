@@ -109,7 +109,7 @@ void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
       ChunkLoader loader(path, id);
       auto chunk = loader.runInternal();
       emit chunkUpdated(chunk, id);
-    });
+    }, PriorityThreadPool::JobPrio::low);
 }
 
 void ChunkLoaderThreadPool::signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id)
