@@ -5,12 +5,12 @@
 
 #include <QSharedPointer>
 
-class AsyncTaskProcessorBase
+class PriorityThreadPool
 {
 public:
     typedef std::function<void()> JobT;
 
-    AsyncTaskProcessorBase();
+    PriorityThreadPool();
 
     enum class JobPrio
     {
@@ -31,10 +31,10 @@ public:
     size_t getNumberOfThreads() const;
 
 private:
-    class ImplC;
+    class HiddenImplementationC;
     using QueueType = ThreadSafePriorityQueue<JobT>;
 
-    QSharedPointer<ImplC> m_impl;
+    QSharedPointer<HiddenImplementationC> m_impl;
     QueueType& m_queue;
 };
 

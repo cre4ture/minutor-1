@@ -1,11 +1,11 @@
-#include "asynctaskprocessorbase.hpp"
+#include "prioritythreadpool.h"
 
 #include <future>
 
-class AsyncTaskProcessorBase::ImplC
+class PriorityThreadPool::HiddenImplementationC
 {
 public:
-  ImplC(AsyncTaskProcessorBase& parent)
+  HiddenImplementationC(PriorityThreadPool& parent)
     : m_parent(parent)
   {
     const size_t numberOfCpuCores = std::thread::hardware_concurrency();
@@ -13,17 +13,17 @@ public:
     for (size_t i = 0; i < numberOfCpuCores; i++)
     {
        m_futures.push_back(std::async(std::launch::async, [this]() {
-        AsyncTaskProcessorBase::JobT job;
+        PriorityThreadPool::JobT job;
         while (m_queue.pop(job))
         {
             job();
-            job = AsyncTaskProcessorBase::JobT(); // directly delete functor after execution and before blocking for wait.
+            job = PriorityThreadPool::JobT(); // directly delete functor after execution and before blocking for wait.
         }
       }));
     }
   }
 
-  ~ImplC()
+  ~HiddenImplementationC()
   {
     m_queue.signalTerminate();
     for (auto& future: m_futures)
@@ -32,17 +32,17 @@ public:
     }
   }
 
-  AsyncTaskProcessorBase& m_parent;
-  AsyncTaskProcessorBase::QueueType m_queue;
+  PriorityThreadPool& m_parent;
+  PriorityThreadPool::QueueType m_queue;
   std::list<std::future<void> > m_futures;
 };
 
-AsyncTaskProcessorBase::AsyncTaskProcessorBase()
-  : m_impl(QSharedPointer<ImplC>::create(*this))
+PriorityThreadPool::PriorityThreadPool()
+  : m_impl(QSharedPointer<HiddenImplementationC>::create(*this))
   , m_queue(m_impl->m_queue)
 {}
 
-size_t AsyncTaskProcessorBase::getNumberOfThreads() const
+size_t PriorityThreadPool::getNumberOfThreads() const
 {
   return m_impl->m_futures.size();
 }
