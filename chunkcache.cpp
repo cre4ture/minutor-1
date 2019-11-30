@@ -106,7 +106,10 @@ QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(ChunkID id)
   return chunk;
 }
 
-bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav)
+bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out,
+                                   ChunkID id,
+                                   FetchBehaviour behav,
+                                   JobPrio priority)
 {
   const bool cached = isCached_unprotected(id, &chunk_out);
 
@@ -116,7 +119,7 @@ bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out, ChunkID id,
        )
     )
   {
-      loadChunkAsync_unprotected(id);
+      loadChunkAsync_unprotected(id, priority);
       chunk_out.reset();
       return false;
   }
@@ -186,7 +189,8 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
   //std::cout << "cached chunks: " << cachemap.size() << std::endl;
 }
 
-void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
+void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
+                                            JobPrio priority)
 {
     {
       auto& chunkState = chunkStates[id];
@@ -199,7 +203,7 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id)
       chunkState << ChunkState::Loading;
     }
 
-  m_loaderPool.enqueueChunkLoading(path, id);
+  m_loaderPool.enqueueChunkLoading(path, id, priority);
 }
 
 void ChunkCache::adaptCacheToWindow(int wx, int wy) {

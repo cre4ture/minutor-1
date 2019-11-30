@@ -24,6 +24,7 @@ HEADERS += \
   coordinatehashmap.h \
   coordinateid.h \
   enumbitset.hpp \
+  jobprio.h \
   location.h \
   lockguarded.hpp \
   mapcamera.hpp \

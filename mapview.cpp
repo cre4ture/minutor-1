@@ -490,7 +490,7 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 
       renderingDone(renderedChunk);
     });
-  }, PriorityThreadPool::JobPrio::high);
+  }, JobPrio::high);
 }
 
 void MapView::updateCacheSize(bool onlyIncrease)
@@ -552,7 +552,7 @@ void MapView::regularUpdate()
 
   regularUpdata__checkRedraw();
 
-  const int maxIterLoadAndRender = 100000;
+  const int maxIterLoadAndRender = 10000;
 
   {
     ChunkCache::Locker locker(*cache);
@@ -980,7 +980,7 @@ void MapView::getToolTip(int x, int z) {
   bool chunkValid = false;
   {
     ChunkCache::Locker locked_cache(*cache);
-    chunkValid = locked_cache.fetch(chunk, pendingToolTipChunk);
+    chunkValid = locked_cache.fetch(chunk, pendingToolTipChunk, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE, JobPrio::high);
   }
 
   if (chunkValid)

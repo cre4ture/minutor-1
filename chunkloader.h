@@ -4,6 +4,7 @@
 
 #include "coordinateid.h"
 #include "cancellation.hpp"
+#include "jobprio.h"
 
 #include <QObject>
 #include <QRunnable>
@@ -22,7 +23,9 @@ public:
   ChunkLoaderThreadPool(const QSharedPointer<PriorityThreadPool>& threadPool);
   ~ChunkLoaderThreadPool();
 
-  void enqueueChunkLoading(QString path, ChunkID id);
+  void enqueueChunkLoading(QString path,
+                           ChunkID id,
+                           JobPrio priority);
 
 signals:
   void chunkUpdated(QSharedPointer<Chunk> chunk, ChunkID id);

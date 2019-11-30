@@ -97,7 +97,9 @@ ChunkLoaderThreadPool::~ChunkLoaderThreadPool()
 
 }
 
-void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
+void ChunkLoaderThreadPool::enqueueChunkLoading(QString path,
+                                                ChunkID id,
+                                                JobPrio priority)
 {
     threadPool->enqueueJob([this, path, id, cancelToken = asyncGuard.getToken()](){
 
@@ -109,7 +111,7 @@ void ChunkLoaderThreadPool::enqueueChunkLoading(QString path, ChunkID id)
       ChunkLoader loader(path, id);
       auto chunk = loader.runInternal();
       emit chunkUpdated(chunk, id);
-    }, PriorityThreadPool::JobPrio::low);
+    }, priority);
 }
 
 void ChunkLoaderThreadPool::signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id)

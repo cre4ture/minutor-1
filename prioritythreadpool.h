@@ -2,8 +2,10 @@
 #define ASYNCTASKPROCESSORBASE_HPP
 
 #include "threadsafequeue.hpp"
+#include "jobprio.h"
 
 #include <QSharedPointer>
+
 
 class PriorityThreadPool
 {
@@ -11,12 +13,6 @@ public:
     typedef std::function<void()> JobT;
 
     PriorityThreadPool();
-
-    enum class JobPrio
-    {
-      low,
-      high
-    };
 
     size_t enqueueJob(const JobT& job, JobPrio prio = JobPrio::low)
     {

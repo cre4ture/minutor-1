@@ -8,6 +8,7 @@
 #include "enumbitset.hpp"
 #include "chunkloader.h"
 #include "coordinatehashmap.h"
+#include "jobprio.h"
 
 #include <QObject>
 #include <QCache>
@@ -57,9 +58,12 @@ private:
           return m_parent.isCached_unprotected(id, nullptr);
       }
 
-      bool fetch(QSharedPointer<Chunk>& chunk_out, ChunkID id, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE)
+      bool fetch(QSharedPointer<Chunk>& chunk_out,
+                 ChunkID id,
+                 FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE,
+                 JobPrio priority = JobPrio::low)
       {
-          return m_parent.fetch_unprotected(chunk_out, id, behav);
+          return m_parent.fetch_unprotected(chunk_out, id, behav, priority);
       }
 
   private:
@@ -98,11 +102,12 @@ private:
 
   ChunkLoaderThreadPool m_loaderPool;
 
-  void loadChunkAsync_unprotected(ChunkID id);
+  void loadChunkAsync_unprotected(ChunkID id,
+                                  JobPrio priority);
 
   bool isCached_unprotected(ChunkID id, QSharedPointer<Chunk>* chunkPtr_out);
 
-  bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, ChunkID id, FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE);
+  bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, ChunkID id, FetchBehaviour behav, JobPrio priority);
 
 };
 

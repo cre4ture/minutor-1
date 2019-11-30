@@ -190,7 +190,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
     });
   };
 
-  m_threadPool->enqueueJob(job, PriorityThreadPool::JobPrio::high);
+  m_threadPool->enqueueJob(job, JobPrio::high);
 }
 
 
