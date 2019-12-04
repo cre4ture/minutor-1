@@ -31,6 +31,8 @@ private:
   std::shared_future<void> cancelationDoneSharedFuture;
 };
 
+class CancellationTokenPtr;
+
 class CancellationTokenWeakPtr : public QWeakPointer<CancellationTokenI>
 {
 public:
@@ -41,6 +43,8 @@ public:
     auto strongPtr = lock();
     return (!strongPtr) || strongPtr->isCanceled();
   }
+
+  CancellationTokenPtr toStrongTokenPtr() const;
 };
 
 class CancellationTokenPtr : public QSharedPointer<CancellationTokenI>
@@ -135,5 +139,10 @@ private:
   CancellationPtr cancellation;
 };
 
+
+inline CancellationTokenPtr CancellationTokenWeakPtr::toStrongTokenPtr() const
+{
+  return toStrongRef();
+}
 
 #endif // CANCELLATION_HPP
