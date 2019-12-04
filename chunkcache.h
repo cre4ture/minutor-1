@@ -100,7 +100,8 @@ private:
   int maxcache;                                   // number of Chunks that fit into Cache
   QThreadPool loaderThreadPool;                   // extra thread pool for loading
 
-  ChunkLoaderThreadPool m_loaderPool;
+  QSharedPointer<PriorityThreadPool> threadPool;
+  QSharedPointer<ChunkLoaderThreadPool> loaderPool;
 
   void loadChunkAsync_unprotected(ChunkID id,
                                   JobPrio priority);

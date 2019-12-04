@@ -12,11 +12,12 @@
 #include <windows.h>
 #endif
 
-ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool)
+ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
     : cache("chunks")
     , chunkStates()
     , mutex(QMutex::Recursive)
-    , m_loaderPool(threadPool)
+    , threadPool(threadPool_)
+    , loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create(threadPool))
 
 {
   chunkStates.reserve(256*1024*1024);
@@ -50,8 +51,7 @@ ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool)
   qRegisterMetaType<QSharedPointer<Chunk> >("QSharedPointer<Chunk>");
   qRegisterMetaType<ChunkID>("ChunkID");
 
-  connect(&m_loaderPool, SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
-          this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
+  clear();
 }
 
 ChunkCache::~ChunkCache() {
@@ -59,10 +59,17 @@ ChunkCache::~ChunkCache() {
 }
 
 void ChunkCache::clear() {
-  QThreadPool::globalInstance()->waitForDone();
   mutex.lock();
+
+  loaderPool.reset(); // stop everything!
+
   cache.clear();
   chunkStates.clear();
+
+  loaderPool = QSharedPointer<ChunkLoaderThreadPool>::create(threadPool); // start again
+  connect(loaderPool.data(), SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
+          this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
+
   mutex.unlock();
 }
 
@@ -203,7 +210,7 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
       chunkState << ChunkState::Loading;
     }
 
-  m_loaderPool.enqueueChunkLoading(path, id, priority);
+  loaderPool->enqueueChunkLoading(path, id, priority);
 }
 
 void ChunkCache::adaptCacheToWindow(int wx, int wy) {

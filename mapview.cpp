@@ -202,6 +202,11 @@ MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool,
   , dragging(false)
   , m_asyncRendererPool(threadpool)
   , cancellationGuard()
+  , invoker()
+  , changed(true)
+  , updateChecker(*this, cache, [this](QSharedPointer<Chunk> chunk){
+          invoker.invoke([this, chunk](){ renderChunkAsync(chunk); });
+      })
 {
   havePendingToolTip = false;
 
@@ -262,6 +267,7 @@ void MapView::setLocation(double x, double z) {
 }
 
 void MapView::setLocation(double x, int y, double z, bool ignoreScale, bool useHeight) {
+  changed = true;
   this->x = ignoreScale ? x : x / scale;
   this->z = ignoreScale ? z : z / scale;
   if (useHeight == true && depth != y) {
@@ -298,8 +304,9 @@ void MapView::setDimension(QString path, int scale) {
     this->x = 0;  // and we jump to the center spawn automatically
     this->z = 0;
   }
-  clearCache();
+
   cache->setPath(path);
+  clearCache();
 }
 
 void MapView::setDepth(int depth) {
@@ -328,10 +335,12 @@ void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
     return;
   }
 
-  auto lock = renderedChunkGroupsCache.lock();
-  if (!lock().contains(cgid))
   {
-    return;
+    auto lock = renderedChunkGroupsCache.lock();
+    if (!lock().contains(cgid))
+    {
+      return;
+    }
   }
 
   /*
@@ -367,10 +376,15 @@ void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayIt
   currentSearchResults = searchResults;
 }
 
-void MapView::clearCache() {
-  chunksToRedraw.clear();
+void MapView::clearCache()
+{
+  const bool backgroundWasEnabled = !asyncCheckerLoop.isNull();
+  setBackgroundActivitiesEnabled(false);
+
   cache->clear();
   renderedChunkGroupsCache.lock()().clear();
+
+  setBackgroundActivitiesEnabled(backgroundWasEnabled);
 }
 
 void MapView::mousePressEvent(QMouseEvent *event) {
@@ -404,6 +418,8 @@ QPointF MapCamera::getPixelFromBlockCoordinates(TopViewPosition block_pos) const
 
 void MapView::adjustZoom(double steps)
 {
+  changed = true;
+
   const bool allowZoomOut = QSettings().value("zoomout", false).toBool();
 
   const double zoomMin = allowZoomOut ? 0.05 : 1.0;
@@ -510,6 +526,37 @@ void MapView::updateCacheSize(bool onlyIncrease)
   lock().setMaxCost(newCount);
 }
 
+void MapView::changeEvent(QEvent *e)
+{
+  if (e && (e->type() & QEvent::EnabledChange))
+  {
+    if (!isEnabled())
+    {
+      setBackgroundActivitiesEnabled(false);
+      clearCache(); // make sure cache is cleared before enable again!
+    }
+  }
+}
+
+void MapView::setBackgroundActivitiesEnabled(bool enabled)
+{
+  if (enabled)
+  {
+    if (!asyncCheckerLoop.isNull())
+      return;
+
+    asyncCheckerLoop = QSharedPointer<AsyncLoop>::create(m_asyncRendererPool, JobPrio::idle,
+                                                         [this]()
+    {
+      updateChecker.update();
+    });
+  }
+  else
+  {
+    asyncCheckerLoop.reset(); // stops and wait for stop
+  }
+}
+
 void MapView::renderingDone(const QSharedPointer<RenderedChunk> renderedChunk)
 {
   if (!renderedChunk)
@@ -517,12 +564,17 @@ void MapView::renderingDone(const QSharedPointer<RenderedChunk> renderedChunk)
     return;
   }
 
+  changed = true;
+
   ChunkID id(renderedChunk->chunkX, renderedChunk->chunkZ);
 
   const auto cgID = ChunkGroupID::fromCoordinates(id.getX(), id.getZ());
   {
-    auto cgLock = renderedChunkGroupsCache.lock();
-    auto grData = cgLock().findOrCreate(cgID);
+    QSharedPointer<RenderGroupData> grData;
+    {
+      auto cgLock = renderedChunkGroupsCache.lock();
+      grData = cgLock().findOrCreate(cgID);
+    }
 
     if (grData && renderedChunk)
     {
@@ -548,11 +600,46 @@ void MapView::regularUpdate()
     return;
   }
 
+  if (!changed)
+  {
+    return;
+  }
+
+  changed = false;
+
   updateCacheSize(true);
 
+  redraw();
+  update();
+
+  updateCacheSize(false);
+}
+
+MapView::UpdateChecker::UpdateChecker(MapView& parent_,
+                                      const QSharedPointer<ChunkCache> &cache_,
+                                      std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_
+                                      )
+  : parent(parent_)
+  , cache(cache_)
+  , renderChunkRequestFunction(renderChunkRequestFunction_)
+  , autoPerformance(std::chrono::milliseconds(30))
+{
+
+}
+
+void MapView::UpdateChecker::update()
+{
   regularUpdata__checkRedraw();
 
-  const int maxIterLoadAndRender = 10000;
+  if (chunksToRedraw.size() == 0)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+  else
+  {
+    const auto lastDuration = std::chrono::duration_cast<std::chrono::milliseconds>(autoPerformanceTimer.updateTime());
+    autoPerformance.update(lastDuration);
+  }
 
   {
     ChunkCache::Locker locker(*cache);
@@ -571,9 +658,9 @@ void MapView::regularUpdate()
 
         if (chunk)
         {
-          size_t currentQueueLength = renderChunkAsync(chunk);
+          renderChunkRequestFunction(chunk);
           i++;
-          if ((i > maxIterLoadAndRender) || (currentQueueLength > maxIterLoadAndRender))
+          if (i > autoPerformance.getCurrentPerformance())
           {
             break;
           }
@@ -581,21 +668,11 @@ void MapView::regularUpdate()
       }
     }
   }
-
-  redraw();
-  update();
-
-  updateCacheSize(false);
 }
 
-void MapView::regularUpdata__checkRedraw()
+void MapView::UpdateChecker::regularUpdata__checkRedraw()
 {
-  const int maxIterLoadAndRender = 10000;
-
-  ChunkCache::Locker locker(*cache);
-  auto lockRendered = renderedChunkGroupsCache.lock();
-
-  DrawHelper h(x, z, zoom * overscanZoomFactor, imageChunks.size());
+  DrawHelper h(parent.x, parent.z, parent.zoom * overscanZoomFactor, parent.imageChunks.size());
 
   ChunkGroupDrawRegion cgit(h.cam);
 
@@ -607,22 +684,25 @@ void MapView::regularUpdata__checkRedraw()
     std::pair<int, int> id = chunkRedrawIterator.getNext(cgit.rootTopLeftChunkGroupId.getX(), cgit.rootTopLeftChunkGroupId.getZ());
     ChunkGroupID cgid(id.first, id.second);
 
-    auto data = lockRendered().findOrCreate(cgid);
-    if (data && redrawNeeded(*data))
+    auto data = parent.renderedChunkGroupsCache.lock()().findOrCreate(cgid);
+    if (data)
     {
-      regularUpdata__checkRedraw_chunkGroup(cgid, *data);
-
-      if (chunksToRedraw.size() > maxIterLoadAndRender)
+      if (parent.redrawNeeded(*data))
       {
-        return;
+        regularUpdata__checkRedraw_chunkGroup(cgid, *data);
+
+        if (chunksToRedraw.size() > autoPerformance.getCurrentPerformance())
+        {
+          return;
+        }
       }
     }
   }
 }
 
-void MapView::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, RenderGroupData &data)
+void MapView::UpdateChecker::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, RenderGroupData &data)
 {
-  data.renderedFor = getCurrentRenderParams();
+  data.renderedFor = parent.getCurrentRenderParams();
 
   for(auto coordinate : cgid)
   {
@@ -634,7 +714,7 @@ void MapView::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, Re
       continue;
     }
 
-    if (redrawNeeded(state))
+    if (parent.redrawNeeded(state))
     {
       chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(cid, QSharedPointer<Chunk>()));
       state.flags.set(RenderStateT::RenderingRequested);
@@ -670,9 +750,12 @@ void MapView::mouseMoveEvent(QMouseEvent *event) {
   if (!dragging) {
     return;
   }
+
   x += (lastMousePressPosition.x()-event->x()) / zoom;
   z += (lastMousePressPosition.y()-event->y()) / zoom;
   lastMousePressPosition = event->pos();
+
+  changed = true;
 }
 
 void MapView::mouseReleaseEvent(QMouseEvent * event) {
@@ -828,6 +911,8 @@ void MapView::redraw() {
     update();
     return;
   }
+
+  setBackgroundActivitiesEnabled(true);
 
   const bool displayDepthMap = QSettings().value("depthmapview", false).toBool();
   const bool chunkgroupstatus = QSettings().value("chunkgroupstatus", false).toBool();
@@ -1220,4 +1305,30 @@ RenderGroupData& RenderGroupData::init()
     depthImg.fill(0);
   }
   return *this;
+}
+
+
+MapView::AsyncLoop::AsyncLoop(const QSharedPointer<PriorityThreadPool>& threadpool_, const JobPrio prio_,
+                              const std::function<void ()> &func_)
+  : threadpool(threadpool_)
+  , prio(prio_)
+  , func(func_)
+{
+  requestNext();
+}
+
+void MapView::AsyncLoop::requestNext()
+{
+  threadpool->enqueueJob([this, weakCancelToken = cancellation.getToken().toWeakToken()](){
+
+    auto strongToken = weakCancelToken.toStrongTokenPtr();
+    if (strongToken.isCanceled())
+    {
+      return;
+    }
+
+    func();
+
+    requestNext();
+  }, prio);
 }

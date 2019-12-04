@@ -16,7 +16,7 @@ public:
 
     size_t enqueueJob(const JobT& job, JobPrio prio = JobPrio::low)
     {
-      return m_queue.push(job, (prio == JobPrio::low) ? 1 : 0);
+      return m_queue.push(job, static_cast<int>(prio));
     }
 
     size_t getQueueLength() const

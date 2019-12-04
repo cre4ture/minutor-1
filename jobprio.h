@@ -3,8 +3,10 @@
 
 enum class JobPrio
 {
-  low,
-  high
+  high = 0,
+  normal = 1,
+  low = 2,
+  idle = 4
 };
 
 #endif // JOBPRIO_H

@@ -86,7 +86,6 @@ class MapView : public QWidget {
   void updatePlayerPositions(const QVector<PlayerInfo>& playerList);
   void updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem> > &searchResults);
 
-
  public slots:
   void setDepth(int depth);
   void chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z);
@@ -171,7 +170,6 @@ class MapView : public QWidget {
   QImage imageChunks;
   QImage imageOverlays;
   QImage image_players;
-  QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
   DefinitionManager *dm;
 
   QSet<QString> overlayItemTypes;
@@ -188,18 +186,119 @@ class MapView : public QWidget {
   QSharedPointer<PriorityThreadPool> m_asyncRendererPool;
   AsyncExecutionCancelGuard cancellationGuard;
 
-  ChunkIteratorC chunkRedrawIterator;
+  SafeInvoker invoker;
+  bool changed;
+
+  class AutoPerformance
+  {
+  public:
+    AutoPerformance(std::chrono::milliseconds updateRateGoal_)
+      : currentPerformance(1)
+      , updateRateGoal(updateRateGoal_)
+    {}
+
+    size_t getCurrentPerformance() const
+    {
+      return currentPerformance;
+    }
+
+    void update(std::chrono::milliseconds actualUpdateRate)
+    {
+      if (actualUpdateRate < updateRateGoal)
+      {
+        if (currentPerformance < std::numeric_limits<size_t>::max())
+        {
+          currentPerformance++;
+        }
+      }
+      else
+      {
+        if (currentPerformance > 1)
+        {
+          currentPerformance--;
+        }
+      }
+    }
+
+  private:
+    size_t currentPerformance;
+    std::chrono::milliseconds updateRateGoal;
+  };
+
+  class AutoPerformanceTimer
+  {
+  public:
+    AutoPerformanceTimer()
+      : lastUpdate(std::chrono::steady_clock::now())
+    {}
+
+    std::chrono::steady_clock::duration updateTime()
+    {
+      const auto now = std::chrono::steady_clock::now();
+      const auto duration = now - lastUpdate;
+      lastUpdate = now;
+      return duration;
+    }
+
+  private:
+    std::chrono::steady_clock::time_point lastUpdate;
+  };
+
+  class UpdateChecker
+  {
+  public:
+    UpdateChecker(
+        MapView& parent_,
+        const QSharedPointer<ChunkCache>& cache,
+        std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_);
+
+    void update();
+
+  private:
+    MapView& parent;
+    QSharedPointer<ChunkCache> cache;
+    std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction;
+    QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
+    ChunkIteratorC chunkRedrawIterator;
+    AutoPerformance autoPerformance;
+    AutoPerformanceTimer autoPerformanceTimer;
+
+    void regularUpdata__checkRedraw();
+    void regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID& cgid, RenderGroupData& data);
+  };
+
+  UpdateChecker updateChecker;
 
   size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
 
   void updateCacheSize(bool onlyIncrease);
 
-private slots:
-    void renderingDone(const QSharedPointer<RenderedChunk> chunk);
+  class AsyncLoop
+  {
+  public:
+    AsyncLoop(const QSharedPointer<PriorityThreadPool>& threadpool,
+              const JobPrio prio_,
+              const std::function<void()>& func_);
 
-    void regularUpdate();
-    void regularUpdata__checkRedraw();
-    void regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID& cgid, RenderGroupData& data);
+  private:
+    QSharedPointer<PriorityThreadPool> threadpool;
+    const JobPrio prio;
+    std::function<void()> func;
+    AsyncExecutionCancelGuard cancellation;
+
+    void requestNext();
+  };
+
+  QSharedPointer<AsyncLoop> asyncCheckerLoop;
+
+  void changeEvent(QEvent *) override;
+
+  void setBackgroundActivitiesEnabled(bool enabled);
+
+private slots:
+  void renderingDone(const QSharedPointer<RenderedChunk> chunk);
+
+  void regularUpdate();
 };
 
 #endif  // MAPVIEW_H_
