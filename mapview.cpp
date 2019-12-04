@@ -205,7 +205,7 @@ MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool,
   , invoker()
   , changed(true)
   , updateChecker(*this, cache, [this](QSharedPointer<Chunk> chunk){
-          invoker.invoke([this, chunk](){ renderChunkAsync(chunk); });
+          renderChunkAsync(chunk);
       })
 {
   havePendingToolTip = false;
@@ -327,13 +327,13 @@ int MapView::getDepth() const {
 
 void MapView::chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-  const ChunkID cid(x, z);
-  const ChunkGroupID cgid = ChunkGroupID::fromCoordinates(x, z);
-
   if (!chunk)
   {
     return;
   }
+
+  const ChunkID cid(x, z);
+  const ChunkGroupID cgid = ChunkGroupID::fromCoordinates(x, z);
 
   {
     auto lock = renderedChunkGroupsCache.lock();
@@ -492,12 +492,12 @@ const QImage& getChunkGroupPlaceholder()
 
 size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
-  renderedChunk->init();
-
-  return m_asyncRendererPool->enqueueJob([this, chunk, renderedChunk, cancelToken = cancellationGuard.getToken()](){
+  return m_asyncRendererPool->enqueueJob([this, chunk, cancelToken = cancellationGuard.getToken()](){
     if (cancelToken.isCanceled())
       return;
+
+    auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
+    renderedChunk->init();
 
     ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
     m_invoker.invoke([this, renderedChunk, cancelToken = cancelToken.toWeakToken()](){
@@ -650,11 +650,8 @@ void MapView::UpdateChecker::update()
       {
         const auto id = chunksToRedraw.dequeue();
 
-        QSharedPointer<Chunk> chunk = id.second;
-        if (!chunk)
-        {
-          locker.fetch(chunk, id.first, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
-        }
+        QSharedPointer<Chunk> chunk;
+        locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
 
         if (chunk)
         {
@@ -716,7 +713,7 @@ void MapView::UpdateChecker::regularUpdata__checkRedraw_chunkGroup(const ChunkGr
 
     if (parent.redrawNeeded(state))
     {
-      chunksToRedraw.enqueue(std::pair<ChunkID, QSharedPointer<Chunk>>(cid, QSharedPointer<Chunk>()));
+      chunksToRedraw.enqueue(cid);
       state.flags.set(RenderStateT::RenderingRequested);
     }
   }

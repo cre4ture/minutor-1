@@ -204,6 +204,7 @@ class MapView : public QWidget {
 
     void update(std::chrono::milliseconds actualUpdateRate)
     {
+
       if (actualUpdateRate < updateRateGoal)
       {
         if (currentPerformance < std::numeric_limits<size_t>::max())
@@ -258,7 +259,7 @@ class MapView : public QWidget {
     MapView& parent;
     QSharedPointer<ChunkCache> cache;
     std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction;
-    QQueue<std::pair<ChunkID, QSharedPointer<Chunk>>> chunksToRedraw;
+    QQueue<ChunkID> chunksToRedraw;
     ChunkIteratorC chunkRedrawIterator;
     AutoPerformance autoPerformance;
     AutoPerformanceTimer autoPerformanceTimer;
