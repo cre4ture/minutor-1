@@ -309,10 +309,12 @@ void MapView::setDimension(QString path, int scale) {
 
 void MapView::setDepth(int depth) {
   this->depth = depth;
+  changed();
 }
 
 void MapView::setFlags(int flags) {
   this->flags = flags;
+  changed();
 }
 
 int MapView::getFlags() const {
