@@ -109,6 +109,20 @@ public:
     return !endReached;
   }
 
+  bool tryPop(T& item)
+  {
+    ProtectedPop guard(*this);
+
+    bool endReached = queue_.empty();
+    if (!endReached)
+    {
+      item = queue_.front();
+      queue_.pop_front();
+    }
+
+    return !endReached;
+  }
+
   size_t push(const T& item, bool back = true)
   {
     ProtectedPush guard(*this);
@@ -143,32 +157,10 @@ private:
   std::deque<T> queue_;
 };
 
-
-
 template <typename T, typename PrioT = int>
-class ThreadSafePriorityQueue: public ThreadSafeQueueBase
+class ThreadSafePriorityQueueBase: public ThreadSafeQueueBase
 {
 public:
-  bool pop(T& item)
-  {
-    ProtectedPop guard(*this);
-
-    while (queue_.empty() && isAlive())
-    {
-      guard.waitNextEvent();
-    }
-
-    bool endReached = queue_.empty();
-    if (!endReached)
-    {
-      auto it = queue_.begin();
-      item = it->second;
-      queue_.erase(it);
-    }
-
-    return !endReached;
-  }
-
   size_t push(const T& item, const PrioT& priority)
   {
     ProtectedPush guard(*this);
@@ -193,8 +185,100 @@ public:
     return queue_.size();
   }
 
-private:
+protected:
   std::multimap<PrioT, T> queue_;
+};
+
+template <typename T, typename PrioT = int>
+class ThreadSafePriorityQueue: public ThreadSafePriorityQueueBase<T, PrioT>
+{
+public:
+  using BaseT = ThreadSafePriorityQueueBase<T, PrioT>;
+
+  bool pop(T& item)
+  {
+    typename BaseT::ProtectedPop guard(*this);
+
+    while (BaseT::queue_.empty() && BaseT::isAlive())
+    {
+      guard.waitNextEvent();
+    }
+
+    bool endReached = BaseT::queue_.empty();
+    if (!endReached)
+    {
+      auto it = BaseT::queue_.begin();
+      item = it->second;
+      BaseT::queue_.erase(it);
+    }
+
+    return !endReached;
+  }
+};
+
+template <typename T, typename PrioT = int>
+class ThreadSafePriorityQueueWithIdleJob: public ThreadSafePriorityQueueBase<T, PrioT>
+{
+public:
+  using BaseT = ThreadSafePriorityQueueBase<T, PrioT>;
+
+  bool pop(T& item)
+  {
+    typename BaseT::ProtectedPop guard(*this);
+
+    while (BaseT::queue_.empty() && defaultValueQueue_.empty() && BaseT::isAlive())
+    {
+      guard.waitNextEvent();
+    }
+
+    bool endReached = BaseT::queue_.empty();
+    if (!endReached)
+    {
+      auto it = BaseT::queue_.begin();
+      item = it->second;
+      BaseT::queue_.erase(it);
+      return true;
+    }
+    else
+    {
+      endReached = defaultValueQueue_.empty();
+      if (!endReached)
+      {
+        auto it = defaultValueQueue_.begin();
+        if (it->second)
+        {
+          item = *(it->second);
+        }
+        return true;
+      }
+    }
+
+    return !endReached;
+  }
+
+  void registerDefaultValue(const std::shared_ptr<T>& item, PrioT priority)
+  {
+    typename BaseT::ProtectedPush guard(*this);
+
+    defaultValueQueue_.emplace(priority, item);
+  }
+
+  void unregisterDefaultValue(const std::shared_ptr<T>& item)
+  {
+    typename BaseT::ProtectedBase guard(*this);
+
+    for (auto it = defaultValueQueue_.begin(); it != defaultValueQueue_.end(); ++it)
+    {
+      if (it->second == item)
+      {
+        defaultValueQueue_.erase(it);
+        return;
+      }
+    }
+  }
+
+private:
+  std::multimap<PrioT, std::shared_ptr<T> > defaultValueQueue_;
 };
 
 #endif // THREADSAFEQUEUE_HPP

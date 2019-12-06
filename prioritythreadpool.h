@@ -10,13 +10,14 @@
 class PriorityThreadPool
 {
 public:
-    typedef std::function<void()> JobT;
+    using JobT = std::function<void()>;
+    using QueueType = ThreadSafePriorityQueueWithIdleJob<JobT, JobPrio>;
 
     PriorityThreadPool();
 
     size_t enqueueJob(const JobT& job, JobPrio prio = JobPrio::low)
     {
-      return m_queue.push(job, static_cast<int>(prio));
+      return m_queue.push(job, prio);
     }
 
     size_t getQueueLength() const
@@ -26,9 +27,13 @@ public:
 
     size_t getNumberOfThreads() const;
 
+    QueueType& queueSink()
+    {
+      return m_queue;
+    }
+
 private:
     class HiddenImplementationC;
-    using QueueType = ThreadSafePriorityQueue<JobT>;
 
     QSharedPointer<HiddenImplementationC> m_impl;
     QueueType& m_queue;

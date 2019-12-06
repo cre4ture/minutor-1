@@ -10,6 +10,7 @@
 #include "./enumbitset.hpp"
 #include "./mapviewrenderer.h"
 #include "./safeinvoker.h"
+#include "./threadsafequeue.hpp"
 
 #include <QtWidgets/QWidget>
 #include <QSharedPointer>
@@ -183,11 +184,13 @@ class MapView : public QWidget {
   QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
   SafeInvoker m_invoker;
-  QSharedPointer<PriorityThreadPool> m_asyncRendererPool;
+  QSharedPointer<PriorityThreadPool> threadpool;
   AsyncExecutionCancelGuard cancellationGuard;
 
   SafeInvoker invoker;
-  bool changed;
+  bool hasChanged;
+
+  void changed();
 
   class AutoPerformance
   {
@@ -245,35 +248,6 @@ class MapView : public QWidget {
     std::chrono::steady_clock::time_point lastUpdate;
   };
 
-  class UpdateChecker
-  {
-  public:
-    UpdateChecker(
-        MapView& parent_,
-        const QSharedPointer<ChunkCache>& cache,
-        std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_);
-
-    void update();
-
-  private:
-    MapView& parent;
-    QSharedPointer<ChunkCache> cache;
-    std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction;
-    QQueue<ChunkID> chunksToRedraw;
-    ChunkIteratorC chunkRedrawIterator;
-    AutoPerformance autoPerformance;
-    AutoPerformanceTimer autoPerformanceTimer;
-
-    void regularUpdata__checkRedraw();
-    void regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID& cgid, RenderGroupData& data);
-  };
-
-  UpdateChecker updateChecker;
-
-  size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
-
-  void updateCacheSize(bool onlyIncrease);
-
   class AsyncLoop
   {
   public:
@@ -290,7 +264,49 @@ class MapView : public QWidget {
     void requestNext();
   };
 
-  QSharedPointer<AsyncLoop> asyncCheckerLoop;
+  class UpdateChecker
+  {
+  public:
+    UpdateChecker(
+        MapView& parent_,
+        const QSharedPointer<ChunkCache>& cache,
+        const QSharedPointer<PriorityThreadPool>& threadpool_,
+        std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_);
+    ~UpdateChecker();
+
+    void update();
+
+  private:
+    MapView& parent;
+    QSharedPointer<ChunkCache> cache;
+    QSharedPointer<PriorityThreadPool> threadpool;
+    std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction;
+    ThreadSafeQueue<ChunkID> chunksToRedraw;
+    ChunkIteratorC chunkRedrawIterator;
+    AutoPerformance autoPerformance;
+    AutoPerformanceTimer autoPerformanceTimer;
+    AsyncExecutionCancelGuard asyncGuard;
+    std::mutex mutex;
+    bool updateIsRunning;
+    std::shared_ptr<std::function<void()> > idleJob;
+    bool isIdleJobRegistered;
+
+    void idleJobFunction();
+    void registerIdleJobOfNotYetDone();
+    void unregisterIdleJobIfNotJetDone();
+
+    void regularUpdata__checkRedraw();
+    void regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID& cgid, RenderGroupData& data);
+
+    void update_internal(bool regular);
+  };
+
+  bool isRunning;
+  std::shared_ptr<UpdateChecker> updateChecker;
+
+  size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
+
+  void updateCacheSize(bool onlyIncrease);
 
   void changeEvent(QEvent *) override;
 

@@ -191,7 +191,7 @@ private:
   DrawHelper2 h2_depth;
 };
 
-MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool,
+MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool_,
                  const QSharedPointer<ChunkCache>& chunkcache,
                  QWidget *parent)
   : QWidget(parent)
@@ -200,13 +200,11 @@ MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool,
   , cache(chunkcache)
   , renderedChunkGroupsCache(std::make_unique<RenderedChunkGroupCacheUnprotectedT>("rendergroups"))
   , dragging(false)
-  , m_asyncRendererPool(threadpool)
+  , threadpool(threadpool_)
   , cancellationGuard()
   , invoker()
-  , changed(true)
-  , updateChecker(*this, cache, [this](QSharedPointer<Chunk> chunk){
-          renderChunkAsync(chunk);
-      })
+  , hasChanged(true)
+  , updateChecker()
 {
   havePendingToolTip = false;
 
@@ -267,7 +265,7 @@ void MapView::setLocation(double x, double z) {
 }
 
 void MapView::setLocation(double x, int y, double z, bool ignoreScale, bool useHeight) {
-  changed = true;
+  changed();
   this->x = ignoreScale ? x : x / scale;
   this->z = ignoreScale ? z : z / scale;
   if (useHeight == true && depth != y) {
@@ -378,7 +376,7 @@ void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayIt
 
 void MapView::clearCache()
 {
-  const bool backgroundWasEnabled = !asyncCheckerLoop.isNull();
+  const bool backgroundWasEnabled = (updateChecker != nullptr);
   setBackgroundActivitiesEnabled(false);
 
   cache->clear();
@@ -418,7 +416,7 @@ QPointF MapCamera::getPixelFromBlockCoordinates(TopViewPosition block_pos) const
 
 void MapView::adjustZoom(double steps)
 {
-  changed = true;
+  changed();
 
   const bool allowZoomOut = QSettings().value("zoomout", false).toBool();
 
@@ -436,6 +434,15 @@ void MapView::adjustZoom(double steps)
 
   if (zoom < zoomMin) zoom = zoomMin;
   if (zoom > zoomMax) zoom = zoomMax;
+}
+
+void MapView::changed()
+{
+  hasChanged = true;
+  if (updateChecker)
+  {
+    updateChecker->update();
+  }
 }
 
 const QImage& getPlaceholder()
@@ -492,7 +499,7 @@ const QImage& getChunkGroupPlaceholder()
 
 size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  return m_asyncRendererPool->enqueueJob([this, chunk, cancelToken = cancellationGuard.getToken()](){
+  return threadpool->enqueueJob([this, chunk, cancelToken = cancellationGuard.getToken()](){
     if (cancelToken.isCanceled())
       return;
 
@@ -540,20 +547,16 @@ void MapView::changeEvent(QEvent *e)
 
 void MapView::setBackgroundActivitiesEnabled(bool enabled)
 {
-  if (enabled)
+  if ((!updateChecker) && enabled)
   {
-    if (!asyncCheckerLoop.isNull())
-      return;
-
-    asyncCheckerLoop = QSharedPointer<AsyncLoop>::create(m_asyncRendererPool, JobPrio::idle,
-                                                         [this]()
-    {
-      updateChecker.update();
+    updateChecker = std::make_shared<UpdateChecker>(*this, cache, threadpool, [this](QSharedPointer<Chunk> chunk){
+        renderChunkAsync(chunk);
     });
   }
-  else
+
+  if (!enabled)
   {
-    asyncCheckerLoop.reset(); // stops and wait for stop
+    updateChecker.reset();
   }
 }
 
@@ -564,7 +567,7 @@ void MapView::renderingDone(const QSharedPointer<RenderedChunk> renderedChunk)
     return;
   }
 
-  changed = true;
+  changed();
 
   ChunkID id(renderedChunk->chunkX, renderedChunk->chunkZ);
 
@@ -600,12 +603,12 @@ void MapView::regularUpdate()
     return;
   }
 
-  if (!changed)
+  if (!hasChanged)
   {
     return;
   }
 
-  changed = false;
+  hasChanged = false;
 
   updateCacheSize(true);
 
@@ -617,53 +620,116 @@ void MapView::regularUpdate()
 
 MapView::UpdateChecker::UpdateChecker(MapView& parent_,
                                       const QSharedPointer<ChunkCache> &cache_,
+                                      const QSharedPointer<PriorityThreadPool>& threadpool_,
                                       std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_
                                       )
   : parent(parent_)
   , cache(cache_)
+  , threadpool(threadpool_)
   , renderChunkRequestFunction(renderChunkRequestFunction_)
   , autoPerformance(std::chrono::milliseconds(30))
+  , asyncGuard()
+  , updateIsRunning(false)
+  , isIdleJobRegistered(false)
 {
+  idleJob = std::make_shared<std::function<void()> >([this, cancel = asyncGuard.getToken().toWeakToken()](){
+    auto strong = cancel.toStrongTokenPtr();
+    if (strong.isCanceled())
+      return;
 
+    idleJobFunction();
+  });
+}
+
+void MapView::UpdateChecker::idleJobFunction()
+{
+  ChunkID id;
+
+  {
+    std::unique_lock<std::mutex> guard(mutex);
+
+    if (!updateIsRunning)
+    {
+      size_t len = chunksToRedraw.getCurrentQueueLength();
+      //std::cout << len << std::endl;
+      if ((len < autoPerformance.getCurrentPerformance() / 2) || (len < 10))
+      {
+        updateIsRunning = true;
+        guard.unlock();
+
+        update_internal(true);
+
+        guard.lock();
+        updateIsRunning = false;
+      }
+    }
+
+    if (!chunksToRedraw.tryPop(id))
+    {
+      unregisterIdleJobIfNotJetDone();
+      return;
+    }
+  }
+
+  QSharedPointer<Chunk> chunk;
+  {
+    ChunkCache::Locker locker(*cache);
+    locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
+  }
+
+  if (chunk)
+  {
+    renderChunkRequestFunction(chunk);
+  }
+}
+
+void MapView::UpdateChecker::registerIdleJobOfNotYetDone()
+{
+  if (!isIdleJobRegistered)
+  {
+    threadpool->queueSink().registerDefaultValue(idleJob, JobPrio::idle);
+    isIdleJobRegistered = true;
+  }
+}
+
+void MapView::UpdateChecker::unregisterIdleJobIfNotJetDone()
+{
+  if (isIdleJobRegistered)
+  {
+    threadpool->queueSink().unregisterDefaultValue(idleJob);
+    isIdleJobRegistered = false;
+  }
+}
+
+MapView::UpdateChecker::~UpdateChecker()
+{
+  unregisterIdleJobIfNotJetDone();
 }
 
 void MapView::UpdateChecker::update()
 {
+  std::unique_lock<std::mutex> guard(mutex);
+
+  if (!updateIsRunning)
+  {
+    update_internal(false);
+  }
+}
+
+void MapView::UpdateChecker::update_internal(bool regular)
+{
   regularUpdata__checkRedraw();
 
-  if (chunksToRedraw.size() == 0)
+  if (chunksToRedraw.getCurrentQueueLength() != 0)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  }
-  else
-  {
-    const auto lastDuration = std::chrono::duration_cast<std::chrono::milliseconds>(autoPerformanceTimer.updateTime());
-    autoPerformance.update(lastDuration);
-  }
-
-  {
-    ChunkCache::Locker locker(*cache);
-
+    if (regular)
     {
-      size_t i = 0;
-      while (chunksToRedraw.size() > 0)
-      {
-        const auto id = chunksToRedraw.dequeue();
-
-        QSharedPointer<Chunk> chunk;
-        locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
-
-        if (chunk)
-        {
-          renderChunkRequestFunction(chunk);
-          i++;
-          if (i > autoPerformance.getCurrentPerformance())
-          {
-            break;
-          }
-        }
-      }
+      const auto lastDuration = std::chrono::duration_cast<std::chrono::milliseconds>(autoPerformanceTimer.updateTime());
+      //std::cout << "ld: " << lastDuration.count() << std::endl;
+      autoPerformance.update(lastDuration);
     }
+
+    registerIdleJobOfNotYetDone();
   }
 }
 
@@ -688,7 +754,7 @@ void MapView::UpdateChecker::regularUpdata__checkRedraw()
       {
         regularUpdata__checkRedraw_chunkGroup(cgid, *data);
 
-        if (chunksToRedraw.size() > autoPerformance.getCurrentPerformance())
+        if (chunksToRedraw.getCurrentQueueLength() > autoPerformance.getCurrentPerformance())
         {
           return;
         }
@@ -713,7 +779,7 @@ void MapView::UpdateChecker::regularUpdata__checkRedraw_chunkGroup(const ChunkGr
 
     if (parent.redrawNeeded(state))
     {
-      chunksToRedraw.enqueue(cid);
+      chunksToRedraw.push(cid);
       state.flags.set(RenderStateT::RenderingRequested);
     }
   }
@@ -752,7 +818,7 @@ void MapView::mouseMoveEvent(QMouseEvent *event) {
   z += (lastMousePressPosition.y()-event->y()) / zoom;
   lastMousePressPosition = event->pos();
 
-  changed = true;
+  changed();
 }
 
 void MapView::mouseReleaseEvent(QMouseEvent * event) {
@@ -853,6 +919,7 @@ void MapView::resizeEvent(QResizeEvent *event) {
   imageOverlays = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
   image_players = QImage(event->size(), QImage::Format_ARGB32_Premultiplied);
 
+  changed();
   redraw();
 }
 
