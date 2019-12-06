@@ -552,6 +552,8 @@ void MapView::setBackgroundActivitiesEnabled(bool enabled)
     updateChecker = std::make_shared<UpdateChecker>(*this, cache, threadpool, [this](QSharedPointer<Chunk> chunk){
         renderChunkAsync(chunk);
     });
+
+    changed();
   }
 
   if (!enabled)
@@ -1001,8 +1003,6 @@ void MapView::redraw() {
 
   const auto locker = chunkCacheSatus ? std::make_unique<ChunkCache::Locker>(*cache) : nullptr;
 
-  auto renderdCacheLock = renderedChunkGroupsCache.lock();
-
   DrawHelper h(x,z,zoom,imageChunks.size());
   DrawHelper3 h2(h, imageChunks, imageOverlays, image_players);
 
@@ -1012,26 +1012,40 @@ void MapView::redraw() {
 
   QImage placeholderImg = getChunkGroupPlaceholder().copy();
 
-  RenderGroupData renderedDataDummy;
-  renderedDataDummy.renderedImg = placeholderImg.copy();
+  auto renderedDataDummy = QSharedPointer<RenderGroupData>::create();
+  renderedDataDummy->renderedImg = placeholderImg.copy();
 
   if (chunkgroupstatus)
   {
-    renderedDataDummy.renderedImg.fill(Qt::red);
+    renderedDataDummy->renderedImg.fill(Qt::red);
     placeholderImg.fill(Qt::green);
   }
 
   QBrush b(Qt::Dense6Pattern);
   h2.getCanvas().setPen(QPen(Qt::PenStyle::NoPen));
 
-  for (auto point: cgit)
+  std::vector<std::pair<ChunkGroupID, QSharedPointer<RenderGroupData> > > cgidList;
+
   {
-    const auto cgid = ChunkGroupID(point.getX(), point.getZ());
+    auto renderdCacheLock = renderedChunkGroupsCache.lock();
+    for (auto point: cgit)
+    {
+      const auto cgid = ChunkGroupID(point.getX(), point.getZ());
+
+      auto it = renderdCacheLock()[cgid];
+
+      QSharedPointer<RenderGroupData> renderedData = it ? it : renderedDataDummy;
+
+      cgidList.push_back(std::pair<ChunkGroupID, QSharedPointer<RenderGroupData> >(cgid, renderedData));
+    }
+  }
+
+  for (const auto itp: cgidList)
+  {
+    const ChunkGroupID cgid = itp.first;
+    const RenderGroupData& renderedData = *itp.second;
+
     const auto topLeftChunk = ChunkID(cgid.topLeft().getX(), cgid.topLeft().getZ());
-
-    auto it = renderdCacheLock()[cgid];
-    RenderGroupData& renderedData = it ? *it : renderedDataDummy;
-
     const auto topLeftInBlocks = TopViewPosition(topLeftChunk.topLeft().getX(), topLeftChunk.topLeft().getZ());
     const auto topLeftInPixeln = camera.getPixelFromBlockCoordinates(topLeftInBlocks);
     const auto bottomRightInPixeln = camera.getPixelFromBlockCoordinates(
@@ -1053,7 +1067,7 @@ void MapView::redraw() {
 
     if (chunkCacheSatus)
     {
-      const bool isActuallyChunkDataAvailable = (it && !imageToDraw.isNull());
+      const bool isActuallyChunkDataAvailable = ((itp.second != renderedDataDummy) && !imageToDraw.isNull());
       if (isActuallyChunkDataAvailable)
       {
         for(auto coordinate : cgid)
