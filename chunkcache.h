@@ -102,6 +102,7 @@ private:
 
   QSharedPointer<PriorityThreadPool> threadPool;
   QSharedPointer<ChunkLoaderThreadPool> loaderPool;
+  AsyncExecutionCancelGuard asyncGuard;
 
   void loadChunkAsync_unprotected(ChunkID id,
                                   JobPrio priority);

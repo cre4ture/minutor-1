@@ -207,7 +207,6 @@ class MapView : public QWidget {
 
     void update(std::chrono::milliseconds actualUpdateRate)
     {
-
       if (actualUpdateRate < updateRateGoal)
       {
         if (currentPerformance < std::numeric_limits<size_t>::max())
@@ -217,9 +216,11 @@ class MapView : public QWidget {
       }
       else
       {
-        if (currentPerformance > 1)
+        currentPerformance /= 2;
+
+        if (currentPerformance < 1)
         {
-          currentPerformance--;
+          currentPerformance = 1;
         }
       }
     }
@@ -299,6 +300,8 @@ class MapView : public QWidget {
     void regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID& cgid, RenderGroupData& data);
 
     void update_internal(bool regular);
+
+    size_t getCurrentQueueLimit() const;
   };
 
   bool isRunning;

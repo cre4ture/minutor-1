@@ -29,54 +29,61 @@ public:
   }
 
 protected:
+
+  template<class SelfT>
   class ProtectedBase
   {
   public:
-    ProtectedBase(ThreadSafeQueueBase& self_)
+    ProtectedBase(SelfT& self_)
       : self(self_)
       , mlock(self.mutex_)
     {
     }
 
   protected:
-    ThreadSafeQueueBase& self;
+    SelfT& self;
     std::unique_lock<std::mutex> mlock;
   };
 
+  template<class SelfT>
   class ConstProtectedBase
   {
   public:
-    ConstProtectedBase(const ThreadSafeQueueBase& self_)
+    ConstProtectedBase(const SelfT& self_)
       : self(self_)
       , mlock(self.mutex_)
     {
     }
 
   protected:
-    const ThreadSafeQueueBase& self;
+    const SelfT& self;
     std::unique_lock<std::mutex> mlock;
   };
 
-  class ProtectedPop: public ProtectedBase
+  template<class SelfT>
+  class ProtectedPop: public ProtectedBase<SelfT>
   {
   public:
-    using ProtectedBase::ProtectedBase;
+    using BaseT = ProtectedBase<SelfT>;
+    using BaseT::BaseT;
 
     void waitNextEvent()
     {
-      self.cond_.wait(mlock);
+      BaseT::self.cond_.wait(BaseT::mlock);
     }
   };
 
-  class ProtectedPush: public ProtectedBase
+  template<class SelfT>
+  class ProtectedPush: public ProtectedBase<SelfT>
   {
   public:
-    using ProtectedBase::ProtectedBase;
+    using BaseT = ProtectedBase<SelfT>;
+    using BaseT::BaseT;
 
     ~ProtectedPush()
     {
-      mlock.unlock(); // notify should be after mutex unlock!
-      self.cond_.notify_one();
+      BaseT::mlock.unlock(); // notify should be after mutex unlock!
+      BaseT::self.cond_.notify_one();
     }
   };
 
@@ -90,9 +97,11 @@ template <typename T>
 class ThreadSafeQueue: public ThreadSafeQueueBase
 {
 public:
+  using ThisT = ThreadSafeQueue;
+
   bool pop(T& item)
   {
-    ProtectedPop guard(*this);
+    ProtectedPop<ThisT> guard(*this);
 
     while (queue_.empty() && isAlive())
     {
@@ -111,7 +120,7 @@ public:
 
   bool tryPop(T& item)
   {
-    ProtectedPop guard(*this);
+    ProtectedPop<ThisT> guard(*this);
 
     bool endReached = queue_.empty();
     if (!endReached)
@@ -123,33 +132,52 @@ public:
     return !endReached;
   }
 
+  template<class SelfT>
+  class ProtectedPush2: public ProtectedPush<SelfT>
+  {
+  public:
+    using BaseT = ProtectedPush<SelfT>;
+    using BaseT::BaseT;
+
+    void push(T&& item, bool back = true)
+    {
+      if(back)
+        BaseT::self.queue_.push_back(std::move(item));
+      else
+        BaseT::self.queue_.push_front(std::move(item));
+    }
+
+    void push(const T& item, bool back = true)
+    {
+      if(back)
+        BaseT::self.queue_.push_back(item);
+      else
+        BaseT::self.queue_.push_front(item);
+    }
+  };
+
+
   size_t push(const T& item, bool back = true)
   {
-    ProtectedPush guard(*this);
+    ProtectedPush2<ThisT> guard(*this);
 
-    if(back)
-      queue_.push_back(item);
-    else
-      queue_.push_front(item);
+    guard.push(item, back);
 
     return queue_.size();
   }
 
   size_t push(T&& item, bool back = true)
   {
-    ProtectedPush guard(*this);
+    ProtectedPush2<ThisT> guard(*this);
 
-    if(back)
-      queue_.push_back(std::move(item));
-    else
-      queue_.push_front(std::move(item));
+    guard.push(std::move(item), back);
 
     return queue_.size();
   }
 
   size_t getCurrentQueueLength() const
   {
-    ConstProtectedBase guard(*this);
+    ConstProtectedBase<ThisT> guard(*this);
     return queue_.size();
   }
 
@@ -161,9 +189,11 @@ template <typename T, typename PrioT = int>
 class ThreadSafePriorityQueueBase: public ThreadSafeQueueBase
 {
 public:
+  using ThisT = ThreadSafePriorityQueueBase;
+
   size_t push(const T& item, const PrioT& priority)
   {
-    ProtectedPush guard(*this);
+    ProtectedPush<ThisT> guard(*this);
 
     queue_.emplace(priority, item);
 
@@ -172,7 +202,7 @@ public:
 
   size_t push(T&& item, const PrioT& priority)
   {
-    ProtectedPush guard(*this);
+    ProtectedPush<ThisT> guard(*this);
 
     queue_.emplace(priority, std::move(item));
 
@@ -181,7 +211,7 @@ public:
 
   size_t getCurrentQueueLength() const
   {
-    ConstProtectedBase guard(*this);
+    ConstProtectedBase<ThisT> guard(*this);
     return queue_.size();
   }
 
@@ -220,11 +250,12 @@ template <typename T, typename PrioT = int>
 class ThreadSafePriorityQueueWithIdleJob: public ThreadSafePriorityQueueBase<T, PrioT>
 {
 public:
+  using ThisT = ThreadSafePriorityQueueWithIdleJob;
   using BaseT = ThreadSafePriorityQueueBase<T, PrioT>;
 
   bool pop(T& item)
   {
-    typename BaseT::ProtectedPop guard(*this);
+    typename BaseT::template ProtectedPop<ThisT> guard(*this);
 
     while (BaseT::queue_.empty() && defaultValueQueue_.empty() && BaseT::isAlive())
     {
@@ -258,14 +289,14 @@ public:
 
   void registerDefaultValue(const std::shared_ptr<T>& item, PrioT priority)
   {
-    typename BaseT::ProtectedPush guard(*this);
+    typename BaseT::template ProtectedPush<ThisT> guard(*this);
 
     defaultValueQueue_.emplace(priority, item);
   }
 
   void unregisterDefaultValue(const std::shared_ptr<T>& item)
   {
-    typename BaseT::ProtectedBase guard(*this);
+    typename BaseT::template ProtectedBase<ThisT> guard(*this);
 
     for (auto it = defaultValueQueue_.begin(); it != defaultValueQueue_.end(); ++it)
     {

@@ -652,7 +652,7 @@ void MapView::UpdateChecker::idleJobFunction()
     {
       size_t len = chunksToRedraw.getCurrentQueueLength();
       //std::cout << len << std::endl;
-      if ((len < autoPerformance.getCurrentPerformance() / 2) || (len < 10))
+      if (len < getCurrentQueueLimit() / 2)
       {
         updateIsRunning = true;
         guard.unlock();
@@ -730,11 +730,28 @@ void MapView::UpdateChecker::update_internal(bool regular)
     }
 
     registerIdleJobOfNotYetDone();
+
+    //std::cout << "ctr: " << chunksToRedraw.getCurrentQueueLength() << std::endl;
   }
+}
+
+namespace {
+  const size_t numberOfCpuCores = std::thread::hardware_concurrency();
+}
+
+size_t MapView::UpdateChecker::getCurrentQueueLimit() const
+{
+  return numberOfCpuCores * 4;
 }
 
 void MapView::UpdateChecker::regularUpdata__checkRedraw()
 {
+  const size_t currentQueueLen = chunksToRedraw.getCurrentQueueLength();
+  if (currentQueueLen > getCurrentQueueLimit())
+  {
+    return;
+  }
+
   DrawHelper h(parent.x, parent.z, parent.zoom * overscanZoomFactor, parent.imageChunks.size());
 
   ChunkGroupDrawRegion cgit(h.cam);
@@ -754,7 +771,7 @@ void MapView::UpdateChecker::regularUpdata__checkRedraw()
       {
         regularUpdata__checkRedraw_chunkGroup(cgid, *data);
 
-        if (chunksToRedraw.getCurrentQueueLength() > autoPerformance.getCurrentPerformance())
+        if (chunksToRedraw.getCurrentQueueLength() > getCurrentQueueLimit())
         {
           return;
         }
@@ -764,7 +781,7 @@ void MapView::UpdateChecker::regularUpdata__checkRedraw()
 }
 
 void MapView::UpdateChecker::regularUpdata__checkRedraw_chunkGroup(const ChunkGroupID &cgid, RenderGroupData &data)
-{
+{  
   data.renderedFor = parent.getCurrentRenderParams();
 
   for(auto coordinate : cgid)
@@ -779,8 +796,8 @@ void MapView::UpdateChecker::regularUpdata__checkRedraw_chunkGroup(const ChunkGr
 
     if (parent.redrawNeeded(state))
     {
-      chunksToRedraw.push(cid);
       state.flags.set(RenderStateT::RenderingRequested);
+      chunksToRedraw.push(cid);
     }
   }
 }

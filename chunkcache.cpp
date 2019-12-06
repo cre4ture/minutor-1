@@ -2,6 +2,7 @@
 
 #include "./chunkcache.h"
 #include "./chunkloader.h"
+#include "prioritythreadpool.h"
 
 #include <QMetaType>
 #include <iostream>
@@ -18,7 +19,6 @@ ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
     , mutex(QMutex::Recursive)
     , threadPool(threadPool_)
     , loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create(threadPool))
-
 {
   chunkStates.reserve(256*1024*1024);
 
@@ -169,19 +169,22 @@ void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
 
 void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 {
-  QMutexLocker locker(&mutex);
-
-  auto& chunkState = chunkStates[id];
-  chunkState.unset(ChunkState::Loading);
-
-  if (!chunk)
   {
-    chunkState.set(ChunkState::NonExisting);
-    emit chunkLoaded(QSharedPointer<Chunk>(), id.getX(), id.getZ()); // signal that chunk information about non existend chunk is available now
-    return;
-  }
+    QMutexLocker locker(&mutex);
 
-  cache.insert(id, chunk);
+    auto& chunkState = chunkStates[id];
+    chunkState.unset(ChunkState::Loading);
+
+    if (!chunk)
+    {
+      chunkState.set(ChunkState::NonExisting);
+      emit chunkLoaded(QSharedPointer<Chunk>(), id.getX(), id.getZ()); // signal that chunk information about non existend chunk is available now
+      return;
+    }
+
+    cache.insert(id, chunk);
+
+  }
 
   if (chunk)
   {
@@ -210,7 +213,19 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
       chunkState << ChunkState::Loading;
     }
 
-  loaderPool->enqueueChunkLoading(path, id, priority);
+  threadPool->enqueueJob([this, id, cancelToken = asyncGuard.getToken()](){
+
+    if (cancelToken.isCanceled())
+    {
+      return;
+    }
+
+    ChunkLoader loader(path, id);
+    auto chunk = loader.runInternal();
+
+    gotChunk(chunk, id);
+
+  }, priority);
 }
 
 void ChunkCache::adaptCacheToWindow(int wx, int wy) {
