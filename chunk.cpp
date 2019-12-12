@@ -34,10 +34,11 @@ quint16 getBits(const unsigned char *data, int pos, int n) {
 
 
 Chunk::Chunk()
-  : entities(QSharedPointer<EntityMap>::create())
-{
-  loaded = false;
-}
+  : loaded(false)
+  , version(0)
+  , highest(0)
+  , entities(QSharedPointer<EntityMap>::create())
+{}
 
 Chunk::~Chunk() {
   if (loaded) {
@@ -56,35 +57,65 @@ Chunk::~Chunk() {
 }
 
 
+int Chunk::get_biome(int x, int z) {
+  return get_biome(x, 64, z);
+}
+
+int Chunk::get_biome(int x, int y, int z) {
+  int offset;
+
+  if (this->version >= 2203) {
+    // Minecraft 1.15 has Y dependand Biome
+    int x_idx = x >> 2;
+    int y_idx = y >> 2;
+    int z_idx = z >> 2;
+    offset = x_idx + 4*z_idx + 16*y_idx;
+  } else {
+    // Minecraft <1.15 has fixed Biome per collumn
+    offset = x + 16*z;
+  }
+
+  return get_biome(offset);
+}
+
+int Chunk::get_biome(int offset) {
+  return this->biomes[offset];
+}
+
+
+
 void Chunk::load(const NBT &nbt) {
 
   for (int i = 0; i < 16; i++)
     this->sections[i] = NULL;
-  highest = 0;
 
-  int version = 0;
   if (nbt.has("DataVersion"))
-    version = nbt.at("DataVersion")->toInt();
+    this->version = nbt.at("DataVersion")->toInt();
   const Tag * level = nbt.at("Level");
   chunkX = level->at("xPos")->toInt();
   chunkZ = level->at("zPos")->toInt();
 
-  // load Biome per column
+  // load Biome data
   if (level->has("Biomes")) {
-    const Tag_Int_Array * biomes = dynamic_cast<const Tag_Int_Array*> (level->at("Biomes"));
-    if ((version >= 1519) && biomes) {
-      // raw copy Biome data
-      safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*biomes->length());
-    } else {
-      const Tag * biomes = level->at("Biomes");
+    const Tag_Int_Array * biomes = dynamic_cast<const Tag_Int_Array*>(level->at("Biomes"));
+    if (biomes) {  // Biomes is a Tag_Int_Array
+      if ((this->version >= 2203)) {
+        // raw copy Biome data
+        safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*1024);
+      } else if ((this->version >= 1519)) {
+        // raw copy Biome data
+        safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*256);
+      }
+    } else {  // Biomes is not a Tag_Int_Array
+      const Tag_Byte_Array * biomes = dynamic_cast<const Tag_Byte_Array*>(level->at("Biomes"));
       // convert quint8 to quint32
       auto rawBiomes = biomes->toByteArray();
-      for (int i=0; i<256; i++)
+      for (int i=0; i<256; i++) {
         this->biomes[i] = rawBiomes[i];
+      }
     }
-  } else {
-    // no Biome data present
-    for (int i=0; i<256; i++)
+  } else {  // no Biome data present
+    for (int i=0; i<16*16*4; i++)
       this->biomes[i] = -1;
   }
 
@@ -99,7 +130,7 @@ void Chunk::load(const NBT &nbt) {
       // only sections 0..15 contain block data
       if ((idx >=0) && (idx <16)) {
         ChunkSection *cs = new ChunkSection();
-        if (version >= 1519) {
+        if (this->version >= 1519) {
           loadSection1519(cs, section);
         } else {
           loadSection1343(cs, section);
@@ -168,6 +199,7 @@ void Chunk::load(const NBT &nbt) {
 //
 // 1519 = 1.13
 // 1628 = 1.13.1
+// 2203 = 1.15.19w36a
 void Chunk::loadSection1343(ChunkSection *cs, const Tag *section) {
   // copy raw data
   quint8 blocks[4096];

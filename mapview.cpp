@@ -387,6 +387,28 @@ void MapView::clearCache()
   setBackgroundActivitiesEnabled(backgroundWasEnabled);
 }
 
+void MapView::adjustZoom(double steps)
+{
+  changed();
+
+  const bool allowZoomOut = QSettings().value("zoomout", false).toBool();
+
+  const double zoomMin = allowZoomOut ? 0.05 : 1.0;
+  const double zoomMax = 20.0;
+
+  const bool useFineZoomStrategy = QSettings().value("finezoom", false).toBool();
+
+  if (useFineZoomStrategy) {
+    zoom *= pow(1.3, steps);
+  }
+  else {
+    zoom = floor(zoom + steps);
+  }
+
+  if (zoom < zoomMin) zoom = zoomMin;
+  if (zoom > zoomMax) zoom = zoomMax;
+}
+
 void MapView::mousePressEvent(QMouseEvent *event) {
   lastMousePressPosition = event->pos();
   dragging = true;
@@ -414,28 +436,6 @@ QPointF MapCamera::getPixelFromBlockCoordinates(TopViewPosition block_pos) const
 
   const QPoint centerPixel(size_pixels.width() / 2, size_pixels.height() / 2);
   return centerPixel + pixelDelta;
-}
-
-void MapView::adjustZoom(double steps)
-{
-  changed();
-
-  const bool allowZoomOut = QSettings().value("zoomout", false).toBool();
-
-  const double zoomMin = allowZoomOut ? 0.05 : 1.0;
-  const double zoomMax = 20.0;
-
-  const bool useFineZoomStrategy = QSettings().value("finezoom", false).toBool();
-
-  if (useFineZoomStrategy) {
-    zoom *= pow(1.3, steps);
-  }
-  else {
-    zoom = floor(zoom + steps);
-  }
-
-  if (zoom < zoomMin) zoom = zoomMin;
-  if (zoom > zoomMax) zoom = zoomMax;
 }
 
 void MapView::changed()
@@ -897,40 +897,40 @@ void MapView::keyPressEvent(QKeyEvent *event) {
   }
 
   switch (event->key()) {
-  case Qt::Key_Up:
-  case Qt::Key_W:
-    z -= stepSize / zoom;
-    break;
-  case Qt::Key_Down:
-  case Qt::Key_S:
-    z += stepSize / zoom;
-    break;
-  case Qt::Key_Left:
-  case Qt::Key_A:
-    x -= stepSize / zoom;
-    break;
-  case Qt::Key_Right:
-  case Qt::Key_D:
-    x += stepSize / zoom;
-    break;
-  case Qt::Key_PageUp:
-  case Qt::Key_Q:
-    adjustZoom(+1);
-    break;
-  case Qt::Key_PageDown:
-  case Qt::Key_E:
-    adjustZoom(-1);
-    break;
-  case Qt::Key_Home:
-  case Qt::Key_Plus:
-  case Qt::Key_BracketLeft:
-    emit demandDepthChange(+1);
-    break;
-  case Qt::Key_End:
-  case Qt::Key_Minus:
-  case Qt::Key_BracketRight:
-    emit demandDepthChange(-1);
-    break;
+    case Qt::Key_Up:
+    case Qt::Key_W:
+      z -= stepSize / zoom;
+      break;
+    case Qt::Key_Down:
+    case Qt::Key_S:
+      z += stepSize / zoom;
+      break;
+    case Qt::Key_Left:
+    case Qt::Key_A:
+      x -= stepSize / zoom;
+      break;
+    case Qt::Key_Right:
+    case Qt::Key_D:
+      x += stepSize / zoom;
+      break;
+    case Qt::Key_PageUp:
+    case Qt::Key_Q:
+      adjustZoom(+1);
+      break;
+    case Qt::Key_PageDown:
+    case Qt::Key_E:
+      adjustZoom(-1);
+      break;
+    case Qt::Key_Home:
+    case Qt::Key_Plus:
+    case Qt::Key_BracketLeft:
+      emit demandDepthChange(+1);
+      break;
+    case Qt::Key_End:
+    case Qt::Key_Minus:
+    case Qt::Key_BracketRight:
+      emit demandDepthChange(-1);
+      break;
   }
 }
 
@@ -1016,7 +1016,7 @@ void MapView::redraw() {
   {
     renderedDataDummy->renderedImg.fill(Qt::red);
     placeholderImg.fill(Qt::green);
-  }
+            }
 
   ChunkGroupIDListT cgidList;
   cgidList.reserve(cgit.count());
@@ -1032,15 +1032,15 @@ void MapView::redraw() {
       QSharedPointer<RenderGroupData> renderedData = it ? it : renderedDataDummy;
 
       cgidList.push_back(std::pair<ChunkGroupID, QSharedPointer<RenderGroupData> >(cgid, renderedData));
-    }
-  }
+          }
+        }
 
   redraw_drawMap(cgidList, placeholderImg, h.cam, h2);
 
   if (chunkCacheSatus)
   {
     redraw_drawChunkCacheStatus(cgidList, renderedDataDummy, h2.getCanvas(), h.cam);
-  }
+      }
 
   // add on the entity layer
   // done as part of drawChunk
@@ -1217,10 +1217,10 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
   if (chunk) {
     int top = qMin(depth, chunk->highest);
     for (y = top; y >= 0; y--) {
-      int sec = y >> 4;
-      ChunkSection *section = chunk->sections[sec];
+      int section_idx = y >> 4;
+      ChunkSection *section = chunk->sections[section_idx];
       if (!section) {
-        y = (sec << 4) - 1;  // skip entire section
+        y = (section_idx << 4) - 1;  // skip entire section
         continue;
       }
 
@@ -1250,7 +1250,8 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
       blockstate.chop(1);
       break;
     }
-    auto &bi = BiomeIdentifier::Instance().getBiome(chunk->biomes[(x & 0xf) + (z & 0xf) * 16]);
+    int biome_code = chunk->get_biome((x & 0xf), y, (z & 0xf));
+    auto &bi = BiomeIdentifier::Instance().getBiome(biome_code);
     biome = bi.name;
 
     // count Entity of each display type
@@ -1274,8 +1275,8 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
   }
 
   QString hovertext = QString("X:%1 Y:%2 Z:%3 (Nether: X:%7 Z:%8) - %4 - %5 (id:%6)")
-      .arg(x).arg(y).arg(z)
-      .arg(biome)
+                              .arg(x).arg(y).arg(z)
+                              .arg(biome)
       .arg(name)
       .arg(blockId)
       .arg(x/8)
@@ -1287,10 +1288,10 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
 
   hovertext += QString(" - zoom: %1").arg(zoom);
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(_DEBUG) || defined(QT_DEBUG)
   hovertext += " [Cache:"
-      + QString().number(this->cache.getCost()) + "/"
-      + QString().number(this->cache.getMaxCost()) + "]";
+            + QString().number(this->cache.getCost()) + "/"
+            + QString().number(this->cache.getMaxCost()) + "]";
 #endif
 
   emit hoverTextChanged(hovertext);
@@ -1376,13 +1377,13 @@ QList<QSharedPointer<OverlayItem>> MapView::getItems(int x, int y, int z) {
       // entities
       auto itemRange = chunk->entities->equal_range(type);
       for (auto itItem = itemRange.first; itItem != itemRange.second;
-           ++itItem) {
+          ++itItem) {
         double ymin = y - BELOW_GROUND_VALUE;
         double ymax = depth + 4;
 
         if ((*itItem)->intersects(
-              OverlayItem::Point(x - invzoom/2, ymin, z - invzoom/2),
-              OverlayItem::Point(x + 1 + invzoom/2, ymax, z + 1 + invzoom/2))) {
+            OverlayItem::Point(x - invzoom/2, ymin, z - invzoom/2),
+            OverlayItem::Point(x + 1 + invzoom/2, ymax, z + 1 + invzoom/2))) {
           ret.append(*itItem);
         }
       }

@@ -59,7 +59,8 @@ ChunkCache::~ChunkCache() {
 }
 
 void ChunkCache::clear() {
-  mutex.lock();
+
+  QMutexLocker guard(&mutex);
 
   loaderPool.reset(); // stop everything!
 
@@ -69,8 +70,6 @@ void ChunkCache::clear() {
   loaderPool = QSharedPointer<ChunkLoaderThreadPool>::create(threadPool); // start again
   connect(loaderPool.data(), SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
           this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
-
-  mutex.unlock();
 }
 
 void ChunkCache::setPath(QString path) {
@@ -130,7 +129,6 @@ bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out,
       chunk_out.reset();
       return false;
   }
-
   return cached;
 }
 
@@ -231,5 +229,7 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
 void ChunkCache::adaptCacheToWindow(int wx, int wy) {
   int chunks = ((wx + 15) >> 4) * ((wy + 15) >> 4);  // number of chunks visible
   chunks *= 1.10;  // add 10%
+
+  QMutexLocker guard(&mutex);
   cache.setMaxCost(qMin(chunks, maxcache));
 }

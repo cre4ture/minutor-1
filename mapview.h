@@ -40,10 +40,9 @@ class MapView : public QWidget {
     flgMobSpawn     = 1 << 1,
     flgCaveMode     = 1 << 2,
     flgDepthShading = 1 << 3,
-    flgShowEntities = 1 << 4,
-    flgSingleLayer  = 1 << 5,
-    flgBiomeColors  = 1 << 6,
-    flgSeaGround    = 1 << 7
+    flgBiomeColors  = 1 << 4,
+    flgSeaGround    = 1 << 5,
+    flgSingleLayer  = 1 << 6
   };
 
   typedef struct {
@@ -147,6 +146,7 @@ class MapView : public QWidget {
   void getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk> &chunk);
   int getY(int x, int z);
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
+  void adjustZoom(double steps);
 
   MapCamera getCamera() const;
 
@@ -160,8 +160,6 @@ class MapView : public QWidget {
   int scale;
 
   double zoom;
-
-  void adjustZoom(double steps);
 
   int flags;
   QTimer updateTimer;

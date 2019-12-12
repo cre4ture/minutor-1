@@ -53,6 +53,10 @@ class Chunk : public QObject {
   ~Chunk();
   void load(const NBT &nbt);
 
+  qint32 get_biome(int x, int z);
+  qint32 get_biome(int x, int y, int z);
+  qint32 get_biome(int offset);
+
   const EntityMap& getEntityMap() const { return *entities; }
   const QSharedPointer<EntityMap> getEntityMapSp() const { return entities; }
 
@@ -65,7 +69,8 @@ class Chunk : public QObject {
   void loadSection1343(ChunkSection *cs, const Tag *section);
   void loadSection1519(ChunkSection *cs, const Tag *section);
 
-  quint32 biomes[16*16];
+  int version;
+  qint32 biomes[16 * 16 * 4];
   int highest;
   ChunkSection *sections[16];
   bool loaded;
