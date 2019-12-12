@@ -119,6 +119,13 @@ class MapView : public QWidget {
   void addStructureFromChunk(QSharedPointer<GeneratedStructure> structure);
 
  private:
+
+  using ChunkGroupIDListT = std::vector<std::pair<ChunkGroupID, QSharedPointer<RenderGroupData> > >;
+
+  void redraw_drawMap(const ChunkGroupIDListT& cgidList, const QImage &placeholderImg, const MapCamera &camera, DrawHelper3& h2);
+
+  void redraw_drawChunkCacheStatus(const ChunkGroupIDListT& cgidList, const QSharedPointer<RenderGroupData>& renderedDataDummy, QPainter &canvas, const MapCamera &camera);
+
   class AsyncRenderLock;
 
   RenderParams getCurrentRenderParams() const
