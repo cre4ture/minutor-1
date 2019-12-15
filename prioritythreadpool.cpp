@@ -4,6 +4,7 @@
 
 #include <QList>
 #include <QThread>
+#include <iostream>
 
 
 namespace {
@@ -41,8 +42,14 @@ public:
         PriorityThreadPool::JobT job;
         while (jobqueue.pop(job))
         {
+          try {
             job();
-            job = PriorityThreadPool::JobT(); // directly delete functor after execution and before blocking for wait.
+          } catch (std::exception e) {
+            std::cerr << "PriorityThreadPool(): exception caught: " << e.what() << std::endl;
+          } catch (...) {
+            std::cerr << "PriorityThreadPool(): unknown exception caught" << std::endl;
+          }
+          job = PriorityThreadPool::JobT(); // directly delete functor after execution and before blocking for wait.
         }
       });
 
