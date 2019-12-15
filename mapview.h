@@ -71,6 +71,7 @@ class MapView : public QWidget {
   void setLocation(double x, double z);
   void setLocation(double x, int y, double z, bool ignoreScale, bool useHeight);
   BlockLocation getLocation();
+  BlockLocation getConfiguredLocation();
   void setDimension(QString path, int scale);
   void setFlags(int flags);
   int  getFlags() const;

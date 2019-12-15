@@ -290,6 +290,16 @@ MapView::BlockLocation MapView::getLocation()
   return currentLocation;
 }
 
+MapView::BlockLocation MapView::getConfiguredLocation()
+{
+  MapView::BlockLocation loc;
+  loc.x = x;
+  loc.y = depth;
+  loc.z = z;
+  loc.scale = scale;
+  return loc;
+}
+
 void MapView::setDimension(QString path, int scale) {
   if (scale > 0) {
     this->x *= this->scale;

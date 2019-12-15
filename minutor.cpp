@@ -148,7 +148,7 @@ void Minutor::open() {
 }
 
 void Minutor::reload() {
-  auto loc = mapview->getLocation();
+  auto loc = mapview->getConfiguredLocation();
 
   loadWorld(currentWorld);
   mapview->setLocation(loc.x, loc.y, loc.z, false, true);
