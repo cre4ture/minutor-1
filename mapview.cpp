@@ -1290,8 +1290,8 @@ void MapView::getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<C
 
 #if defined(DEBUG) || defined(_DEBUG) || defined(QT_DEBUG)
   hovertext += " [Cache:"
-            + QString().number(this->cache.getCost()) + "/"
-            + QString().number(this->cache.getMaxCost()) + "]";
+            + QString().number(this->cache->getCost()) + "/"
+            + QString().number(this->cache->getMaxCost()) + "]";
 #endif
 
   emit hoverTextChanged(hovertext);
