@@ -96,25 +96,37 @@ void Chunk::load(const NBT &nbt) {
   chunkZ = level->at("zPos")->toInt();
 
   // load Biome data
-  if (level->has("Biomes")) {
+  bool biomesAvailable = level->has("Biomes");
+  if (biomesAvailable) {
     const Tag_Int_Array * biomes = dynamic_cast<const Tag_Int_Array*>(level->at("Biomes"));
     if (biomes) {  // Biomes is a Tag_Int_Array
-      if ((this->version >= 2203)) {
-        // raw copy Biome data
-        safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*1024);
-      } else if ((this->version >= 1519)) {
-        // raw copy Biome data
-        safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*256);
+      biomesAvailable = (biomes->length() != 0);
+      if (biomesAvailable)
+      {
+        if ((this->version >= 2203)) {
+          // raw copy Biome data
+          safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*1024);
+        } else if ((this->version >= 1519)) {
+          // raw copy Biome data
+          safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*256);
+        }
       }
     } else {  // Biomes is not a Tag_Int_Array
       const Tag_Byte_Array * biomes = dynamic_cast<const Tag_Byte_Array*>(level->at("Biomes"));
-      // convert quint8 to quint32
-      auto rawBiomes = biomes->toByteArray();
-      for (int i=0; i<256; i++) {
-        this->biomes[i] = rawBiomes[i];
+      biomesAvailable = (biomes) && (biomes->length() != 0);
+      if (biomesAvailable)
+      {
+        // convert quint8 to quint32
+        auto rawBiomes = biomes->toByteArray();
+        for (int i=0; i<256; i++) {
+          this->biomes[i] = rawBiomes[i];
+        }
       }
     }
-  } else {  // no Biome data present
+  }
+
+  if (!biomesAvailable)
+  {  // no Biome data present
     for (int i=0; i<16*16*4; i++)
       this->biomes[i] = -1;
   }
