@@ -28,14 +28,22 @@ void ChunkLoader::run() {
 
 QSharedPointer<NBT> ChunkLoader::loadNbt()
 {
-    QString filename = getRegionFilename(path, id);
+  QString filename = getRegionFilename(path, id);
 
-    QFile f(filename);
+  QFile f(filename);
   if (!f.open(QIODevice::ReadOnly)) {  // no chunks in this region
       return QSharedPointer<NBT>();
   }
+
+
+  const int headerSize = 4096;
+
+  if (f.size() < headerSize) {
+    return QSharedPointer<NBT>(); // file header not yet fully written by minecraft
+  }
+
   // map header into memory
-  uchar *header = f.map(0, 4096);
+  uchar *header = f.map(0, headerSize);
   int offset = 4 * ((id.getX() & 31) + (id.getZ() & 31) * 32);
   int coffset = (header[offset] << 16) | (header[offset + 1] << 8) |
       header[offset + 2];
@@ -47,8 +55,15 @@ QSharedPointer<NBT> ChunkLoader::loadNbt()
     return QSharedPointer<NBT>();
   }
 
-  uchar *raw = f.map(coffset * 4096, numSectors * 4096);
-    if (raw == nullptr) {
+  const int chunkStart = coffset * 4096;
+  const int chunkSize = numSectors * 4096;
+
+  if (f.size() < (chunkStart + chunkSize)) {
+    return QSharedPointer<NBT>(); // chunk not yet fully written by minecraft
+  }
+
+  uchar *raw = f.map(chunkStart, chunkSize);
+  if (raw == nullptr) {
     f.close();
     return QSharedPointer<NBT>();
   }
