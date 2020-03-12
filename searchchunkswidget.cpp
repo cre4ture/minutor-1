@@ -12,12 +12,11 @@
 
 SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
-    , ui(new Ui::SearchChunksWidget)
-    , m_input(input)
-    , m_invoker()
-    , m_threadPool(m_input.threadpool)
-    , m_searchRunning(false)
-    , m_asyncExecutionGuard()
+  , ui(new Ui::SearchChunksWidget)
+  , m_input(input)
+  , m_invoker()
+  , safeThreadPoolI(*m_input.threadpool)
+  , m_searchRunning(false)
 {
   ui->setupUi(this);
 
@@ -38,16 +37,16 @@ SearchChunksWidget::~SearchChunksWidget()
 
 void SearchChunksWidget::on_pb_search_clicked()
 {
-  if (m_asyncExecutionGuard)
+  if (!currentToken.isCanceled().first)
   {
     cancelSearch();
     return;
   }
 
-  ui->pb_search->setText("Cancel");
+  currentToken = safeThreadPoolI.getCancelToken().toWeakToken();
+  auto weakToken = currentToken;
 
-  m_asyncExecutionGuard = GuardT::create(*this);
-  auto weakCancel = m_asyncExecutionGuard->getAccessor().token().toWeakToken();
+  ui->pb_search->setText("Cancel");
 
   m_chunksRequestedToSearchList.clear();
 
@@ -79,7 +78,7 @@ void SearchChunksWidget::on_pb_search_clicked()
     if ((count++ % 100) == 0)
       QApplication::processEvents();
 
-    if (weakCancel.isCanceled().first)
+    if (weakToken.isCanceled().first)
     {
       return;
     }
@@ -101,21 +100,20 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
     }
   }
 
-  m_threadPool->enqueueJob([id, cancelToken = m_asyncExecutionGuard->getWeakAccessor()]()
+  safeThreadPoolI.enqueueJob([this, id]()
   {
-    auto guard = cancelToken.safeAccess();
+    auto chunk = m_input.cache->getChunkSynchronously(id);
 
-    auto chunk = guard.first.m_input.cache->getChunkSynchronously(id);
-
-    guard.first.m_invoker.invoke([cancelToken, chunk, id](){
-      cancelToken.safeAccess().first.chunkLoaded(chunk, id.getX(), id.getZ());
+    m_invoker.invoke([this, chunk, id](){
+      chunkLoaded(chunk, id.getX(), id.getZ());
     });
   });
 }
 
 void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-  if (!m_asyncExecutionGuard || m_asyncExecutionGuard->getToken().isCanceled())
+  auto cancelstate = currentToken.isCanceled();
+  if (cancelstate.first)
   {
     return;
   }
@@ -154,17 +152,10 @@ Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1,
 
 void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 {
-  auto guard = m_asyncExecutionGuard;
-
-  if (!guard)
-    return;
-
   const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
 
-  auto job = [chunk, range_y, cancelToken = guard->getWeakAccessor(), searchPlug = m_input.searchPlugin.toWeakRef()]()
+  auto job = [this, chunk, range_y, searchPlug = m_input.searchPlugin.toWeakRef()]()
   {
-    auto guard = cancelToken.safeAccess();
-
     ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
     auto strong = searchPlug.lock();
@@ -184,15 +175,12 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
       }
     }
 
-    guard.first.m_invoker.invoke([cancelToken, results, id](){
-
-      auto guard = cancelToken.safeAccess();
-
-      guard.first.displayResults(results, id);
+    m_invoker.invoke([this, results, id](){
+      displayResults(results, id);
     });
   };
 
-  m_threadPool->enqueueJob(job, JobPrio::high);
+  safeThreadPoolI.enqueueJob(job, JobPrio::high);
 }
 
 
@@ -219,7 +207,7 @@ void SearchChunksWidget::addOneToProgress(ChunkID /* id */)
 
 void SearchChunksWidget::cancelSearch()
 {
-  m_asyncExecutionGuard.reset();
+  safeThreadPoolI.renewCancellation();
 
   ui->pb_search->setText("Search");
 

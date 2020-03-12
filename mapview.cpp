@@ -191,7 +191,7 @@ private:
   DrawHelper2 h2_depth;
 };
 
-MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool_,
+MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool__,
                  const QSharedPointer<ChunkCache>& chunkcache,
                  QWidget *parent)
   : QWidget(parent)
@@ -200,8 +200,8 @@ MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool_,
   , cache(chunkcache)
   , renderedChunkGroupsCache(std::make_unique<RenderedChunkGroupCacheUnprotectedT>("rendergroups"))
   , dragging(false)
-  , threadpool(threadpool_)
-  , cancellationGuard(*this)
+  , threadpool_(threadpool__)
+  , safeThreadPoolI(*threadpool_)
   , invoker()
   , hasChanged(true)
   , updateChecker()
@@ -513,18 +513,14 @@ const QImage& getChunkGroupPlaceholder()
 
 size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  return threadpool->enqueueJob([chunk, cancelToken = cancellationGuard.getWeakAccessor()](){
-
-    auto guard = cancelToken.safeAccess();
+  return safeThreadPoolI.enqueueJob([this, chunk](){
 
     auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
     renderedChunk->init();
 
-    ChunkRenderer::renderChunk(guard.first, chunk, *renderedChunk);
-    guard.first.m_invoker.invoke([renderedChunk, cancelToken](){
-      auto guard = cancelToken.safeAccess();
-
-      guard.first.renderingDone(renderedChunk);
+    ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
+    m_invoker.invoke([this, renderedChunk](){
+      renderingDone(renderedChunk);
     });
   }, JobPrio::high);
 }
@@ -562,7 +558,7 @@ void MapView::setBackgroundActivitiesEnabled(bool enabled)
 {
   if ((!updateChecker) && enabled)
   {
-    updateChecker = std::make_shared<UpdateChecker>(*this, cache, threadpool, [this](QSharedPointer<Chunk> chunk){
+    updateChecker = std::make_shared<UpdateChecker>(*this, cache, threadpool_, [this](QSharedPointer<Chunk> chunk){
         renderChunkAsync(chunk);
     });
 

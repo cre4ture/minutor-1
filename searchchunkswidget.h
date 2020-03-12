@@ -10,6 +10,7 @@
 #include "value_initialized.h"
 #include "cancellation.hpp"
 #include "safeinvoker.h"
+#include "safeprioritythreadpoolwrapper.h"
 
 #include <QWidget>
 #include <set>
@@ -77,12 +78,10 @@ private:
     QSharedPointer<Ui::SearchChunksWidget> ui;
     SearchEntityWidgetInputC m_input;
     SafeInvoker m_invoker;
-    QSharedPointer<PriorityThreadPool> m_threadPool;
+    SafePriorityThreadPoolWrapper safeThreadPoolI;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
-
-    using GuardT = QSharedPointer<AsyncExecutionGuardAndAccessor_t<SearchChunksWidget> >;
-    GuardT m_asyncExecutionGuard;
+    CancellationTokenWeakPtr currentToken;
 
     void requestSearchingOfChunk(ChunkID id);
 

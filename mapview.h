@@ -190,8 +190,8 @@ class MapView : public QWidget {
   QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
   SafeInvoker m_invoker;
-  QSharedPointer<PriorityThreadPool> threadpool;
-  AsyncExecutionGuardAndAccessor_t<MapView> cancellationGuard;
+  QSharedPointer<PriorityThreadPool> threadpool_;
+  SafePriorityThreadPoolWrapper safeThreadPoolI;
 
   SafeInvoker invoker;
   bool hasChanged;

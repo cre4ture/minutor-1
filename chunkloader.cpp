@@ -100,9 +100,9 @@ QString ChunkLoader::getRegionFilename(const QString& path, const ChunkID& id)
             QString::number(rz) + ".mca";
 }
 
-ChunkLoaderThreadPool::ChunkLoaderThreadPool(const QSharedPointer<PriorityThreadPool> &threadPool_)
-  : asyncGuard(*this)
-  , threadPool(threadPool_)
+ChunkLoaderThreadPool::ChunkLoaderThreadPool(const QSharedPointer<PriorityThreadPool> &threadPool__)
+  : threadPool_(threadPool__)
+  , safeThreadPoolI(*threadPool_)
 {
 
 }
@@ -116,9 +116,7 @@ void ChunkLoaderThreadPool::enqueueChunkLoading(QString path,
                                                 ChunkID id,
                                                 JobPrio priority)
 {
-    threadPool->enqueueJob([this /* this needs to be captured for emit */, path, id, cancelToken = asyncGuard.getWeakAccessor()](){
-
-      auto guard = cancelToken.safeAccess();
+    safeThreadPoolI.enqueueJob([this, path, id](){
 
       ChunkLoader loader(path, id);
       auto chunk = loader.runInternal();

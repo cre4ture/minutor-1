@@ -30,9 +30,11 @@ HEADERS += \
   mapcamera.hpp \
   mapviewrenderer.h \
   prioritythreadpool.h \
+  prioritythreadpoolinterface.h \
   range.h \
   safecache.hpp \
   safeinvoker.h \
+  safeprioritythreadpoolwrapper.h \
   searchchunkswidget.h \
   value_initialized.h \
   zlib/zlib.h \
@@ -101,6 +103,7 @@ SOURCES += \
   prioritythreadpool.cpp \
   properties.cpp \
   safeinvoker.cpp \
+  safeprioritythreadpoolwrapper.cpp \
   searchchunkswidget.cpp \
   settings.cpp \
   village.cpp \

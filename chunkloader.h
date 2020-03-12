@@ -5,6 +5,7 @@
 #include "coordinateid.h"
 #include "cancellation.hpp"
 #include "jobprio.h"
+#include "safeprioritythreadpoolwrapper.h"
 
 #include <QObject>
 #include <QRunnable>
@@ -31,8 +32,9 @@ signals:
   void chunkUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 
 private:
-  AsyncExecutionGuardAndAccessor_t<ChunkLoaderThreadPool> asyncGuard;
-  QSharedPointer<PriorityThreadPool> threadPool;
+  QSharedPointer<PriorityThreadPool> threadPool_;
+  SafePriorityThreadPoolWrapper safeThreadPoolI;
+
 
   void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 };
