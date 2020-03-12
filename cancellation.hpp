@@ -177,13 +177,13 @@ public:
 
   std::pair<ThisT&,CancellationTokenPtr> safeAccess() const
   {
-    auto strongPtr = guard.lock();
-    if (!strongPtr || strongPtr->isCanceled())
+    auto cancelState = guard.isCanceled();
+    if (cancelState.first)
     {
       throw CancelledException("already cancelled!");
     }
 
-    return std::make_pair(std::ref(myParent), strongPtr);
+    return std::make_pair(std::ref(myParent), cancelState.second);
   }
 
 private:
