@@ -1,5 +1,7 @@
 #include "safeinvoker.h"
 
+#include "cancellation.hpp"
+
 Q_DECLARE_METATYPE(QSharedPointer<std::function<void()>>)
 
 SafeInvoker::SafeInvoker()
@@ -23,5 +25,12 @@ void SafeInvoker::invoke(std::function<void ()> functionObj)
 void SafeInvoker::invokeAtMainThread(QSharedPointer<std::function<void()>> functionObj)
 {
   if (functionObj)
-    (*functionObj)();
+  {
+    try
+    {
+      (*functionObj)();
+    } catch (CancelledException e) {
+
+    }
+  }
 }

@@ -6,6 +6,12 @@
 
 #include <future>
 
+class CancelledException: public std::runtime_error
+{
+public:
+  using std::runtime_error::runtime_error;
+};
+
 class CancellationTokenI
 {
 public:
@@ -38,10 +44,11 @@ class CancellationTokenWeakPtr : public QWeakPointer<CancellationTokenI>
 public:
   using QWeakPointer::QWeakPointer;
 
-  bool isCanceled() const
+  std::pair<bool, QSharedPointer<CancellationTokenI> > isCanceled() const
   {
     auto strongPtr = lock();
-    return (!strongPtr) || strongPtr->isCanceled();
+    bool isCanceled = (!strongPtr) || strongPtr->isCanceled();
+    return std::make_pair(isCanceled, strongPtr);
   }
 
   CancellationTokenPtr toStrongTokenPtr() const;
@@ -137,6 +144,73 @@ public:
 
 private:
   CancellationPtr cancellation;
+};
+
+template<class ThisT>
+class CancelSafeThisAccessor_t
+{
+public:
+  CancelSafeThisAccessor_t(ThisT& parent_, const CancellationTokenPtr& guard_)
+    : guard(guard_)
+    , myParent(parent_)
+  {}
+
+  ThisT& parent() const { return myParent; }
+
+  CancellationTokenPtr token() const {
+    return guard;
+  }
+
+private:
+  CancellationTokenPtr guard;
+  ThisT& myParent;
+};
+
+template<class ThisT>
+class WeakCancelSafeThisAccessor_t
+{
+public:
+  WeakCancelSafeThisAccessor_t(ThisT& parent_, const CancellationTokenWeakPtr& guard_)
+    : guard(guard_)
+    , myParent(parent_)
+  {}
+
+  std::pair<ThisT&,CancellationTokenPtr> safeAccess() const
+  {
+    auto strongPtr = guard.lock();
+    if (!strongPtr || strongPtr->isCanceled())
+    {
+      throw CancelledException("already cancelled!");
+    }
+
+    return std::make_pair(std::ref(myParent), strongPtr);
+  }
+
+private:
+  CancellationTokenWeakPtr guard;
+  ThisT& myParent;
+};
+
+template<class ThisT>
+class AsyncExecutionGuardAndAccessor_t: public AsyncExecutionCancelGuard
+{
+public:
+  AsyncExecutionGuardAndAccessor_t(ThisT& parent_)
+    : parent(parent_)
+  {}
+
+  CancelSafeThisAccessor_t<ThisT> getAccessor() const
+  {
+    return CancelSafeThisAccessor_t<ThisT>(parent, AsyncExecutionCancelGuard::getToken());
+  }
+
+  WeakCancelSafeThisAccessor_t<ThisT> getWeakAccessor() const
+  {
+    return WeakCancelSafeThisAccessor_t<ThisT>(parent, AsyncExecutionCancelGuard::getToken());
+  }
+
+private:
+  ThisT& parent;
 };
 
 

@@ -74,13 +74,15 @@ private slots:
     void displayResults(QSharedPointer<SearchPluginI::ResultListT> results, ChunkID id);
 
 private:
-    Ui::SearchChunksWidget *ui;
+    QSharedPointer<Ui::SearchChunksWidget> ui;
     SearchEntityWidgetInputC m_input;
     SafeInvoker m_invoker;
     QSharedPointer<PriorityThreadPool> m_threadPool;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
-    CancellationPtr cancellation;
+
+    using GuardT = QSharedPointer<AsyncExecutionGuardAndAccessor_t<SearchChunksWidget> >;
+    GuardT m_asyncExecutionGuard;
 
     void requestSearchingOfChunk(ChunkID id);
 

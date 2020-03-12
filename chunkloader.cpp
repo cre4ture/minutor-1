@@ -101,7 +101,7 @@ QString ChunkLoader::getRegionFilename(const QString& path, const ChunkID& id)
 }
 
 ChunkLoaderThreadPool::ChunkLoaderThreadPool(const QSharedPointer<PriorityThreadPool> &threadPool_)
-  : asyncGuard()
+  : asyncGuard(*this)
   , threadPool(threadPool_)
 {
 
@@ -116,16 +116,14 @@ void ChunkLoaderThreadPool::enqueueChunkLoading(QString path,
                                                 ChunkID id,
                                                 JobPrio priority)
 {
-    threadPool->enqueueJob([this, path, id, cancelToken = asyncGuard.getToken()](){
+    threadPool->enqueueJob([this /* this needs to be captured for emit */, path, id, cancelToken = asyncGuard.getWeakAccessor()](){
 
-      if (cancelToken.isCanceled())
-      {
-        return;
-      }
+      auto guard = cancelToken.safeAccess();
 
       ChunkLoader loader(path, id);
       auto chunk = loader.runInternal();
       emit chunkUpdated(chunk, id);
+
     }, priority);
 }
 

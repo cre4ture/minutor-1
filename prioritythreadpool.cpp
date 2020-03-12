@@ -1,5 +1,7 @@
 #include "prioritythreadpool.h"
 
+#include "cancellation.hpp"
+
 #include <future>
 
 #include <QList>
@@ -44,6 +46,8 @@ public:
         {
           try {
             job();
+          } catch (CancelledException e) {
+            /* ignore */
           } catch (std::exception e) {
             std::cerr << "PriorityThreadPool(): exception caught: " << e.what() << std::endl;
           } catch (...) {

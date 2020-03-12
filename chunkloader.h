@@ -31,7 +31,7 @@ signals:
   void chunkUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
 
 private:
-  AsyncExecutionCancelGuard asyncGuard;
+  AsyncExecutionGuardAndAccessor_t<ChunkLoaderThreadPool> asyncGuard;
   QSharedPointer<PriorityThreadPool> threadPool;
 
   void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);

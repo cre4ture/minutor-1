@@ -191,7 +191,7 @@ class MapView : public QWidget {
 
   SafeInvoker m_invoker;
   QSharedPointer<PriorityThreadPool> threadpool;
-  AsyncExecutionCancelGuard cancellationGuard;
+  AsyncExecutionGuardAndAccessor_t<MapView> cancellationGuard;
 
   SafeInvoker invoker;
   bool hasChanged;
@@ -266,7 +266,7 @@ class MapView : public QWidget {
     QSharedPointer<PriorityThreadPool> threadpool;
     const JobPrio prio;
     std::function<void()> func;
-    AsyncExecutionCancelGuard cancellation;
+    AsyncExecutionGuardAndAccessor_t<AsyncLoop> cancellation;
 
     void requestNext();
   };

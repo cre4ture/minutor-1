@@ -19,6 +19,7 @@ ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
     , mutex(QMutex::Recursive)
     , threadPool(threadPool_)
     , loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create(threadPool))
+    , asyncGuard(*this)
 {
   chunkStates.reserve(256*1024*1024);
 
@@ -211,17 +212,14 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
       chunkState << ChunkState::Loading;
     }
 
-  threadPool->enqueueJob([this, id, cancelToken = asyncGuard.getToken()](){
+  threadPool->enqueueJob([id, cancelToken = asyncGuard.getWeakAccessor()](){
 
-    if (cancelToken.isCanceled())
-    {
-      return;
-    }
+    auto guard = cancelToken.safeAccess();
 
-    ChunkLoader loader(path, id);
+    ChunkLoader loader(guard.first.path, id);
     auto chunk = loader.runInternal();
 
-    gotChunk(chunk, id);
+    guard.first.gotChunk(chunk, id);
 
   }, priority);
 }

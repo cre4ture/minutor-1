@@ -201,7 +201,7 @@ MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool_,
   , renderedChunkGroupsCache(std::make_unique<RenderedChunkGroupCacheUnprotectedT>("rendergroups"))
   , dragging(false)
   , threadpool(threadpool_)
-  , cancellationGuard()
+  , cancellationGuard(*this)
   , invoker()
   , hasChanged(true)
   , updateChecker()
@@ -379,6 +379,8 @@ void MapView::updatePlayerPositions(const QVector<PlayerInfo> &playerList)
     auto entity = QSharedPointer<Entity>::create(info);
     currentPlayers.push_back(entity);
   }
+
+  changed();
 }
 
 void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem>> &searchResults)
@@ -511,19 +513,18 @@ const QImage& getChunkGroupPlaceholder()
 
 size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  return threadpool->enqueueJob([this, chunk, cancelToken = cancellationGuard.getToken()](){
-    if (cancelToken.isCanceled())
-      return;
+  return threadpool->enqueueJob([chunk, cancelToken = cancellationGuard.getWeakAccessor()](){
+
+    auto guard = cancelToken.safeAccess();
 
     auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
     renderedChunk->init();
 
-    ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-    m_invoker.invoke([this, renderedChunk, cancelToken = cancelToken.toWeakToken()](){
-      if (cancelToken.isCanceled())
-        return;
+    ChunkRenderer::renderChunk(guard.first, chunk, *renderedChunk);
+    guard.first.m_invoker.invoke([renderedChunk, cancelToken](){
+      auto guard = cancelToken.safeAccess();
 
-      renderingDone(renderedChunk);
+      guard.first.renderingDone(renderedChunk);
     });
   }, JobPrio::high);
 }
@@ -1324,14 +1325,18 @@ void MapView::addOverlayItem(QSharedPointer<OverlayItem> item) {
   }
   // otherwise add item
   overlayItems[item->type()].push_back(item);
+
+  changed();
 }
 
 void MapView::clearOverlayItems() {
   overlayItems.clear();
+  changed();
 }
 
 void MapView::setVisibleOverlayItemTypes(const QSet<QString>& itemTypes) {
   overlayItemTypes = itemTypes;
+  changed();
 }
 
 QList<QSharedPointer<OverlayItem> > MapView::getOverlayItems(const QString &type) const
@@ -1444,22 +1449,19 @@ MapView::AsyncLoop::AsyncLoop(const QSharedPointer<PriorityThreadPool>& threadpo
   : threadpool(threadpool_)
   , prio(prio_)
   , func(func_)
+  , cancellation(*this)
 {
   requestNext();
 }
 
 void MapView::AsyncLoop::requestNext()
 {
-  threadpool->enqueueJob([this, weakCancelToken = cancellation.getToken().toWeakToken()](){
+  threadpool->enqueueJob([cancelToken = cancellation.getWeakAccessor()](){
 
-    auto strongToken = weakCancelToken.toStrongTokenPtr();
-    if (strongToken.isCanceled())
-    {
-      return;
-    }
+    auto guard = cancelToken.safeAccess();
 
-    func();
+    guard.first.func();
 
-    requestNext();
+    guard.first.requestNext();
   }, prio);
 }
