@@ -14,9 +14,9 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
   , ui(new Ui::SearchChunksWidget)
   , m_input(input)
+  , m_searchRunning(false)
   , m_invoker()
   , safeThreadPoolI(*m_input.threadpool)
-  , m_searchRunning(false)
 {
   ui->setupUi(this);
 
