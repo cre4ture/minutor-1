@@ -201,10 +201,10 @@ MapView::MapView(const QSharedPointer<PriorityThreadPool> &threadpool__,
   , renderedChunkGroupsCache(std::make_unique<RenderedChunkGroupCacheUnprotectedT>("rendergroups"))
   , dragging(false)
   , threadpool_(threadpool__)
-  , safeThreadPoolI(*threadpool_)
   , invoker()
   , hasChanged(true)
   , updateChecker()
+  , safeThreadPoolI(*threadpool_)
 {
   havePendingToolTip = false;
 
@@ -635,13 +635,14 @@ MapView::UpdateChecker::UpdateChecker(MapView& parent_,
                                       std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_
                                       )
   : parent(parent_)
+  , mutex()
   , cache(cache_)
   , threadpool(threadpool_)
   , renderChunkRequestFunction(renderChunkRequestFunction_)
   , autoPerformance(std::chrono::milliseconds(30))
-  , asyncGuard()
   , updateIsRunning(false)
   , isIdleJobRegistered(false)
+  , asyncGuard()
 {
   idleJob = std::make_shared<std::function<void()> >([this, cancelToken = asyncGuard.getTokenPtr()](){
     auto guard = cancelToken.createExecutionGuardChecked();

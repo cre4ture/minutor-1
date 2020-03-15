@@ -191,7 +191,6 @@ class MapView : public QWidget {
 
   SafeGuiThreadInvoker m_invoker;
   QSharedPointer<PriorityThreadPool> threadpool_;
-  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
 
   SafeGuiThreadInvoker invoker;
   bool hasChanged;
@@ -266,7 +265,7 @@ class MapView : public QWidget {
     QSharedPointer<PriorityThreadPool> threadpool;
     const JobPrio prio;
     std::function<void()> func;
-    SimpleSafePriorityThreadPoolWrapper safeThreadI;
+    SimpleSafePriorityThreadPoolWrapper safeThreadI;     // must be last member
 
     void requestNext();
   };
@@ -285,6 +284,7 @@ class MapView : public QWidget {
 
   private:
     MapView& parent;
+    std::mutex mutex;
     QSharedPointer<ChunkCache> cache;
     QSharedPointer<PriorityThreadPool> threadpool;
     std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction;
@@ -292,11 +292,11 @@ class MapView : public QWidget {
     ChunkIteratorC chunkRedrawIterator;
     AutoPerformance autoPerformance;
     AutoPerformanceTimer autoPerformanceTimer;
-    AsyncExecutionCancelGuard asyncGuard;
-    std::mutex mutex;
     bool updateIsRunning;
     std::shared_ptr<std::function<void()> > idleJob;
     bool isIdleJobRegistered;
+
+    AsyncExecutionCancelGuard asyncGuard;     // must be last member
 
     void idleJobFunction();
     void registerIdleJobOfNotYetDone();
@@ -312,6 +312,8 @@ class MapView : public QWidget {
 
   bool isRunning;
   std::shared_ptr<UpdateChecker> updateChecker;
+
+  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;      // must be last member
 
   size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
 

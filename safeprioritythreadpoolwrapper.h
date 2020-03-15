@@ -45,7 +45,7 @@ public:
 
 private:
   SafePriorityThreadPoolWrapper safeWrapper;
-  std::unique_ptr<AsyncExecutionCancelGuard> cancellation;
+  std::unique_ptr<AsyncExecutionCancelGuard> cancellation;     // must be last member
 
 };
 

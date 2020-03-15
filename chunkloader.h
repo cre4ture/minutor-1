@@ -33,7 +33,7 @@ signals:
 
 private:
   QSharedPointer<PriorityThreadPool> threadPool_;
-  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
+  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;      // must be last member
 
 
   void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
