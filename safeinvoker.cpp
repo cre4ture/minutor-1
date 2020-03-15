@@ -17,7 +17,7 @@ SafeGuiThreadInvoker::~SafeGuiThreadInvoker()
 
 void SafeGuiThreadInvoker::invoke(std::function<void ()> functionObj)
 {
-  QMetaObject::invokeMethod(this, "invokeAtMainThread", Qt::AutoConnection,
+  QMetaObject::invokeMethod(this, "invokeAtMainThread", Qt::QueuedConnection,
                             Q_ARG(QSharedPointer<std::function<void()>>, QSharedPointer<std::function<void()>>::create(functionObj))
                             );
 }

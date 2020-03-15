@@ -201,7 +201,7 @@ void SearchChunksWidget::addOneToProgress(ChunkID /* id */)
 
   if (ui->progressBar->maximum() == ui->progressBar->value())
   {
-    cancelSearch();
+    m_invoker.invoke([this](){cancelSearch();}); // invoke instead of calling directly to prevent a deadlock when called from a guarded workpackage
   }
 }
 
