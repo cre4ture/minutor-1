@@ -77,11 +77,12 @@ private slots:
 private:
     QSharedPointer<Ui::SearchChunksWidget> ui;
     SearchEntityWidgetInputC m_input;
-    SafeGuiThreadInvoker m_invoker;
-    SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
     ExecutionStatusToken currentToken;
+
+    SafeGuiThreadInvoker m_invoker;
+    SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;      // must be last member
 
     void requestSearchingOfChunk(ChunkID id);
 
