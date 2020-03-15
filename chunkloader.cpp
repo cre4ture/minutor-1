@@ -116,7 +116,7 @@ void ChunkLoaderThreadPool::enqueueChunkLoading(QString path,
                                                 ChunkID id,
                                                 JobPrio priority)
 {
-    safeThreadPoolI.enqueueJob([this, path, id](const ExecutionGuard& cancelToken){
+    safeThreadPoolI.enqueueJob([this, path, id](const ExecutionGuard& guard){
 
       ChunkLoader loader(path, id);
       auto chunk = loader.runInternal();

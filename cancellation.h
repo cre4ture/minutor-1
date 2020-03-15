@@ -46,8 +46,12 @@ class ExecutionGuard;
 
 class ExecutionStatusToken : public QWeakPointer<ExecutionStatus>
 {
+  typedef QWeakPointer<ExecutionStatus> BaseT;
 public:
-  using QWeakPointer::QWeakPointer;
+  ExecutionStatusToken()
+  {}
+
+  explicit ExecutionStatusToken(const ExecutionGuard& guard);
 
   ExecutionGuard tryCreateExecutionGuard() const;
 
@@ -56,8 +60,16 @@ public:
 
 class ExecutionGuard : public QSharedPointer<ExecutionStatus>
 {
+  typedef QSharedPointer<ExecutionStatus> BaseT;
+
 public:
-  using QSharedPointer::QSharedPointer;
+  ExecutionGuard()
+    : BaseT()
+  {}
+
+  ExecutionGuard(const BaseT& other)
+    : BaseT(other)
+  {}
 
   bool isCanceled() const
   {
@@ -66,10 +78,14 @@ public:
 
   ExecutionStatusToken toWeakToken() const
   {
-    return *this;
+    return ExecutionStatusToken(*this);
   }
 };
 
+
+inline ExecutionStatusToken::ExecutionStatusToken(const ExecutionGuard &guard)
+  : BaseT(static_cast<const QSharedPointer<ExecutionStatus>&>(guard))
+{}
 
 inline ExecutionGuard ExecutionStatusToken::tryCreateExecutionGuard() const
 {

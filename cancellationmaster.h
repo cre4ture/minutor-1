@@ -36,7 +36,7 @@ public:
 
   ExecutionStatusToken getTokenPtr() const
   {
-    return *this;
+    return ExecutionStatusToken(this->staticCast<ExecutionStatus>());
   }
 };
 
