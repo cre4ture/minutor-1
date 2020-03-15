@@ -519,7 +519,7 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
     renderedChunk->init();
 
     ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-    m_invoker.invokeCancellable(guard.toWeakToken(), [this, renderedChunk](const ExecutionGuard& guard){
+    m_invoker.invokeCancellable(guard.getStatusToken(), [this, renderedChunk](const ExecutionGuard& guard){
       renderingDone(renderedChunk);
     });
   }, JobPrio::high);

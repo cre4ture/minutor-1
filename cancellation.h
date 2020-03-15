@@ -76,7 +76,7 @@ public:
     return isNull() || data()->isCanceled();
   }
 
-  ExecutionStatusToken toWeakToken() const
+  ExecutionStatusToken getStatusToken() const
   {
     return ExecutionStatusToken(*this);
   }

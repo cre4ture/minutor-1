@@ -104,7 +104,7 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
   {
     auto chunk = m_input.cache->getChunkSynchronously(id);
 
-    m_invoker.invokeCancellable(guard.toWeakToken(), [this, chunk, id](const ExecutionGuard& guard){
+    m_invoker.invokeCancellable(guard.getStatusToken(), [this, chunk, id](const ExecutionGuard& guard){
       chunkLoaded(chunk, id.getX(), id.getZ());
     });
   });
@@ -175,7 +175,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
       }
     }
 
-    m_invoker.invokeCancellable(guard.toWeakToken(), [this, results, id](const ExecutionGuard& guard){
+    m_invoker.invokeCancellable(guard.getStatusToken(), [this, results, id](const ExecutionGuard& guard){
       displayResults(results, id);
     });
   };
