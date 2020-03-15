@@ -2,28 +2,50 @@
 #define SAFEPRIORITYTHREADPOOLWRAPPER_H
 
 #include "prioritythreadpoolinterface.h"
-#include "cancellation.hpp"
+#include "cancellationasyncexecutionguard.h"
 
 #include <memory>
 
-class SafePriorityThreadPoolWrapper: public PriorityThreadPoolInterface
+class SafePriorityThreadPoolWrapper
 {
 public:
   SafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool);
 
-  virtual size_t enqueueJob(const JobT &job, JobPrio prio = JobPrio::low) override;
-  virtual size_t getNumberOfThreads() const override;
-
-  void renewCancellation();
-
-  auto getCancelToken()
+  template<typename _FuncT>
+  size_t enqueueJob(const CancellationTokenWeakPtr& cancellationToken,
+                    const _FuncT &job,
+                    JobPrio prio = JobPrio::low)
   {
-    return cancellation->getToken();
+    return actualThreadPool.enqueueJob([cancellationToken, job]()
+      {
+        auto guard = cancellationToken.createExecutionGuardChecked();
+        job(guard);
+      }, prio);
   }
 
 private:
   PriorityThreadPoolInterface& actualThreadPool;
-  std::shared_ptr<AsyncExecutionGuardAndAccessor_t<SafePriorityThreadPoolWrapper> > cancellation;
+};
+
+class SimpleSafePriorityThreadPoolWrapper
+{
+public:
+  SimpleSafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool_);
+
+  template<typename _FuncT>
+  size_t enqueueJob(const _FuncT &job,
+                    JobPrio prio = JobPrio::low)
+  {
+    return safeWrapper.enqueueJob(cancellation->getTokenPtr(), job, prio);
+  }
+
+  void renewCancellation();
+
+  CancellationTokenWeakPtr getCancelToken();
+
+private:
+  SafePriorityThreadPoolWrapper safeWrapper;
+  std::unique_ptr<AsyncExecutionCancelGuard> cancellation;
 
 };
 

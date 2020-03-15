@@ -1,20 +1,31 @@
 #ifndef SAFEINVOKER_H
 #define SAFEINVOKER_H
 
+#include "cancellation.h"
+
 #include <QObject>
 #include <QSharedPointer>
 
 #include <functional>
 
-class SafeInvoker: public QObject
+class SafeGuiThreadInvoker: public QObject
 {
   Q_OBJECT
 
 public:
-  SafeInvoker();
-  ~SafeInvoker();
+  SafeGuiThreadInvoker();
+  ~SafeGuiThreadInvoker();
 
   void invoke(std::function<void()> functionObj);
+
+  template<typename _FuncT>
+  void invokeCancellable(const CancellationTokenWeakPtr& token, const _FuncT& func)
+  {
+    invoke([token, func](){
+      auto guard = token.createExecutionGuardChecked();
+      func(guard);
+    });
+  }
 
 private slots:
   void invokeAtMainThread(QSharedPointer<std::function<void()>> functionObj);

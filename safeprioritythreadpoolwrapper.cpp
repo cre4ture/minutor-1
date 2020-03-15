@@ -2,25 +2,27 @@
 
 SafePriorityThreadPoolWrapper::SafePriorityThreadPoolWrapper(PriorityThreadPoolInterface &actualThreadPool_)
   : actualThreadPool(actualThreadPool_)
-  , cancellation(std::make_shared<AsyncExecutionGuardAndAccessor_t<SafePriorityThreadPoolWrapper> >(std::ref(*this)))
 {
 
 }
 
-size_t SafePriorityThreadPoolWrapper::enqueueJob(const PriorityThreadPoolInterface::JobT &job, JobPrio prio)
+
+
+SimpleSafePriorityThreadPoolWrapper::SimpleSafePriorityThreadPoolWrapper(PriorityThreadPoolInterface &actualThreadPool_)
+  : safeWrapper(actualThreadPool_)
+  , cancellation(std::make_unique<AsyncExecutionCancelGuard>())
 {
-  return actualThreadPool.enqueueJob([cancel = cancellation->getWeakAccessor(), job](){
-    auto guard = cancel.safeAccess();
-    job();
-  }, prio);
+
 }
 
-size_t SafePriorityThreadPoolWrapper::getNumberOfThreads() const
+
+
+void SimpleSafePriorityThreadPoolWrapper::renewCancellation()
 {
-  return actualThreadPool.getNumberOfThreads();
+  cancellation = std::make_unique<AsyncExecutionCancelGuard>();
 }
 
-void SafePriorityThreadPoolWrapper::renewCancellation()
+CancellationTokenWeakPtr SimpleSafePriorityThreadPoolWrapper::getCancelToken()
 {
-  cancellation = std::make_shared<AsyncExecutionGuardAndAccessor_t<SafePriorityThreadPoolWrapper> >(std::ref(*this));
+  return cancellation->getTokenPtr();
 }

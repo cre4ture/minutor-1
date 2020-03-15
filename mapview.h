@@ -189,11 +189,11 @@ class MapView : public QWidget {
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
   QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
-  SafeInvoker m_invoker;
+  SafeGuiThreadInvoker m_invoker;
   QSharedPointer<PriorityThreadPool> threadpool_;
-  SafePriorityThreadPoolWrapper safeThreadPoolI;
+  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
 
-  SafeInvoker invoker;
+  SafeGuiThreadInvoker invoker;
   bool hasChanged;
 
   void changed();
@@ -266,7 +266,7 @@ class MapView : public QWidget {
     QSharedPointer<PriorityThreadPool> threadpool;
     const JobPrio prio;
     std::function<void()> func;
-    AsyncExecutionGuardAndAccessor_t<AsyncLoop> cancellation;
+    SimpleSafePriorityThreadPoolWrapper safeThreadI;
 
     void requestNext();
   };

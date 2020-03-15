@@ -8,7 +8,7 @@
 #include "coordinatehashmap.h"
 #include "prioritythreadpool.h"
 #include "value_initialized.h"
-#include "cancellation.hpp"
+#include "cancellation.h"
 #include "safeinvoker.h"
 #include "safeprioritythreadpoolwrapper.h"
 
@@ -77,8 +77,8 @@ private slots:
 private:
     QSharedPointer<Ui::SearchChunksWidget> ui;
     SearchEntityWidgetInputC m_input;
-    SafeInvoker m_invoker;
-    SafePriorityThreadPoolWrapper safeThreadPoolI;
+    SafeGuiThreadInvoker m_invoker;
+    SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
     CancellationTokenWeakPtr currentToken;

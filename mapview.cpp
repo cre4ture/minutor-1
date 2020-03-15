@@ -513,13 +513,13 @@ const QImage& getChunkGroupPlaceholder()
 
 size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  return safeThreadPoolI.enqueueJob([this, chunk](){
+  return safeThreadPoolI.enqueueJob([this, chunk](const CancellationTokenPtr& guard){
 
     auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
     renderedChunk->init();
 
     ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-    m_invoker.invoke([this, renderedChunk](){
+    m_invoker.invokeCancellable(guard, [this, renderedChunk](const CancellationTokenPtr& guard){
       renderingDone(renderedChunk);
     });
   }, JobPrio::high);
@@ -643,11 +643,8 @@ MapView::UpdateChecker::UpdateChecker(MapView& parent_,
   , updateIsRunning(false)
   , isIdleJobRegistered(false)
 {
-  idleJob = std::make_shared<std::function<void()> >([this, cancel = asyncGuard.getToken().toWeakToken()](){
-    auto strong = cancel.toStrongTokenPtr();
-    if (strong.isCanceled())
-      return;
-
+  idleJob = std::make_shared<std::function<void()> >([this, cancelToken = asyncGuard.getTokenPtr()](){
+    auto guard = cancelToken.createExecutionGuardChecked();
     idleJobFunction();
   });
 }
@@ -1445,19 +1442,15 @@ MapView::AsyncLoop::AsyncLoop(const QSharedPointer<PriorityThreadPool>& threadpo
   : threadpool(threadpool_)
   , prio(prio_)
   , func(func_)
-  , cancellation(*this)
+  , safeThreadI(*threadpool)
 {
   requestNext();
 }
 
 void MapView::AsyncLoop::requestNext()
 {
-  threadpool->enqueueJob([cancelToken = cancellation.getWeakAccessor()](){
-
-    auto guard = cancelToken.safeAccess();
-
-    guard.first.func();
-
-    guard.first.requestNext();
+  safeThreadI.enqueueJob([this](const CancellationTokenPtr& guard){
+    func();
+    requestNext();
   }, prio);
 }

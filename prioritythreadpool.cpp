@@ -1,6 +1,6 @@
 #include "prioritythreadpool.h"
 
-#include "cancellation.hpp"
+#include "cancellation.h"
 
 #include <future>
 

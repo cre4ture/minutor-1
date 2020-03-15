@@ -214,7 +214,7 @@ void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
 
   threadPool->enqueueJob([id, cancelToken = asyncGuard.getWeakAccessor()](){
 
-    auto guard = cancelToken.safeAccess();
+    auto guard = cancelToken.accessChecked();
 
     ChunkLoader loader(guard.first.path, id);
     auto chunk = loader.runInternal();

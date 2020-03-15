@@ -37,13 +37,13 @@ SearchChunksWidget::~SearchChunksWidget()
 
 void SearchChunksWidget::on_pb_search_clicked()
 {
-  if (!currentToken.isCanceled().first)
+  if (currentToken.tryCreateExecutionGuard())
   {
     cancelSearch();
     return;
   }
 
-  currentToken = safeThreadPoolI.getCancelToken().toWeakToken();
+  currentToken = safeThreadPoolI.getCancelToken();
   auto weakToken = currentToken;
 
   ui->pb_search->setText("Cancel");
@@ -78,7 +78,7 @@ void SearchChunksWidget::on_pb_search_clicked()
     if ((count++ % 100) == 0)
       QApplication::processEvents();
 
-    if (weakToken.isCanceled().first)
+    if (!weakToken.tryCreateExecutionGuard())
     {
       return;
     }
@@ -100,11 +100,11 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
     }
   }
 
-  safeThreadPoolI.enqueueJob([this, id]()
+  safeThreadPoolI.enqueueJob([this, id](const CancellationTokenPtr& guard)
   {
     auto chunk = m_input.cache->getChunkSynchronously(id);
 
-    m_invoker.invoke([this, chunk, id](){
+    m_invoker.invokeCancellable(guard, [this, chunk, id](const CancellationTokenPtr& guard){
       chunkLoaded(chunk, id.getX(), id.getZ());
     });
   });
@@ -112,8 +112,8 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
 
 void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
 {
-  auto cancelstate = currentToken.isCanceled();
-  if (cancelstate.first)
+  auto guard = currentToken.tryCreateExecutionGuard();
+  if (!guard)
   {
     return;
   }
@@ -154,7 +154,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 {
   const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
 
-  auto job = [this, chunk, range_y, searchPlug = m_input.searchPlugin.toWeakRef()]()
+  auto job = [this, chunk, range_y, searchPlug = m_input.searchPlugin.toWeakRef()](const CancellationTokenPtr& guard)
   {
     ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
@@ -175,7 +175,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
       }
     }
 
-    m_invoker.invoke([this, results, id](){
+    m_invoker.invokeCancellable(guard, [this, results, id](const CancellationTokenPtr& guard){
       displayResults(results, id);
     });
   };

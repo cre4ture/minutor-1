@@ -3,7 +3,7 @@
 #define CHUNKLOADER_H_
 
 #include "coordinateid.h"
-#include "cancellation.hpp"
+#include "cancellation.h"
 #include "jobprio.h"
 #include "safeprioritythreadpoolwrapper.h"
 
@@ -33,7 +33,7 @@ signals:
 
 private:
   QSharedPointer<PriorityThreadPool> threadPool_;
-  SafePriorityThreadPoolWrapper safeThreadPoolI;
+  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
 
 
   void signalUpdated(QSharedPointer<Chunk> chunk, ChunkID id);
