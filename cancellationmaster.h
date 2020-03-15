@@ -1,7 +1,7 @@
 #ifndef CANCELLATIONMASTER_H
 #define CANCELLATIONMASTER_H
 
-#include "cancellation.h"
+#include "executionstatus.h"
 
 class CancellationTokenMaster: public ExecutionStatus
 {

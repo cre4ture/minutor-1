@@ -1,7 +1,7 @@
 #ifndef SAFEINVOKER_H
 #define SAFEINVOKER_H
 
-#include "cancellation.h"
+#include "executionstatus.h"
 
 #include <QObject>
 #include <QSharedPointer>

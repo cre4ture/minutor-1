@@ -20,12 +20,12 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
-  cancellation.h \
   cancellationasyncexecutionguard.h \
   cancellationmaster.h \
   coordinatehashmap.h \
   coordinateid.h \
   enumbitset.hpp \
+  executionstatus.h \
   jobprio.h \
   location.h \
   lockguarded.hpp \

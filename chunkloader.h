@@ -3,7 +3,7 @@
 #define CHUNKLOADER_H_
 
 #include "coordinateid.h"
-#include "cancellation.h"
+#include "executionstatus.h"
 #include "jobprio.h"
 #include "safeprioritythreadpoolwrapper.h"
 

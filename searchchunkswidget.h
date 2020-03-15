@@ -8,7 +8,7 @@
 #include "coordinatehashmap.h"
 #include "prioritythreadpool.h"
 #include "value_initialized.h"
-#include "cancellation.h"
+#include "executionstatus.h"
 #include "safeinvoker.h"
 #include "safeprioritythreadpoolwrapper.h"
 

@@ -1,6 +1,6 @@
 #include "safeinvoker.h"
 
-#include "cancellation.h"
+#include "executionstatus.h"
 
 Q_DECLARE_METATYPE(QSharedPointer<std::function<void()>>)
 
