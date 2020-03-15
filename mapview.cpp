@@ -513,13 +513,13 @@ const QImage& getChunkGroupPlaceholder()
 
 size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
-  return safeThreadPoolI.enqueueJob([this, chunk](const CancellationTokenPtr& guard){
+  return safeThreadPoolI.enqueueJob([this, chunk](const ExecutionGuard& guard){
 
     auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
     renderedChunk->init();
 
     ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-    m_invoker.invokeCancellable(guard, [this, renderedChunk](const CancellationTokenPtr& guard){
+    m_invoker.invokeCancellable(guard, [this, renderedChunk](const ExecutionGuard& guard){
       renderingDone(renderedChunk);
     });
   }, JobPrio::high);
@@ -1450,7 +1450,7 @@ MapView::AsyncLoop::AsyncLoop(const QSharedPointer<PriorityThreadPool>& threadpo
 
 void MapView::AsyncLoop::requestNext()
 {
-  safeThreadI.enqueueJob([this](const CancellationTokenPtr& guard){
+  safeThreadI.enqueueJob([this](const ExecutionGuard& guard){
     func();
     requestNext();
   }, prio);

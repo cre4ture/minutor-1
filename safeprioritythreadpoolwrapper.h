@@ -12,7 +12,7 @@ public:
   SafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool);
 
   template<typename _FuncT>
-  size_t enqueueJob(const CancellationTokenWeakPtr& cancellationToken,
+  size_t enqueueJob(const ExecutionStatusToken& cancellationToken,
                     const _FuncT &job,
                     JobPrio prio = JobPrio::low)
   {
@@ -41,7 +41,7 @@ public:
 
   void renewCancellation();
 
-  CancellationTokenWeakPtr getCancelToken();
+  ExecutionStatusToken getCancelToken();
 
 private:
   SafePriorityThreadPoolWrapper safeWrapper;

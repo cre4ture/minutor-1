@@ -19,7 +19,7 @@ public:
   void invoke(std::function<void()> functionObj);
 
   template<typename _FuncT>
-  void invokeCancellable(const CancellationTokenWeakPtr& token, const _FuncT& func)
+  void invokeCancellable(const ExecutionStatusToken& token, const _FuncT& func)
   {
     invoke([token, func](){
       auto guard = token.createExecutionGuardChecked();

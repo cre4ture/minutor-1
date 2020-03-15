@@ -13,48 +13,48 @@ public:
   using std::runtime_error::runtime_error;
 };
 
-class CancellationToken: public boost::noncopyable
+class ExecutionStatus: public boost::noncopyable
 {
 public:
   bool isCanceled() const { return cancelled; }
 
-  CancellationToken()
+  ExecutionStatus()
     : cancelled(false)
-    , cancelationDonePromise()
-    , cancelationDoneSharedFuture(cancelationDonePromise.get_future().share())
+    , executionDonePromise()
+    , executionDoneSharedFuture(executionDonePromise.get_future().share())
   {}
 
-  virtual ~CancellationToken()
+  virtual ~ExecutionStatus()
   {
-    cancelationDonePromise.set_value();
+    executionDonePromise.set_value();
   }
 
-  auto getCancellationFuture()
+  auto getExecutionDoneFuture()
   {
-    return cancelationDoneSharedFuture;
+    return executionDoneSharedFuture;
   }
 
 protected:
   std::atomic<bool> cancelled;
 
 private:
-  std::promise<void> cancelationDonePromise;
-  std::shared_future<void> cancelationDoneSharedFuture;
+  std::promise<void> executionDonePromise;
+  std::shared_future<void> executionDoneSharedFuture;
 };
 
-class CancellationTokenPtr;
+class ExecutionGuard;
 
-class CancellationTokenWeakPtr : public QWeakPointer<CancellationToken>
+class ExecutionStatusToken : public QWeakPointer<ExecutionStatus>
 {
 public:
   using QWeakPointer::QWeakPointer;
 
-  CancellationTokenPtr tryCreateExecutionGuard() const;
+  ExecutionGuard tryCreateExecutionGuard() const;
 
-  CancellationTokenPtr createExecutionGuardChecked() const;
+  ExecutionGuard createExecutionGuardChecked() const;
 };
 
-class CancellationTokenPtr : public QSharedPointer<CancellationToken>
+class ExecutionGuard : public QSharedPointer<ExecutionStatus>
 {
 public:
   using QSharedPointer::QSharedPointer;
@@ -64,23 +64,23 @@ public:
     return isNull() || data()->isCanceled();
   }
 
-  CancellationTokenWeakPtr toWeakToken() const
+  ExecutionStatusToken toWeakToken() const
   {
     return *this;
   }
 };
 
 
-inline CancellationTokenPtr CancellationTokenWeakPtr::tryCreateExecutionGuard() const
+inline ExecutionGuard ExecutionStatusToken::tryCreateExecutionGuard() const
 {
-  CancellationTokenPtr strongPtr = lock();
+  ExecutionGuard strongPtr = lock();
   bool isCanceled = (!strongPtr) || strongPtr->isCanceled();
-  return isCanceled ? CancellationTokenPtr() : strongPtr;
+  return isCanceled ? ExecutionGuard() : strongPtr;
 }
 
-inline CancellationTokenPtr CancellationTokenWeakPtr::createExecutionGuardChecked() const
+inline ExecutionGuard ExecutionStatusToken::createExecutionGuardChecked() const
 {
-  CancellationTokenPtr guard = tryCreateExecutionGuard();
+  ExecutionGuard guard = tryCreateExecutionGuard();
   if (!guard)
   {
     throw CancelledException("CancellationTokenWeakPtr::createExecutionGuardChecked(): already canceled!");

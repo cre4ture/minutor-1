@@ -81,7 +81,7 @@ private:
     SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;
     CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
-    CancellationTokenWeakPtr currentToken;
+    ExecutionStatusToken currentToken;
 
     void requestSearchingOfChunk(ChunkID id);
 

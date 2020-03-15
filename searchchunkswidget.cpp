@@ -100,11 +100,11 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
     }
   }
 
-  safeThreadPoolI.enqueueJob([this, id](const CancellationTokenPtr& guard)
+  safeThreadPoolI.enqueueJob([this, id](const ExecutionGuard& guard)
   {
     auto chunk = m_input.cache->getChunkSynchronously(id);
 
-    m_invoker.invokeCancellable(guard, [this, chunk, id](const CancellationTokenPtr& guard){
+    m_invoker.invokeCancellable(guard, [this, chunk, id](const ExecutionGuard& guard){
       chunkLoaded(chunk, id.getX(), id.getZ());
     });
   });
@@ -154,7 +154,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
 {
   const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
 
-  auto job = [this, chunk, range_y, searchPlug = m_input.searchPlugin.toWeakRef()](const CancellationTokenPtr& guard)
+  auto job = [this, chunk, range_y, searchPlug = m_input.searchPlugin.toWeakRef()](const ExecutionGuard& guard)
   {
     ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
 
@@ -175,7 +175,7 @@ void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
       }
     }
 
-    m_invoker.invokeCancellable(guard, [this, results, id](const CancellationTokenPtr& guard){
+    m_invoker.invokeCancellable(guard, [this, results, id](const ExecutionGuard& guard){
       displayResults(results, id);
     });
   };

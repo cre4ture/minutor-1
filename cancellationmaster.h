@@ -3,7 +3,7 @@
 
 #include "cancellation.h"
 
-class CancellationTokenMaster: public CancellationToken
+class CancellationTokenMaster: public ExecutionStatus
 {
 public:
   void cancel()
@@ -29,12 +29,12 @@ public:
 
     data()->cancel();
 
-    auto future = data()->getCancellationFuture();
+    auto future = data()->getExecutionDoneFuture();
     reset();
     future.wait();
   }
 
-  CancellationTokenWeakPtr getTokenPtr() const
+  ExecutionStatusToken getTokenPtr() const
   {
     return *this;
   }

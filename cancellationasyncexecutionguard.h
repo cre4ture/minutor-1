@@ -15,7 +15,7 @@ public:
     cancellation.cancelAndWait();
   }
 
-  CancellationTokenWeakPtr getTokenPtr() const
+  ExecutionStatusToken getTokenPtr() const
   {
     return cancellation.getTokenPtr();
   }
@@ -28,19 +28,19 @@ template<class ThisT>
 class CancelSafeThisAccessor_t
 {
 public:
-  CancelSafeThisAccessor_t(ThisT& parent_, const CancellationTokenPtr& guard_)
+  CancelSafeThisAccessor_t(ThisT& parent_, const ExecutionGuard& guard_)
     : guard(guard_)
     , myParent(parent_)
   {}
 
   ThisT& parent() const { return myParent; }
 
-  CancellationTokenPtr token() const {
+  ExecutionGuard token() const {
     return guard;
   }
 
 private:
-  CancellationTokenPtr guard;
+  ExecutionGuard guard;
   ThisT& myParent;
 };
 
@@ -48,12 +48,12 @@ template<class ThisT>
 class WeakCancelSafeObjectAccessor_t
 {
 public:
-  WeakCancelSafeObjectAccessor_t(ThisT& parent_, const CancellationTokenWeakPtr& guard_)
+  WeakCancelSafeObjectAccessor_t(ThisT& parent_, const ExecutionStatusToken& guard_)
     : guard(guard_)
     , myParent(parent_)
   {}
 
-  std::pair<ThisT&,CancellationTokenPtr> accessChecked() const
+  std::pair<ThisT&,ExecutionGuard> accessChecked() const
   {
     auto executionGuard = guard.createExecutionGuardChecked();
 
@@ -61,7 +61,7 @@ public:
   }
 
 private:
-  CancellationTokenWeakPtr guard;
+  ExecutionStatusToken guard;
   ThisT& myParent;
 };
 
