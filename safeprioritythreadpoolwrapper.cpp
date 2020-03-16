@@ -9,7 +9,7 @@ SafePriorityThreadPoolWrapper::SafePriorityThreadPoolWrapper(PriorityThreadPoolI
 
 
 SimpleSafePriorityThreadPoolWrapper::SimpleSafePriorityThreadPoolWrapper(PriorityThreadPoolInterface &actualThreadPool_)
-  : safeWrapper(actualThreadPool_)
+  : BaseT(actualThreadPool_)
   , cancellation(std::make_unique<AsyncExecutionCancelGuard>())
 {
 

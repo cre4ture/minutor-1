@@ -84,6 +84,12 @@ public:
     return isNull() || data()->isCanceled();
   }
 
+  void checkCancellation() const
+  {
+    if (isCanceled())
+      throw CancelledException("ExecutionGuard()::checkCancellation(): cancelled!");
+  }
+
   ExecutionStatusToken getStatusToken() const
   {
     return ExecutionStatusToken(*this);

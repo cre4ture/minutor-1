@@ -20,9 +20,6 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
 {
   ui->setupUi(this);
 
-  connect(m_input.cache.data(), SIGNAL(chunkLoaded(const QSharedPointer<Chunk>&,int,int)),
-          this, SLOT(chunkLoaded(const QSharedPointer<Chunk>&,int,int)));
-
   auto layout = new QHBoxLayout(ui->plugin_context);
   ui->plugin_context->setLayout(layout);
   layout->setSizeConstraint(QLayout::SizeConstraint::SetMinimumSize);
@@ -35,20 +32,32 @@ SearchChunksWidget::~SearchChunksWidget()
 {
 }
 
+static Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1, const QSpinBox& sb2)
+{
+  if (!checkBox.isChecked())
+  {
+    return Range<float>::max();
+  }
+  else
+  {
+    return Range<float>::createFromUnorderedParams(sb1.value(), sb2.value());
+  }
+}
+
 void SearchChunksWidget::on_pb_search_clicked()
 {
-  if (currentToken.tryCreateExecutionGuard())
+  if (currentSearch)
   {
     cancelSearch();
     return;
   }
 
-  currentToken = safeThreadPoolI.getCancelToken();
-  auto weakToken = currentToken;
+  const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
+  currentSearch = QSharedPointer<AsyncSearch>::create(*this, safeThreadPoolI.getCancelToken(), range_y, m_input.searchPlugin);
+
+  auto weakToken = safeThreadPoolI.getCancelToken();
 
   ui->pb_search->setText("Cancel");
-
-  m_chunksRequestedToSearchList.clear();
 
   ui->resultList->clearResults();
   ui->resultList->setPointOfInterest(m_input.posOfInterestProvider());
@@ -87,100 +96,70 @@ void SearchChunksWidget::on_pb_search_clicked()
 
 void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
 {
-  m_chunksRequestedToSearchList[id] = true;
-
   {
     ChunkCache::Locker locked_cache(*m_input.cache);
 
     QSharedPointer<Chunk> chunk;
     if (locked_cache.isCached(id, chunk)) // can return true and nullptr in case of inexistend chunk
     {
-      chunkLoaded(chunk, id.getX(), id.getZ());
+      safeThreadPoolI.enqueueJob([currentSearch = currentSearch, chunk](const ExecutionGuard& guard)
+      {
+        currentSearch->searchLoadedChunk_async(chunk, guard);
+      });
       return;
     }
   }
 
-  safeThreadPoolI.enqueueJob([this, id](const ExecutionGuard& guard)
+  safeThreadPoolI.enqueueJob([this, currentSearch = currentSearch, id](const ExecutionGuard& guard)
   {
     auto chunk = m_input.cache->getChunkSynchronously(id);
 
-    m_invoker.invokeCancellable(guard.getStatusToken(), [this, chunk, id](const ExecutionGuard& guard){
-      chunkLoaded(chunk, id.getX(), id.getZ());
-    });
+    guard.checkCancellation();
+
+    currentSearch->searchLoadedChunk_async(chunk, guard);
   });
 }
 
-void SearchChunksWidget::chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z)
+void SearchChunksWidget::AsyncSearch::searchLoadedChunk_async(const QSharedPointer<Chunk>& chunk, const ExecutionGuard &guard)
 {
-  auto guard = currentToken.tryCreateExecutionGuard();
-  if (!guard)
+  if (chunk)
+  {
+    searchExistingChunk_async(chunk, guard);
+  }
+  else
+  {
+    parent.m_invoker.invokeCancellable(guard.getStatusToken(), [&parent = parent](const ExecutionGuard& guard){
+      parent.addOneToProgress(ChunkID());
+    });
+  }
+}
+
+void SearchChunksWidget::AsyncSearch::searchExistingChunk_async(const QSharedPointer<Chunk>& chunk, const ExecutionGuard &guard)
+{
+  ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
+
+  auto strong = searchPlugin.lock();
+  if (!strong)
   {
     return;
   }
 
-  const ChunkID id(x, z);
+  auto results_tmp = strong->searchChunk(*chunk);
+  auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
 
-  bool& isChunkToSearch = m_chunksRequestedToSearchList[id];
-  if (!isChunkToSearch)
+  guard.checkCancellation();
+
+  for (const auto& result: results_tmp)
   {
-    return; // already searched or not of interest
-  }
-
-  isChunkToSearch = false; // mark as done
-
-  if (chunk)
-  {
-    searchLoadedChunk(chunk);
-  }
-  else
-  {
-    addOneToProgress(id);
-  }
-}
-
-Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1, const QSpinBox& sb2)
-{
-  if (!checkBox.isChecked())
-  {
-    return Range<float>::max();
-  }
-  else
-  {
-    return Range<float>::createFromUnorderedParams(sb1.value(), sb2.value());
-  }
-}
-
-void SearchChunksWidget::searchLoadedChunk(const QSharedPointer<Chunk>& chunk)
-{
-  const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
-
-  auto job = [this, chunk, range_y, searchPlug = m_input.searchPlugin.toWeakRef()](const ExecutionGuard& guard)
-  {
-    ChunkID id(chunk->getChunkX(), chunk->getChunkZ());
-
-    auto strong = searchPlug.lock();
-    if (!strong)
+    if (range_y.isInsideRange(result.pos.y()))
     {
-      return;
+      results->push_back(result);
     }
+  }
 
-    auto results_tmp = strong->searchChunk(*chunk);
-    auto results = QSharedPointer<SearchPluginI::ResultListT>::create();
-
-    for (const auto& result: results_tmp)
-    {
-      if (range_y.isInsideRange(result.pos.y()))
-      {
-        results->push_back(result);
-      }
-    }
-
-    m_invoker.invokeCancellable(guard.getStatusToken(), [this, results, id](const ExecutionGuard& guard){
-      displayResults(results, id);
-    });
-  };
-
-  safeThreadPoolI.enqueueJob(job, JobPrio::high);
+  parent.m_invoker.invokeCancellable(guard.getStatusToken(), [&parent = parent, results, id](const ExecutionGuard& guard){
+    parent.displayResults(results, id);
+  });
 }
 
 
@@ -212,6 +191,8 @@ void SearchChunksWidget::cancelSearch()
   ui->pb_search->setText("Search");
 
   ui->resultList->searchDone();
+
+  currentSearch.reset();
 }
 
 void SearchChunksWidget::on_resultList_jumpTo(const QVector3D &pos)

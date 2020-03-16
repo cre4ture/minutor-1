@@ -11,6 +11,7 @@
 #include "executionstatus.h"
 #include "safeinvoker.h"
 #include "safeprioritythreadpoolwrapper.h"
+#include "range.h"
 
 #include <QWidget>
 #include <set>
@@ -67,26 +68,48 @@ signals:
 private slots:
     void on_pb_search_clicked();
 
-    void chunkLoaded(const QSharedPointer<Chunk> &chunk, int x, int z);
-
     void on_resultList_jumpTo(const QVector3D &);
     void on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> >);
 
     void displayResults(QSharedPointer<SearchPluginI::ResultListT> results, ChunkID id);
 
 private:
+    class AsyncSearch;
+
     QSharedPointer<Ui::SearchChunksWidget> ui;
     SearchEntityWidgetInputC m_input;
-    CoordinateHashMap<value_initialized<bool> > m_chunksRequestedToSearchList;
     bool m_searchRunning;
-    ExecutionStatusToken currentToken;
+    QSharedPointer<AsyncSearch> currentSearch;
 
     SafeGuiThreadInvoker m_invoker;
     SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;      // must be last member
 
-    void requestSearchingOfChunk(ChunkID id);
+    class AsyncSearch
+    {
+    public:
+      AsyncSearch(SearchChunksWidget& parent_,
+                  const ExecutionStatusToken& currentToken_,
+                  const Range<float>& range_y_,
+                  QWeakPointer<SearchPluginI> searchPlugin_)
+        : parent(parent_)
+        , currentToken(currentToken_)
+        , range_y(range_y_)
+        , searchPlugin(searchPlugin_)
+      {}
 
-    void searchLoadedChunk(const QSharedPointer<Chunk> &chunk);
+      void searchLoadedChunk_async(const QSharedPointer<Chunk> &chunk, const ExecutionGuard &guard);
+
+      void searchExistingChunk_async(const QSharedPointer<Chunk> &chunk, const ExecutionGuard &guard);
+
+    private:
+      SearchChunksWidget& parent;
+      ExecutionStatusToken currentToken;
+      const Range<float> range_y;
+      QWeakPointer<SearchPluginI> searchPlugin;
+    };
+
+
+    void requestSearchingOfChunk(ChunkID id);
 
     void addOneToProgress(ChunkID id);
 

@@ -27,8 +27,10 @@ private:
   PriorityThreadPoolInterface& actualThreadPool;
 };
 
-class SimpleSafePriorityThreadPoolWrapper
+class SimpleSafePriorityThreadPoolWrapper: public SafePriorityThreadPoolWrapper
 {
+  using BaseT = SafePriorityThreadPoolWrapper;
+
 public:
   SimpleSafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool_);
 
@@ -36,7 +38,7 @@ public:
   size_t enqueueJob(const _FuncT &job,
                     JobPrio prio = JobPrio::low)
   {
-    return safeWrapper.enqueueJob(cancellation->getTokenPtr(), job, prio);
+    return BaseT::enqueueJob(cancellation->getTokenPtr(), job, prio);
   }
 
   void renewCancellation();
@@ -44,7 +46,6 @@ public:
   ExecutionStatusToken getCancelToken();
 
 private:
-  SafePriorityThreadPoolWrapper safeWrapper;
   std::unique_ptr<AsyncExecutionCancelGuard> cancellation;     // must be last member
 
 };
