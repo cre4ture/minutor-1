@@ -82,30 +82,34 @@ private:
     QSharedPointer<AsyncSearch> currentSearch;
 
     SafeGuiThreadInvoker m_invoker;
-    SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;      // must be last member
+    SimpleSafePriorityThreadPoolWrapper_t<QSharedPointer<AsyncSearch> > safeThreadPoolI;      // must be last member
+
+    using MyExecutionGuard = ExecutionGuard_t<QSharedPointer<AsyncSearch> >;
 
     class AsyncSearch
     {
     public:
       AsyncSearch(SearchChunksWidget& parent_,
-                  const ExecutionStatusToken& currentToken_,
                   const Range<float>& range_y_,
-                  QWeakPointer<SearchPluginI> searchPlugin_)
+                  const QWeakPointer<SearchPluginI>& searchPlugin_,
+                  const QSharedPointer<ChunkCache>& cache_)
         : parent(parent_)
-        , currentToken(currentToken_)
         , range_y(range_y_)
         , searchPlugin(searchPlugin_)
+        , cache(cache_)
       {}
 
-      void searchLoadedChunk_async(const QSharedPointer<Chunk> &chunk, const ExecutionGuard &guard);
+      void loadAndSearchChunk_async(ChunkID id, const MyExecutionGuard &guard);
 
-      void searchExistingChunk_async(const QSharedPointer<Chunk> &chunk, const ExecutionGuard &guard);
+      void searchLoadedChunk_async(const QSharedPointer<Chunk> &chunk, const MyExecutionGuard &guard);
+
+      QSharedPointer<SearchPluginI::ResultListT> searchExistingChunk_async(const QSharedPointer<Chunk> &chunk, const MyExecutionGuard &guard);
 
     private:
       SearchChunksWidget& parent;
-      ExecutionStatusToken currentToken;
       const Range<float> range_y;
       QWeakPointer<SearchPluginI> searchPlugin;
+      QSharedPointer<ChunkCache> cache;
     };
 
 

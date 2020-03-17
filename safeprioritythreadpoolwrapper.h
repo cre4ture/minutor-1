@@ -10,10 +10,12 @@
 class SafePriorityThreadPoolWrapper
 {
 public:
-  SafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool);
+  SafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool_)
+    : actualThreadPool(actualThreadPool_)
+  {}
 
-  template<typename _FuncT>
-  size_t enqueueJob(const ExecutionStatusToken& cancellationToken,
+  template<typename _FuncT, typename DataT = NullData>
+  size_t enqueueJob(const ExecutionStatusToken_t<DataT>& cancellationToken,
                     const _FuncT &job,
                     JobPrio prio = JobPrio::low)
   {
@@ -30,12 +32,17 @@ private:
 
 // automatically attaches and uses a cancellationToken / ExecutionSatusToken
 // in combination with AsyncExecutionCancelGuard that automatically cancells and waits for cancellation done when destroyed
-class SimpleSafePriorityThreadPoolWrapper: public SafePriorityThreadPoolWrapper
+template<class DataT>
+class SimpleSafePriorityThreadPoolWrapper_t: public SafePriorityThreadPoolWrapper
 {
   using BaseT = SafePriorityThreadPoolWrapper;
 
 public:
-  SimpleSafePriorityThreadPoolWrapper(PriorityThreadPoolInterface& actualThreadPool_);
+  SimpleSafePriorityThreadPoolWrapper_t(PriorityThreadPoolInterface& actualThreadPool_)
+    : BaseT(actualThreadPool_)
+    , cancellation(std::make_unique<AsyncExecutionCancelGuard_t<DataT> >())
+  {}
+
 
   template<typename _FuncT>
   size_t enqueueJob(const _FuncT &job,
@@ -44,15 +51,28 @@ public:
     return BaseT::enqueueJob(cancellation->getTokenPtr(), job, prio);
   }
 
-  void renewCancellation();
+  void renewCancellation()
+  {
+    cancellation = std::make_unique<AsyncExecutionCancelGuard_t<DataT> >();
+  }
 
-  std::unique_ptr<AsyncExecutionCancelGuard> renewCancellationAndReturnOld();
+  std::unique_ptr<AsyncExecutionCancelGuard_t<DataT> > renewCancellationAndReturnOld()
+  {
+    std::unique_ptr<AsyncExecutionCancelGuard_t<DataT> > result = std::move(cancellation);
+    renewCancellation();
+    return result;
+  }
 
-  ExecutionStatusToken getCancelToken();
+  ExecutionStatusToken_t<DataT> getCancelToken()
+  {
+    return cancellation->getTokenPtr();
+  }
 
 private:
-  std::unique_ptr<AsyncExecutionCancelGuard> cancellation;     // must be last member
+  std::unique_ptr<AsyncExecutionCancelGuard_t<DataT> > cancellation;     // must be last member
 
 };
+
+typedef SimpleSafePriorityThreadPoolWrapper_t<NullData> SimpleSafePriorityThreadPoolWrapper;
 
 #endif // SAFEPRIORITYTHREADPOOLWRAPPER_H

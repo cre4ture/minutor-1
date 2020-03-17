@@ -17,17 +17,16 @@ public:
 // allows cancellation of asynchronous execution of jobs
 // allows tracking of activity in combination with ExecutionGuard
 // allows to wait until all currently connected activities are done
-template<class DataT>
-class ExecutionStatus_t: public boost::noncopyable
+class ExecutionStatusBase: public boost::noncopyable
 {
 public:
-  ExecutionStatus_t()
+  ExecutionStatusBase()
     : cancelled(false)
     , executionDonePromise()
     , executionDoneSharedFuture(executionDonePromise.get_future().share())
   {}
 
-  virtual ~ExecutionStatus_t()
+  virtual ~ExecutionStatusBase()
   {
     executionDonePromise.set_value();
   }
@@ -39,18 +38,37 @@ public:
     return executionDoneSharedFuture;
   }
 
-  DataT& data() { return holdData; }
-
 protected:
   std::atomic<bool> cancelled;
 
 private:
   std::promise<void> executionDonePromise;
   std::shared_future<void> executionDoneSharedFuture;
-  DataT holdData;
 };
 
 struct NullData {};
+
+template<class DataT>
+class ExecutionStatus_t;
+
+template<>
+class ExecutionStatus_t<NullData>: public ExecutionStatusBase
+{
+public:
+  using ExecutionStatusBase::ExecutionStatusBase;
+};
+
+template<class DataT>
+class ExecutionStatus_t: public ExecutionStatus_t<NullData>
+{
+public:
+  using ExecutionStatus_t<NullData>::ExecutionStatus_t;
+
+  DataT& data() { return holdData; }
+
+private:
+  DataT holdData;
+};
 
 typedef ExecutionStatus_t<NullData> ExecutionStatus;
 
@@ -103,9 +121,14 @@ public:
       throw CancelledException("ExecutionGuard()::checkCancellation(): cancelled!");
   }
 
-  ExecutionStatusToken getStatusToken() const
+  ExecutionStatusToken_t<DataT> getStatusToken() const
   {
-    return ExecutionStatusToken(*this);
+    return ExecutionStatusToken_t<DataT>(*this);
+  }
+
+  ExecutionStatusToken_t<NullData> getBaseStatusToken() const
+  {
+    return ExecutionStatusToken_t<NullData>(BaseT::template staticCast<ExecutionStatus_t<NullData> >());
   }
 };
 
@@ -115,7 +138,7 @@ typedef ExecutionGuard_t<NullData> ExecutionGuard;
 
 template<class DataT>
 inline ExecutionStatusToken_t<DataT>::ExecutionStatusToken_t(const ExecutionGuard_t<DataT> &guard)
-  : BaseT(static_cast<const QSharedPointer<ExecutionStatus>&>(guard))
+  : BaseT(static_cast<const QSharedPointer<ExecutionStatus_t<DataT> >&>(guard))
 {}
 
 template<class DataT>
