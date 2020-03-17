@@ -6,6 +6,7 @@
 
 #include <memory>
 
+// enforces the use of a cancellationToken / ExecutionSatusToken
 class SafePriorityThreadPoolWrapper
 {
 public:
@@ -27,6 +28,8 @@ private:
   PriorityThreadPoolInterface& actualThreadPool;
 };
 
+// automatically attaches and uses a cancellationToken / ExecutionSatusToken
+// in combination with AsyncExecutionCancelGuard that automatically cancells and waits for cancellation done when destroyed
 class SimpleSafePriorityThreadPoolWrapper: public SafePriorityThreadPoolWrapper
 {
   using BaseT = SafePriorityThreadPoolWrapper;
