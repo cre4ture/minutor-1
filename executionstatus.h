@@ -17,26 +17,29 @@ public:
 // allows cancellation of asynchronous execution of jobs
 // allows tracking of activity in combination with ExecutionGuard
 // allows to wait until all currently connected activities are done
-class ExecutionStatus: public boost::noncopyable
+template<class DataT>
+class ExecutionStatus_t: public boost::noncopyable
 {
 public:
-  bool isCanceled() const { return cancelled; }
-
-  ExecutionStatus()
+  ExecutionStatus_t()
     : cancelled(false)
     , executionDonePromise()
     , executionDoneSharedFuture(executionDonePromise.get_future().share())
   {}
 
-  virtual ~ExecutionStatus()
+  virtual ~ExecutionStatus_t()
   {
     executionDonePromise.set_value();
   }
+
+  bool isCanceled() const { return cancelled; }
 
   auto getExecutionDoneFuture()
   {
     return executionDoneSharedFuture;
   }
+
+  DataT& data() { return holdData; }
 
 protected:
   std::atomic<bool> cancelled;
@@ -44,44 +47,54 @@ protected:
 private:
   std::promise<void> executionDonePromise;
   std::shared_future<void> executionDoneSharedFuture;
+  DataT holdData;
 };
 
-class ExecutionGuard;
+struct NullData {};
+
+typedef ExecutionStatus_t<NullData> ExecutionStatus;
+
+template<class DataT>
+class ExecutionGuard_t;
 
 // is a weak pointer to the execution status
 // allows to test for cancellation
 // allows to create a strong pointer which is called ExecutionGuard
-class ExecutionStatusToken : public QWeakPointer<ExecutionStatus>
+template<class DataT>
+class ExecutionStatusToken_t : public QWeakPointer<ExecutionStatus_t<DataT> >
 {
-  typedef QWeakPointer<ExecutionStatus> BaseT;
+  typedef QWeakPointer<ExecutionStatus_t<DataT> > BaseT;
 public:
-  ExecutionStatusToken()
+  ExecutionStatusToken_t()
   {}
 
-  explicit ExecutionStatusToken(const ExecutionGuard& guard);
+  explicit ExecutionStatusToken_t(const ExecutionGuard_t<DataT>& guard);
 
-  ExecutionGuard tryCreateExecutionGuard() const;
+  ExecutionGuard_t<DataT> tryCreateExecutionGuard() const;
 
-  ExecutionGuard createExecutionGuardChecked() const;
+  ExecutionGuard_t<DataT> createExecutionGuardChecked() const;
 };
 
+typedef ExecutionStatusToken_t<NullData> ExecutionStatusToken;
+
 // ExecutionGuard blocks the succesfull finish of cancellation until all guards are gone
-class ExecutionGuard : public QSharedPointer<ExecutionStatus>
+template<class DataT>
+class ExecutionGuard_t : public QSharedPointer<ExecutionStatus_t<DataT> >
 {
-  typedef QSharedPointer<ExecutionStatus> BaseT;
+  typedef QSharedPointer<ExecutionStatus_t<DataT> > BaseT;
 
 public:
-  ExecutionGuard()
+  ExecutionGuard_t()
     : BaseT()
   {}
 
-  ExecutionGuard(const BaseT& other)
+  ExecutionGuard_t(const BaseT& other)
     : BaseT(other)
   {}
 
   bool isCanceled() const
   {
-    return isNull() || data()->isCanceled();
+    return BaseT::isNull() || BaseT::data()->isCanceled();
   }
 
   void checkCancellation() const
@@ -96,22 +109,27 @@ public:
   }
 };
 
+typedef ExecutionGuard_t<NullData> ExecutionGuard;
+
 // --- deferred inline function implementations -----------------
 
-inline ExecutionStatusToken::ExecutionStatusToken(const ExecutionGuard &guard)
+template<class DataT>
+inline ExecutionStatusToken_t<DataT>::ExecutionStatusToken_t(const ExecutionGuard_t<DataT> &guard)
   : BaseT(static_cast<const QSharedPointer<ExecutionStatus>&>(guard))
 {}
 
-inline ExecutionGuard ExecutionStatusToken::tryCreateExecutionGuard() const
+template<class DataT>
+inline ExecutionGuard_t<DataT> ExecutionStatusToken_t<DataT>::tryCreateExecutionGuard() const
 {
-  ExecutionGuard strongPtr = lock();
+  ExecutionGuard_t<DataT> strongPtr = BaseT::lock();
   bool isCanceled = (!strongPtr) || strongPtr->isCanceled();
-  return isCanceled ? ExecutionGuard() : strongPtr;
+  return isCanceled ? ExecutionGuard_t<DataT>() : strongPtr;
 }
 
-inline ExecutionGuard ExecutionStatusToken::createExecutionGuardChecked() const
+template<class DataT>
+inline ExecutionGuard_t<DataT> ExecutionStatusToken_t<DataT>::createExecutionGuardChecked() const
 {
-  ExecutionGuard guard = tryCreateExecutionGuard();
+  ExecutionGuard_t<DataT> guard = tryCreateExecutionGuard();
   if (!guard)
   {
     throw CancelledException("CancellationTokenWeakPtr::createExecutionGuardChecked(): already canceled!");

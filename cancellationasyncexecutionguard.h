@@ -3,26 +3,34 @@
 
 #include "cancellationmaster.h"
 
-class AsyncExecutionCancelGuard: public boost::noncopyable
+template<class DataT>
+class AsyncExecutionCancelGuard_t: public boost::noncopyable
 {
 public:
-  AsyncExecutionCancelGuard()
-    : cancellation(CancellationMasterPtr::create())
+  AsyncExecutionCancelGuard_t()
+    : cancellation(CancellationMasterPtr_t<DataT>::create())
   {}
 
-  ~AsyncExecutionCancelGuard()
+  ~AsyncExecutionCancelGuard_t()
   {
     cancellation.cancelAndWait();
   }
 
-  ExecutionStatusToken getTokenPtr() const
+  ExecutionStatusToken_t<DataT> getTokenPtr() const
   {
     return cancellation.getTokenPtr();
   }
 
+  void startCancellation()
+  {
+    cancellation.cancel();
+  }
+
 private:
-  CancellationMasterPtr cancellation;
+  CancellationMasterPtr_t<DataT> cancellation;
 };
+
+typedef AsyncExecutionCancelGuard_t<NullData> AsyncExecutionCancelGuard;
 
 template<class ThisT>
 class CancelSafeThisAccessor_t
@@ -63,28 +71,6 @@ public:
 private:
   ExecutionStatusToken guard;
   ThisT& myParent;
-};
-
-template<class ThisT>
-class AsyncExecutionGuardAndObjectAccessor_t: public AsyncExecutionCancelGuard
-{
-public:
-  AsyncExecutionGuardAndObjectAccessor_t(ThisT& parent_)
-    : parent(parent_)
-  {}
-
-  CancelSafeThisAccessor_t<ThisT> getAccessor() const
-  {
-    return CancelSafeThisAccessor_t<ThisT>(parent, AsyncExecutionCancelGuard::getTokenPtr());
-  }
-
-  WeakCancelSafeObjectAccessor_t<ThisT> getWeakAccessor() const
-  {
-    return WeakCancelSafeObjectAccessor_t<ThisT>(parent, AsyncExecutionCancelGuard::getTokenPtr());
-  }
-
-private:
-  ThisT& parent;
 };
 
 

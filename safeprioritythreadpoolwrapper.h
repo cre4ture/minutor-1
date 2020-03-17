@@ -46,6 +46,8 @@ public:
 
   void renewCancellation();
 
+  std::unique_ptr<AsyncExecutionCancelGuard> renewCancellationAndReturnOld();
+
   ExecutionStatusToken getCancelToken();
 
 private:

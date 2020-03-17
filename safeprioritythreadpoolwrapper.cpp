@@ -22,6 +22,13 @@ void SimpleSafePriorityThreadPoolWrapper::renewCancellation()
   cancellation = std::make_unique<AsyncExecutionCancelGuard>();
 }
 
+std::unique_ptr<AsyncExecutionCancelGuard> SimpleSafePriorityThreadPoolWrapper::renewCancellationAndReturnOld()
+{
+  std::unique_ptr<AsyncExecutionCancelGuard> result = std::move(cancellation);
+  renewCancellation();
+  return result;
+}
+
 ExecutionStatusToken SimpleSafePriorityThreadPoolWrapper::getCancelToken()
 {
   return cancellation->getTokenPtr();

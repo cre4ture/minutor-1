@@ -17,9 +17,8 @@ ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
     : cache("chunks")
     , chunkStates()
     , mutex(QMutex::Recursive)
-    , threadPool(threadPool_)
-    , loaderPool(QSharedPointer<ChunkLoaderThreadPool>::create(threadPool))
-    , asyncGuard(*this)
+    , threadPool__(threadPool_)
+    , safeThreadPoolI(*threadPool__)
 {
   chunkStates.reserve(256*1024*1024);
 
@@ -61,16 +60,18 @@ ChunkCache::~ChunkCache() {
 
 void ChunkCache::clear() {
 
-  QMutexLocker guard(&mutex);
+  std::unique_ptr<AsyncExecutionCancelGuard> oldGuard;
 
-  loaderPool.reset(); // stop everything!
+  {
+    QMutexLocker guard(&mutex);
+    oldGuard = safeThreadPoolI.renewCancellationAndReturnOld();
+    oldGuard->startCancellation(); // start cancellation of everything started up to now, before locking mutex.
 
-  cache.clear();
-  chunkStates.clear();
+    cache.clear();
+    chunkStates.clear();
+  }
 
-  loaderPool = QSharedPointer<ChunkLoaderThreadPool>::create(threadPool); // start again
-  connect(loaderPool.data(), SIGNAL(chunkUpdated(QSharedPointer<Chunk>, ChunkID)),
-          this, SLOT(gotChunk(const QSharedPointer<Chunk>&, ChunkID)));
+  oldGuard.reset(); // waits for cancellation done (this line is just making it more clear)
 }
 
 void ChunkCache::setPath(QString path) {
@@ -92,6 +93,8 @@ int ChunkCache::getMaxCost() const {
 
 QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(ChunkID id)
 {
+  ExecutionGuard guard;
+
   {
     QMutexLocker locker(&mutex);
 
@@ -103,12 +106,14 @@ QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(ChunkID id)
 
     auto& chunkState = chunkStates[id];
     chunkState << ChunkState::Loading;
+
+    guard = safeThreadPoolI.getCancelToken().createExecutionGuardChecked();
   }
 
   ChunkLoader loader(path, id);
   auto chunk = loader.runInternal();
 
-  gotChunk(chunk, id);
+  gotChunk(chunk, id, guard);
 
   return chunk;
 }
@@ -166,10 +171,12 @@ void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
   emit structureFound(structure);
 }
 
-void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
+void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id, const ExecutionGuard& guard)
 {
   {
     QMutexLocker locker(&mutex);
+
+    guard.checkCancellation();
 
     auto& chunkState = chunkStates[id];
     chunkState.unset(ChunkState::Loading);
@@ -201,25 +208,25 @@ void ChunkCache::gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id)
 void ChunkCache::loadChunkAsync_unprotected(ChunkID id,
                                             JobPrio priority)
 {
+  {
+    auto& chunkState = chunkStates[id];
+
+    if (chunkState[ChunkState::Loading])
     {
-      auto& chunkState = chunkStates[id];
-
-      if (chunkState[ChunkState::Loading])
-      {
-          return; // prevent loading chunk twice
-      }
-
-      chunkState << ChunkState::Loading;
+        return; // prevent loading chunk twice
     }
 
-  threadPool->enqueueJob([id, cancelToken = asyncGuard.getWeakAccessor()](){
+    chunkState << ChunkState::Loading;
+  }
 
-    auto guard = cancelToken.accessChecked();
+  safeThreadPoolI.enqueueJob([this, id](const ExecutionGuard& guard){
 
-    ChunkLoader loader(guard.first.path, id);
+    ChunkLoader loader(path, id);
     auto chunk = loader.runInternal();
 
-    guard.first.gotChunk(chunk, id);
+    guard.checkCancellation();
+
+    gotChunk(chunk, id, guard);
 
   }, priority);
 }

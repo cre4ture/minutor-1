@@ -3,49 +3,56 @@
 
 #include "executionstatus.h"
 
-class CancellationTokenMaster: public ExecutionStatus
+template<class DataT>
+class CancellationTokenMaster_t: public ExecutionStatus_t<DataT>
 {
+  typedef ExecutionStatus_t<DataT> BaseT;
 public:
   void cancel()
   {
-    cancelled = true;
+    BaseT::cancelled = true;
   }
 };
 
-class CancellationMasterPtr : public QSharedPointer<CancellationTokenMaster>
+template<class DataT>
+class CancellationMasterPtr_t : public QSharedPointer<CancellationTokenMaster_t<DataT> >
 {
-public:
-  using QSharedPointer::QSharedPointer;
+  typedef QSharedPointer<CancellationTokenMaster_t<DataT> > BaseT;
 
-  static CancellationMasterPtr create()
+public:
+  using BaseT::BaseT;
+
+  static CancellationMasterPtr_t create()
   {
-    return QSharedPointer<CancellationTokenMaster>::create();
+    return BaseT::create();
   }
 
   void cancel()
   {
-    if (isNull())
+    if (BaseT::isNull())
       return;
 
-    data()->cancel();
+    BaseT::data()->cancel();
   }
 
   void cancelAndWait()
   {
-    if (isNull())
+    if (BaseT::isNull())
       return;
 
     cancel();
 
-    auto future = data()->getExecutionDoneFuture();
-    reset();
+    auto future = BaseT::data()->getExecutionDoneFuture();
+    BaseT::reset();
     future.wait();
   }
 
-  ExecutionStatusToken getTokenPtr() const
+  ExecutionStatusToken_t<DataT> getTokenPtr() const
   {
-    return ExecutionStatusToken(this->staticCast<ExecutionStatus>());
+    return ExecutionStatusToken_t<DataT>(BaseT::template staticCast<ExecutionStatus_t<DataT> >());
   }
 };
+
+typedef CancellationMasterPtr_t<NullData> CancellationMasterPtr;
 
 #endif // CANCELLATIONMASTER_H

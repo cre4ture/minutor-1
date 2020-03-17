@@ -82,7 +82,7 @@ private:
 
  private slots:
   void routeStructure(QSharedPointer<GeneratedStructure> structure);
-  void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id);
+  void gotChunk(const QSharedPointer<Chunk>& chunk, ChunkID id, const ExecutionGuard &guard);
 
  private:
   QString path;                                   // path to folder with region files
@@ -100,9 +100,8 @@ private:
   int maxcache;                                   // number of Chunks that fit into Cache
   QThreadPool loaderThreadPool;                   // extra thread pool for loading
 
-  QSharedPointer<PriorityThreadPool> threadPool;
-  QSharedPointer<ChunkLoaderThreadPool> loaderPool;
-  AsyncExecutionGuardAndObjectAccessor_t<ChunkCache> asyncGuard;
+  QSharedPointer<PriorityThreadPool> threadPool__;
+  SimpleSafePriorityThreadPoolWrapper safeThreadPoolI; // last member!
 
   void loadChunkAsync_unprotected(ChunkID id,
                                   JobPrio priority);
