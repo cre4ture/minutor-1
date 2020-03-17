@@ -22,12 +22,20 @@ public:
     return QSharedPointer<CancellationTokenMaster>::create();
   }
 
-  void cancelAndWait()
+  void cancel()
   {
-    if (data() == nullptr)
+    if (isNull())
       return;
 
     data()->cancel();
+  }
+
+  void cancelAndWait()
+  {
+    if (isNull())
+      return;
+
+    cancel();
 
     auto future = data()->getExecutionDoneFuture();
     reset();
