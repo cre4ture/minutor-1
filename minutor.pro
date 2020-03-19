@@ -20,6 +20,8 @@ QMAKE_CFLAGS_WARN_ON=-Wreturn-type
 
 # Input
 HEADERS += \
+  ConvenientJobCancellingAsyncCallWrapper_t.hpp \
+  JobCancellingAsyncCallWrapper_t.hpp \
   cancellationasyncexecutionguard.h \
   cancellationmaster.h \
   coordinatehashmap.h \

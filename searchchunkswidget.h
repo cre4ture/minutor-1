@@ -10,7 +10,7 @@
 #include "value_initialized.h"
 #include "executionstatus.h"
 #include "safeinvoker.h"
-#include "safeprioritythreadpoolwrapper.h"
+#include "ConvenientJobCancellingAsyncCallWrapper_t.hpp"
 #include "range.h"
 
 #include <QWidget>
@@ -82,7 +82,7 @@ private:
     QSharedPointer<AsyncSearch> currentSearch;
 
     SafeGuiThreadInvoker m_invoker;
-    SimpleSafePriorityThreadPoolWrapper_t<QSharedPointer<AsyncSearch> > safeThreadPoolI;      // must be last member
+    ConvenientJobCancellingAsyncCallWrapper_t<QSharedPointer<AsyncSearch>, PriorityThreadPoolInterface, JobPrio> safeThreadPoolI;      // must be last member
 
     using MyExecutionGuard = ExecutionGuard_t<QSharedPointer<AsyncSearch> >;
 

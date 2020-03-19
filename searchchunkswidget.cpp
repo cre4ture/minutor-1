@@ -100,7 +100,7 @@ void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
   safeThreadPoolI.enqueueJob([id](const MyExecutionGuard& guard)
   {
     guard->data()->loadAndSearchChunk_async(id, guard);
-  });
+  }, JobPrio::low);
 }
 
 void SearchChunksWidget::AsyncSearch::loadAndSearchChunk_async(ChunkID id, const MyExecutionGuard &guard)

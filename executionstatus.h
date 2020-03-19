@@ -39,7 +39,7 @@ public:
   }
 
 protected:
-  std::atomic<bool> cancelled;
+  std::atomic<bool> cancelled; // hidden to prevent cancellation from everywhere
 
 private:
   std::promise<void> executionDonePromise;
@@ -88,9 +88,9 @@ public:
 
   explicit ExecutionStatusToken_t(const ExecutionGuard_t<DataT>& guard);
 
-  ExecutionGuard_t<DataT> tryCreateExecutionGuard() const;
+  ExecutionGuard_t<DataT> tryCreateExecutionGuard() const; // returns nullptr when cancelled
 
-  ExecutionGuard_t<DataT> createExecutionGuardChecked() const;
+  ExecutionGuard_t<DataT> createExecutionGuardChecked() const; // throws CancelledException if cancelled
 };
 
 typedef ExecutionStatusToken_t<NullData> ExecutionStatusToken;
