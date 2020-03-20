@@ -66,6 +66,11 @@ private:
           return m_parent.fetch_unprotected(chunk_out, id, behav, priority);
       }
 
+      void triggerReload(ChunkID id)
+      {
+        return m_parent.loadChunkAsync_unprotected(id, JobPrio::low);
+      }
+
   private:
       ChunkCache& m_parent;
       QMutexLocker m_locker;

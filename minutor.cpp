@@ -965,9 +965,8 @@ void Minutor::updateChunksAroundPlayer(const Location &pos, size_t areaRadius)
     {
         for (int dz = -chunkRadius; dz < chunkRadius; dz++)
         {
-            QSharedPointer<Chunk> chunk;
             ChunkID chunkToSearchID(id.getX() + dx, id.getZ() + dz);
-            locker.fetch(chunk, chunkToSearchID, ChunkCache::FetchBehaviour::FORCE_UPDATE);
+            locker.triggerReload(chunkToSearchID);
         }
     }
 }

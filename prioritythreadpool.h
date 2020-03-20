@@ -6,12 +6,12 @@
 
 #include <QSharedPointer>
 
-class PriorityThreadPool: public PriorityThreadPoolInterface
+class PriorityThreadPoolN: public PriorityThreadPoolInterface
 {
 public:
   using QueueType = ThreadSafePriorityQueueWithIdleJob<JobT, JobPrio>;
 
-  PriorityThreadPool();
+  PriorityThreadPoolN(size_t threadCount);
 
   size_t enqueueJob(const JobT& job, JobPrio prio = JobPrio::low) override
   {
@@ -35,6 +35,12 @@ private:
 
   QSharedPointer<HiddenImplementationC> m_impl;
   QueueType& m_queue;
+};
+
+class PriorityThreadPool: public PriorityThreadPoolN
+{
+public:
+  PriorityThreadPool();
 };
 
 #endif // ASYNCTASKPROCESSORBASE_HPP

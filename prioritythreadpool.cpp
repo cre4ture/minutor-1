@@ -29,19 +29,17 @@ namespace {
 
 }
 
-class PriorityThreadPool::HiddenImplementationC
+class PriorityThreadPoolN::HiddenImplementationC
 {
 public:
-  HiddenImplementationC(PriorityThreadPool& parent)
+  HiddenImplementationC(PriorityThreadPoolN& parent, size_t threadCount)
     : m_parent(parent)
   {
-    const size_t numberOfCpuCores = std::thread::hardware_concurrency();
-
-    for (size_t i = 0; i < numberOfCpuCores; i++)
+    for (size_t i = 0; i < threadCount; i++)
     {
 
       std::packaged_task<void()> task([this]() {
-        PriorityThreadPool::JobT job;
+        PriorityThreadPoolN::JobT job;
         while (jobqueue.pop(job))
         {
           try {
@@ -49,11 +47,11 @@ public:
           } catch (CancelledException e) {
             /* ignore */
           } catch (std::exception e) {
-            std::cerr << "PriorityThreadPool(): exception caught: " << e.what() << std::endl;
+            std::cerr << "PriorityThreadPoolN(): exception caught: " << e.what() << std::endl;
           } catch (...) {
-            std::cerr << "PriorityThreadPool(): unknown exception caught" << std::endl;
+            std::cerr << "PriorityThreadPoolN(): unknown exception caught" << std::endl;
           }
-          job = PriorityThreadPool::JobT(); // directly delete functor after execution and before blocking for wait.
+          job = PriorityThreadPoolN::JobT(); // directly delete functor after execution and before blocking for wait.
         }
       });
 
@@ -81,18 +79,24 @@ public:
     }
   }
 
-  PriorityThreadPool& m_parent;
-  PriorityThreadPool::QueueType jobqueue;
+  PriorityThreadPoolN& m_parent;
+  PriorityThreadPoolN::QueueType jobqueue;
   QList<QSharedPointer<WorkerThread> > workers;
   QList<std::shared_future<void> > futures;
 };
 
-PriorityThreadPool::PriorityThreadPool()
-  : m_impl(QSharedPointer<HiddenImplementationC>::create(*this))
+PriorityThreadPoolN::PriorityThreadPoolN(size_t threadCount)
+  : m_impl(QSharedPointer<HiddenImplementationC>::create(*this, threadCount))
   , m_queue(m_impl->jobqueue)
 {}
 
-size_t PriorityThreadPool::getNumberOfThreads() const
+size_t PriorityThreadPoolN::getNumberOfThreads() const
 {
   return m_impl->futures.size();
+}
+
+PriorityThreadPool::PriorityThreadPool()
+  : PriorityThreadPoolN(std::thread::hardware_concurrency())
+{
+
 }
