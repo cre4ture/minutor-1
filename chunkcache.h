@@ -33,13 +33,6 @@ private:
   int getCost() const;
   int getMaxCost() const;
 
-  enum class FetchBehaviour
-  {
-      USE_CACHED,
-      USE_CACHED_OR_UDPATE,
-      FORCE_UPDATE
-  };
-
   class Locker
   {
   public:
@@ -60,10 +53,9 @@ private:
 
       bool fetch(QSharedPointer<Chunk>& chunk_out,
                  ChunkID id,
-                 FetchBehaviour behav = FetchBehaviour::USE_CACHED_OR_UDPATE,
                  JobPrio priority = JobPrio::low)
       {
-          return m_parent.fetch_unprotected(chunk_out, id, behav, priority);
+          return m_parent.fetch_unprotected(chunk_out, id, priority);
       }
 
       void triggerReload(ChunkID id)
@@ -113,7 +105,7 @@ private:
 
   bool isCached_unprotected(ChunkID id, QSharedPointer<Chunk>* chunkPtr_out);
 
-  bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, ChunkID id, FetchBehaviour behav, JobPrio priority);
+  bool fetch_unprotected(QSharedPointer<Chunk> &chunk_out, ChunkID id, JobPrio priority);
 
 };
 

@@ -1192,7 +1192,7 @@ void MapView::getToolTip(int x, int z) {
   bool chunkValid = false;
   {
     ChunkCache::Locker locked_cache(*cache);
-    chunkValid = locked_cache.fetch(chunk, pendingToolTipChunk, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE, JobPrio::high);
+    chunkValid = locked_cache.fetch(chunk, pendingToolTipChunk, JobPrio::high);
   }
 
   if (chunkValid)

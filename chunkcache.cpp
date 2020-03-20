@@ -120,21 +120,17 @@ QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(ChunkID id)
 
 bool ChunkCache::fetch_unprotected(QSharedPointer<Chunk>& chunk_out,
                                    ChunkID id,
-                                   FetchBehaviour behav,
                                    JobPrio priority)
 {
   const bool cached = isCached_unprotected(id, &chunk_out);
 
-  if ( (behav == FetchBehaviour::FORCE_UPDATE) ||
-       (
-           (behav == FetchBehaviour::USE_CACHED_OR_UDPATE) && (!cached)
-       )
-    )
+  if (!cached)
   {
       loadChunkAsync_unprotected(id, priority);
       chunk_out.reset();
       return false;
   }
+
   return cached;
 }
 
