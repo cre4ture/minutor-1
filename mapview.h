@@ -273,11 +273,13 @@ class MapView : public QWidget {
   class UpdateChecker
   {
   public:
+    typedef std::function<void(QSharedPointer<Chunk>,  const ExecutionGuard &guard)> RenderFuncT;
+
     UpdateChecker(
         MapView& parent_,
         const QSharedPointer<ChunkCache>& cache,
         const QSharedPointer<PriorityThreadPool>& threadpool_,
-        std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_);
+        const RenderFuncT& renderChunkRequestFunction_);
     ~UpdateChecker();
 
     void update();
@@ -287,7 +289,7 @@ class MapView : public QWidget {
     std::mutex mutex;
     QSharedPointer<ChunkCache> cache;
     QSharedPointer<PriorityThreadPool> threadpool;
-    std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction;
+    RenderFuncT renderChunkFunction;
     ThreadSafeQueue<ChunkID> chunksToRedraw;
     ChunkIteratorC chunkRedrawIterator;
     AutoPerformance autoPerformance;
@@ -316,6 +318,7 @@ class MapView : public QWidget {
   SimpleSafePriorityThreadPoolWrapper safeThreadPoolI;      // must be last member
 
   size_t renderChunkAsync(const QSharedPointer<Chunk> &chunk);
+  void renderChunkSync(const QSharedPointer<Chunk> &chunk, const ExecutionGuard &guard);
 
   void updateCacheSize(bool onlyIncrease);
 

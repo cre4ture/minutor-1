@@ -515,14 +515,21 @@ size_t MapView::renderChunkAsync(const QSharedPointer<Chunk> &chunk)
 {
   return safeThreadPoolI.enqueueJob([this, chunk](const ExecutionGuard& guard){
 
-    auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
-    renderedChunk->init();
+    renderChunkSync(chunk, guard);
 
-    ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
-    m_invoker.invokeCancellable(guard.getStatusToken(), [this, renderedChunk](const ExecutionGuard& guard){
-      renderingDone(renderedChunk);
-    });
   }, JobPrio::high);
+}
+
+void MapView::renderChunkSync(const QSharedPointer<Chunk> &chunk, const ExecutionGuard& guard)
+{
+  auto renderedChunk = QSharedPointer<RenderedChunk>::create(chunk);
+  renderedChunk->init();
+
+  ChunkRenderer::renderChunk(*this, chunk, *renderedChunk);
+
+  m_invoker.invokeCancellable(guard.getStatusToken(), [this, renderedChunk](const ExecutionGuard& guard){
+    renderingDone(renderedChunk);
+  });
 }
 
 void MapView::updateCacheSize(bool onlyIncrease)
@@ -558,8 +565,8 @@ void MapView::setBackgroundActivitiesEnabled(bool enabled)
 {
   if ((!updateChecker) && enabled)
   {
-    updateChecker = std::make_shared<UpdateChecker>(*this, cache, threadpool_, [this](QSharedPointer<Chunk> chunk){
-        renderChunkAsync(chunk);
+    updateChecker = std::make_shared<UpdateChecker>(*this, cache, threadpool_, [this](QSharedPointer<Chunk> chunk, const ExecutionGuard &guard){
+        renderChunkSync(chunk, guard);
     });
 
     changed();
@@ -632,13 +639,12 @@ void MapView::regularUpdate()
 MapView::UpdateChecker::UpdateChecker(MapView& parent_,
                                       const QSharedPointer<ChunkCache> &cache_,
                                       const QSharedPointer<PriorityThreadPool>& threadpool_,
-                                      std::function<void(QSharedPointer<Chunk>)> renderChunkRequestFunction_
-                                      )
+                                      const RenderFuncT& renderChunkRequestFunction_)
   : parent(parent_)
   , mutex()
   , cache(cache_)
   , threadpool(threadpool_)
-  , renderChunkRequestFunction(renderChunkRequestFunction_)
+  , renderChunkFunction(renderChunkRequestFunction_)
   , autoPerformance(std::chrono::milliseconds(30))
   , updateIsRunning(false)
   , isIdleJobRegistered(false)
@@ -680,15 +686,11 @@ void MapView::UpdateChecker::idleJobFunction()
     }
   }
 
-  QSharedPointer<Chunk> chunk;
-  {
-    ChunkCache::Locker locker(*cache);
-    locker.fetch(chunk, id, ChunkCache::FetchBehaviour::USE_CACHED_OR_UDPATE);
-  }
+  QSharedPointer<Chunk> chunk = cache->getChunkSynchronously(id);
 
   if (chunk)
   {
-    renderChunkRequestFunction(chunk);
+    renderChunkFunction(chunk, asyncGuard.getTokenPtr().createExecutionGuardChecked());
   }
 }
 
