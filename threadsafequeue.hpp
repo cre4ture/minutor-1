@@ -6,6 +6,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
+#include <vector>
 
 class ThreadSafeQueueBase
 {
@@ -252,6 +253,43 @@ class ThreadSafePriorityQueueWithIdleJob: public ThreadSafePriorityQueueBase<T, 
 public:
   using ThisT = ThreadSafePriorityQueueWithIdleJob;
   using BaseT = ThreadSafePriorityQueueBase<T, PrioT>;
+
+  bool pop_n(size_t n, std::vector<T>& listOut)
+  {
+    typename BaseT::template ProtectedPop<ThisT> guard(*this);
+
+    while (BaseT::queue_.empty() && defaultValueQueue_.empty() && BaseT::isAlive())
+    {
+      guard.waitNextEvent();
+    }
+
+    for (size_t i = 0; (i < n) && (!BaseT::queue_.empty()); i++)
+    {
+      auto it = BaseT::queue_.begin();
+      listOut.push_back(it->second);
+      BaseT::queue_.erase(it);
+    }
+
+    if (listOut.size() > 0)
+    {
+      return true;
+    }
+    else
+    {
+      bool endReached = defaultValueQueue_.empty();
+      if (!endReached)
+      {
+        auto it = defaultValueQueue_.begin();
+        if (it->second)
+        {
+          listOut.push_back(*(it->second));
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   bool pop(T& item)
   {

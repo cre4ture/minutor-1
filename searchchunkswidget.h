@@ -112,9 +112,6 @@ private:
       QSharedPointer<ChunkCache> cache;
     };
 
-
-    void requestSearchingOfChunk(ChunkID id);
-
     void addOneToProgress(ChunkID id);
 
     void cancelSearch();

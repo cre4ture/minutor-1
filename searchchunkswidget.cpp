@@ -44,6 +44,37 @@ static Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBo
   }
 }
 
+
+template<class JobQueueT, class JobT, class ExecutionGuardT>
+class JobPacker
+{
+public:
+  JobPacker(JobQueueT& queue_)
+    : queue(queue_)
+  {}
+
+  void enqueueJob(const JobT& job)
+  {
+    pack.push_back(job);
+    if (pack.size() > 50)
+    {
+      queue.enqueueJob([joblist = std::move(pack)](const ExecutionGuardT& guard)
+      {
+        for (auto& job: joblist)
+        {
+          guard.checkCancellation();
+          job(guard);
+        }
+      }, JobPrio::low);
+    }
+  }
+
+private:
+  JobQueueT& queue;
+  std::vector<JobT> pack;
+};
+
+
 void SearchChunksWidget::on_pb_search_clicked()
 {
   if (currentSearch)
@@ -78,12 +109,17 @@ void SearchChunksWidget::on_pb_search_clicked()
 
   QRect searchRange((poi - radius2d).toPoint(), (poi + radius2d).toPoint());
 
+  //JobPacker<ConvenientJobCancellingAsyncCallWrapper_t, std::function<void(const MyExecutionGuard& guard)>, MyExecutionGuard> packer(safeThreadPoolI);
+
   size_t count = 0;
   for (RectangleInnerToOuterIterator it(searchRange); it != it.end(); ++it)
   {
     const ChunkID id(it->getX(), it->getZ());
 
-    requestSearchingOfChunk(id);
+    safeThreadPoolI.enqueueJob([id](const MyExecutionGuard& guard)
+    {
+      guard->data()->loadAndSearchChunk_async(id, guard);
+    }, JobPrio::low);
 
     if ((count++ % 100) == 0)
       QApplication::processEvents();
@@ -93,14 +129,6 @@ void SearchChunksWidget::on_pb_search_clicked()
       return;
     }
   }
-}
-
-void SearchChunksWidget::requestSearchingOfChunk(ChunkID id)
-{
-  safeThreadPoolI.enqueueJob([id](const MyExecutionGuard& guard)
-  {
-    guard->data()->loadAndSearchChunk_async(id, guard);
-  }, JobPrio::low);
 }
 
 void SearchChunksWidget::AsyncSearch::loadAndSearchChunk_async(ChunkID id, const MyExecutionGuard &guard)
