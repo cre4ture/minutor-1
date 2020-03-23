@@ -14,6 +14,8 @@
 #include "range.h"
 
 #include <QWidget>
+#include <QFuture>
+
 #include <set>
 
 namespace Ui {
@@ -82,7 +84,7 @@ private:
     QSharedPointer<AsyncSearch> currentSearch;
 
     SafeGuiThreadInvoker m_invoker;
-    ConvenientJobCancellingAsyncCallWrapper_t<QSharedPointer<AsyncSearch>, PriorityThreadPoolInterface, JobPrio> safeThreadPoolI;      // must be last member
+    QFuture<void> currentfuture;
 
     using MyExecutionGuard = ExecutionGuard_t<QSharedPointer<AsyncSearch> >;
 

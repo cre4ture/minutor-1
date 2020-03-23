@@ -9,6 +9,7 @@
 #include <QVariant>
 #include <QTreeWidgetItem>
 #include <boost/noncopyable.hpp>
+#include <QtConcurrent/QtConcurrent>
 
 SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   : QWidget(input.parent)
@@ -16,7 +17,6 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
   , m_input(input)
   , m_searchRunning(false)
   , m_invoker()
-  , safeThreadPoolI(*m_input.threadpool)
 {
   ui->setupUi(this);
 
@@ -30,6 +30,7 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
 
 SearchChunksWidget::~SearchChunksWidget()
 {
+  cancelSearch();
 }
 
 static Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1, const QSpinBox& sb2)
@@ -77,7 +78,7 @@ private:
 
 void SearchChunksWidget::on_pb_search_clicked()
 {
-  if (currentSearch)
+  if (!currentfuture.isCanceled())
   {
     cancelSearch();
     return;
@@ -85,9 +86,6 @@ void SearchChunksWidget::on_pb_search_clicked()
 
   const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
   currentSearch = QSharedPointer<AsyncSearch>::create(*this, range_y, m_input.searchPlugin, m_input.cache);
-
-  auto weakToken = safeThreadPoolI.getCancelToken();
-  weakToken.createExecutionGuardChecked()->data() = currentSearch;
 
   ui->pb_search->setText("Cancel");
 
@@ -111,24 +109,18 @@ void SearchChunksWidget::on_pb_search_clicked()
 
   //JobPacker<ConvenientJobCancellingAsyncCallWrapper_t, std::function<void(const MyExecutionGuard& guard)>, MyExecutionGuard> packer(safeThreadPoolI);
 
-  size_t count = 0;
+  auto chunks = QSharedPointer<QList<ChunkID> >::create();
+
   for (RectangleInnerToOuterIterator it(searchRange); it != it.end(); ++it)
   {
     const ChunkID id(it->getX(), it->getZ());
-
-    safeThreadPoolI.enqueueJob([id](const MyExecutionGuard& guard)
-    {
-      guard->data()->loadAndSearchChunk_async(id, guard);
-    }, JobPrio::low);
-
-    if ((count++ % 100) == 0)
-      QApplication::processEvents();
-
-    if (!weakToken.tryCreateExecutionGuard())
-    {
-      return;
-    }
+    chunks->append(id);
   }
+
+  currentfuture = QtConcurrent::map(*chunks, [currentSearch = currentSearch, chunks /* needed to keep list alive during search */](const ChunkID& id){
+    auto master = CancellationMasterPtr_t<QSharedPointer<AsyncSearch> >::create();
+    currentSearch->loadAndSearchChunk_async(id, master.getTokenPtr().createExecutionGuardChecked());
+  });
 }
 
 void SearchChunksWidget::AsyncSearch::loadAndSearchChunk_async(ChunkID id, const MyExecutionGuard &guard)
@@ -207,7 +199,10 @@ void SearchChunksWidget::addOneToProgress(ChunkID /* id */)
 
 void SearchChunksWidget::cancelSearch()
 {
-  safeThreadPoolI.renewCancellation();
+  currentfuture.cancel();
+  currentfuture.waitForFinished();
+
+  //safeThreadPoolI.renewCancellation();
 
   ui->pb_search->setText("Search");
 
