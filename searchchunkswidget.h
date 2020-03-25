@@ -25,9 +25,7 @@ class SearchChunksWidget;
 class ChunkCache;
 class Chunk;
 class SearchResultWidget;
-class GenericIdentifier;
 class PriorityThreadPool;
-class SearchTextWidget;
 
 struct SearchEntityWidgetInputC
 {
@@ -35,13 +33,11 @@ struct SearchEntityWidgetInputC
 
     SearchEntityWidgetInputC(const QSharedPointer<PriorityThreadPool>& threadpool_,
                              const QSharedPointer<ChunkCache>& cache_,
-//                             EntityDefitionsConfig definitions_,
                              PositionProviderT posOfInterestProvider_,
                              QSharedPointer<SearchPluginI> searchPlugin_,
                              QWidget *parent_ = nullptr)
         : threadpool(threadpool_)
         , cache(cache_)
-//        , definitions(definitions_)
         , posOfInterestProvider(posOfInterestProvider_)
         , searchPlugin(searchPlugin_)
         , parent(parent_)
@@ -49,7 +45,6 @@ struct SearchEntityWidgetInputC
 
     QSharedPointer<PriorityThreadPool> threadpool;
     QSharedPointer<ChunkCache> cache;
-//    EntityDefitionsConfig definitions;
     PositionProviderT posOfInterestProvider;
     QSharedPointer<SearchPluginI> searchPlugin;
     QWidget *parent;
@@ -73,20 +68,16 @@ private slots:
     void on_resultList_jumpTo(const QVector3D &);
     void on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> >);
 
-    void displayResults(QSharedPointer<SearchPluginI::ResultListT> results, ChunkID id);
+    void displayResultsOfSingleChunk(QSharedPointer<SearchPluginI::ResultListT> results, ChunkID id);
 
 private:
-    class AsyncSearch;
-
     QSharedPointer<Ui::SearchChunksWidget> ui;
     SearchEntityWidgetInputC m_input;
-    bool m_searchRunning;
-    QSharedPointer<AsyncSearch> currentSearch;
-
     SafeGuiThreadInvoker m_invoker;
-    QFuture<void> currentfuture;
 
-    using MyExecutionGuard = ExecutionGuard_t<QSharedPointer<AsyncSearch> >;
+    class AsyncSearch;
+    QSharedPointer<AsyncSearch> currentSearch;
+    QFuture<void> currentfuture;
 
     class AsyncSearch
     {
@@ -101,11 +92,11 @@ private:
         , cache(cache_)
       {}
 
-      void loadAndSearchChunk_async(ChunkID id, const MyExecutionGuard &guard);
+      void loadAndSearchChunk_async(ChunkID id);
 
-      void searchLoadedChunk_async(const QSharedPointer<Chunk> &chunk, const MyExecutionGuard &guard);
+      void searchLoadedChunk_async(const QSharedPointer<Chunk> &chunk);
 
-      QSharedPointer<SearchPluginI::ResultListT> searchExistingChunk_async(const QSharedPointer<Chunk> &chunk, const MyExecutionGuard &guard);
+      QSharedPointer<SearchPluginI::ResultListT> searchExistingChunk_async(const QSharedPointer<Chunk> &chunk);
 
     private:
       SearchChunksWidget& parent;
