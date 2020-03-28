@@ -338,7 +338,6 @@ void Minutor::toggleFlags() {
   if (biomeColorsAct->isChecked())  flags |= MapView::flgBiomeColors;
   if (seaGroundAct->isChecked())    flags |= MapView::flgSeaGround;
   if (singleLayerAct->isChecked())  flags |= MapView::flgSingleLayer;
-  if (seaGroundAct->isChecked())    flags |= MapView::flgSeaGround;
   mapview->setFlags(flags);
 
   QSet<QString> overlayTypes;
