@@ -4,6 +4,7 @@
 
 #include <QString>
 #include <QMap>
+#include <QVariant>
 
 class PaletteEntry {
  public:
