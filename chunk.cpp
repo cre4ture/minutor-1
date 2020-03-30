@@ -7,15 +7,15 @@
 #include "./blockidentifier.h"
 #include "./chunkid.h"
 
-template<typename _ValueT>
-inline void* safeMemCpy(void* __dest, const std::vector<_ValueT>& __src, size_t __len)
+template<typename ValueT>
+inline void* safeMemCpy(void* dest, const std::vector<ValueT>& srcVec, size_t length)
 {
-    if (__len > (sizeof(_ValueT) * __src.size()))
+    if (length > (sizeof(ValueT) * srcVec.size()))
     {
         throw NtbStreamDecodingError("myMemCpy() size mismatch!");
     }
 
-    return memcpy(__dest, &__src[0], __len);
+    return memcpy(dest, &srcVec[0], length);
 }
 
 quint16 getBits(const unsigned char *data, int pos, int n) {
