@@ -13,7 +13,7 @@
 #include <QObject>
 #include <QCache>
 #include <QSharedPointer>
-
+#include "./chunkid.h"
 class ChunkCache : public QObject {
   Q_OBJECT
 
@@ -30,8 +30,9 @@ private:
   void setPath(QString path);
   QString getPath() const;
   QSharedPointer<Chunk> fetch(int cx, int cz);         // fetch Chunk and load when not found
-  int getCost() const;
-  int getMaxCost() const;
+  int getCacheUsage() const;
+  int getCacheMax() const;
+  int getMemoryMax() const;
 
   class Locker
   {
@@ -75,7 +76,7 @@ private:
   void structureFound(QSharedPointer<GeneratedStructure> structure);
 
  public slots:
-  void adaptCacheToWindow(int wx, int wy);
+  void setCacheMaxSize(int chunks);
 
  private slots:
   void routeStructure(QSharedPointer<GeneratedStructure> structure);
@@ -94,7 +95,7 @@ private:
   SafeCache<ChunkID, Chunk> cache;           // real Cache
   CoordinateHashMap<ChunkInfoT> chunkStates;
   QMutex mutex;                                   // Mutex for accessing the Cache
-  int maxcache;                                   // number of Chunks that fit into Cache
+  int maxcache;                                   // number of Chunks that fit into memory
   QThreadPool loaderThreadPool;                   // extra thread pool for loading
 
   QSharedPointer<PriorityThreadPool> threadPool__;

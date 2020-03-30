@@ -7,10 +7,11 @@
  make less-than-optimal PNGs.
  */
 
+#include <zlib.h>
 #include "./worldsave.h"
 #include "./mapview.h"
+#include "./chunkloader.h"
 #include "./chunkrenderer.h"
-#include "zlib/zlib.h"
 
 #include "chunkrenderer.h"
 
@@ -76,13 +77,13 @@ void WorldSave::run() {
   const char *sig = "\x89PNG\x0d\x0a\x1a\x0a";
   png.write(sig, 8);
   // output PNG header
-  const char *ihdrdata = "\x00\x00\x00\x00"  // width
-      "\x00\x00\x00\x00"  // height
-      "\x08"  // bit depth
-      "\x06"  // color type (rgba)
-      "\x00"  // compresion method (deflate)
-      "\x00"  // filter method (standard)
-      "\x00";  // interlace method (none)
+  const char *ihdrdata =  "\x00\x00\x00\x00"  // width
+                          "\x00\x00\x00\x00"  // height
+                          "\x08"              // bit depth
+                          "\x06"              // color type (rgba)
+                          "\x00"              // compresion method (deflate)
+                          "\x00"              // filter method (standard)
+                          "\x00";             // interlace method (none)
   char ihdr[13];
   memcpy(ihdr, ihdrdata, 13);
   w32(ihdr, width);
@@ -105,36 +106,20 @@ void WorldSave::run() {
 
   double maximum = (bottom + 1 - top) * (right + 1 - left);
   double step = 0.0;
-  for (int z = top; z <= bottom; z++) {
-    for (int x = left; x <= right; x++, step += 1.0) {
+  for (int cz = top; cz <= bottom; cz++) {
+    for (int cx = left; cx <= right; cx++, step += 1.0) {
       emit progress(tr("Rendering world"), step / maximum);
-      int rx = x >> 5;
-      int rz = z >> 5;
-      QFile f(path + "/region/r." + QString::number(rx) + "." +
-              QString::number(rz) + ".mca");
-      if (!f.open(QIODevice::ReadOnly)) {
-        blankChunk(scanlines, width * 4 + 1, x - left);
-        continue;
-      }
-      uchar *header = f.map(0, 4096);
-      int offset = 4 * ((x & 31) + (z & 31) * 32);
-      int coffset = (header[offset] << 16) | (header[offset + 1] << 8) |
-          header[offset + 2];
-      int numSectors = header[offset + 3];
-      f.unmap(header);
-      if (coffset == 0) {
-        // no chunk here
-        blankChunk(scanlines, width * 4 + 1, x - left);
+
+      // create a temporary Chunk for PNG processing
+      QSharedPointer<Chunk> chunk(new Chunk());
+
+      if (ChunkLoader::loadNbt(path, ChunkID(cx, cz), chunk)) {
+        drawChunk(scanlines, width * 4 + 1, cx - left, chunk);
       } else {
-        uchar *raw = f.map(coffset * 4096, numSectors * 4096);
-        NBT nbt(raw);
-        QSharedPointer<Chunk> chunk(new Chunk());
-        chunk->load(nbt);
-        f.unmap(raw);
-        drawChunk(scanlines, width * 4 + 1, x - left, chunk);
-        chunk.reset();
+        blankChunk(scanlines, width * 4 + 1, cx - left);
       }
-      f.close();
+      // cleanup memory resources
+      chunk.reset();
     }
     // write out scanlines to disk
     strm.avail_in = insize;
@@ -142,9 +127,8 @@ void WorldSave::run() {
     do {
       strm.avail_out = outsize;
       strm.next_out = compressed;
-      deflate(&strm, (z == bottom) ? Z_FINISH : Z_NO_FLUSH);
-      writeChunk(&png, "IDAT", (const char *)compressed,
-                 outsize - strm.avail_out);
+      deflate(&strm, (cz == bottom) ? Z_FINISH : Z_NO_FLUSH);
+      writeChunk(&png, "IDAT", (const char *)compressed, (outsize - strm.avail_out));
     } while (strm.avail_out == 0);
   }
   deflateEnd(&strm);

@@ -147,7 +147,7 @@ class MapView : public QWidget {
   void getToolTip_withChunkAvailable(int x, int z, const QSharedPointer<Chunk> &chunk);
   int getY(int x, int z);
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
-  void adjustZoom(double steps);
+  void adjustZoom(double steps, bool allowZoomOut);
 
   MapCamera getCamera() const;
 
@@ -159,7 +159,7 @@ class MapView : public QWidget {
   int depth;
   double x, z;
   int scale;
-
+  int zoomIndex;
   double zoom;
 
   int flags;

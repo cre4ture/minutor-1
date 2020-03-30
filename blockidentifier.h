@@ -81,6 +81,7 @@ class BlockIdentifier: public IdentifierI {
   bool       hasBlockInfo(uint hid);
 
   QList<quint32> getKnownIds() const;
+
  private:
   // singleton: prevent access to constructor and copyconstructor
   BlockIdentifier();

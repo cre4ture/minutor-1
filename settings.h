@@ -11,12 +11,11 @@ class Settings : public QDialog {
  public:
   explicit Settings(QWidget *parent = 0);
 
-  bool autoUpdate;
-  bool verticalDepth;
   QString mcpath;
-  bool fineZoom;
-  bool zoomOut;
-
+  bool verticalDepth;
+  bool autoUpdate;
+  Qt::KeyboardModifier modifier4DepthSlider;
+  Qt::KeyboardModifier modifier4ZoomOut;
 
   /** Returns the default path to be used for Minecraft location. */
   static QString getDefaultLocation();
@@ -31,10 +30,8 @@ class Settings : public QDialog {
   void toggleDefaultLocation(bool on);
   void pathChanged(const QString &path);
   void toggleVerticalDepth(bool on);
-
-  void on_checkBox_zoom_out_toggled(bool checked);
-
-  void on_checkBox_fine_zoom_toggled(bool checked);
+  void toggleModifier4DepthSlider();
+  void toggleModifier4ZoomOut();
 
   void on_checkBox_display_depth_map_toggled(bool checked);
 

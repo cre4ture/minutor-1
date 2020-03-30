@@ -2,7 +2,7 @@
 #ifndef CHUNKLOADER_H_
 #define CHUNKLOADER_H_
 
-#include "coordinateid.h"
+#include "chunkid.h"
 #include "executionstatus.h"
 #include "jobprio.h"
 #include "safeprioritythreadpoolwrapper.h"
@@ -48,6 +48,7 @@ class ChunkLoader
   void run();
 
   QSharedPointer<NBT> loadNbt();
+  static bool loadNbt(const QString& path, const ChunkID& id, QSharedPointer<Chunk>& chunk_out);
 
   QSharedPointer<Chunk> runInternal();
 

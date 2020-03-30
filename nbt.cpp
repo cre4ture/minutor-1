@@ -1,11 +1,11 @@
 /** Copyright (c) 2013, Sean Kasun */
+#include <zlib.h>
 #include <QFile>
 #include <QByteArray>
 #include <QDebug>
 #include <QStringList>
 
 #include "./nbt.h"
-#include "zlib/zlib.h"
 
 static void unzip_nbt(QByteArray& data, QByteArray& nbt)
 {

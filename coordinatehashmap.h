@@ -1,7 +1,7 @@
 #ifndef CHUNKHASHMAP_H
 #define CHUNKHASHMAP_H
 
-#include "coordinateid.h"
+#include "chunkid.h"
 
 template<class _ValueT, int reduction = 16>
 class CoordinateHashMap

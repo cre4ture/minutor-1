@@ -1,7 +1,5 @@
 TEMPLATE = lib
 TARGET = minutor
-DEPENDPATH += .
-INCLUDEPATH += .
 CONFIG += c++14
 QT += widgets network concurrent
 QMAKE_INFO_PLIST = minutor.plist
@@ -11,8 +9,8 @@ macx:ICON=icon.icns
 
 #for profiling
 #*-g++* {
-#	QMAKE_CXXFLAGS += -pg
-#	QMAKE_LFLAGS += -pg
+#    QMAKE_CXXFLAGS += -pg
+#    QMAKE_LFLAGS += -pg
 #}
 
 QMAKE_CXXFLAGS_WARN_ON=-Wreturn-type
@@ -24,6 +22,7 @@ HEADERS += \
   JobCancellingAsyncCallWrapper_t.hpp \
   cancellationasyncexecutionguard.h \
   cancellationmaster.h \
+  chunkid.h \
   coordinatehashmap.h \
   coordinateid.h \
   enumbitset.hpp \
@@ -41,8 +40,6 @@ HEADERS += \
   safeprioritythreadpoolwrapper.h \
   searchchunkswidget.h \
   value_initialized.h \
-  zlib/zlib.h \
-  zlib/zconf.h \
   labelledslider.h \
   biomeidentifier.h \
   blockidentifier.h \
@@ -127,21 +124,39 @@ SOURCES += \
 
 RESOURCES = minutor.qrc
 
-win32:SOURCES += zlib/adler32.c \
-		zlib/compress.c \
-		zlib/crc32.c \
-		zlib/deflate.c \
-		zlib/gzclose.c \
-		zlib/gzlib.c \
-		zlib/gzread.c \
-		zlib/gzwrite.c \
-		zlib/infback.c \
-		zlib/inffast.c \
-		zlib/inflate.c \
-		zlib/inftrees.c \
-		zlib/trees.c \
-		zlib/uncompr.c \
-		zlib/zutil.c
+win32 {
+HEADERS += \
+    zlib/crc32.h \
+    zlib/deflate.h \
+    zlib/gzguts.h \
+    zlib/inffast.h \
+    zlib/inffixed.h \
+    zlib/inflate.h \
+    zlib/inftrees.h \
+    zlib/trees.h \
+    zlib/zconf.h \
+    zlib/zlib.h \
+    zlib/zutil.h
+
+SOURCES += \
+    zlib/adler32.c \
+    zlib/compress.c \
+    zlib/crc32.c \
+    zlib/deflate.c \
+    zlib/gzclose.c \
+    zlib/gzlib.c \
+    zlib/gzread.c \
+    zlib/gzwrite.c \
+    zlib/infback.c \
+    zlib/inffast.c \
+    zlib/inflate.c \
+    zlib/inftrees.c \
+    zlib/trees.c \
+    zlib/uncompr.c \
+    zlib/zutil.c
+
+INCLUDEPATH += zlib
+}
 
 desktopfile.path = /usr/share/applications
 desktopfile.files = minutor.desktop

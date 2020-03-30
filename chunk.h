@@ -12,18 +12,20 @@
 #include "./paletteentry.h"
 #include "./generatedstructure.h"
 
+#include <array>
+
 class BlockIdentifier;
-class ChunkRenderer;
+class ChunkRenderer; 
 class DrawHelper2;
 
 class ChunkSection {
  public:
-  const PaletteEntry & getPaletteEntry(int x, int y, int z);
-  const PaletteEntry & getPaletteEntry(int offset, int y);
+  const PaletteEntry & getPaletteEntry(int x, int y, int z) const;
+  const PaletteEntry & getPaletteEntry(int offset, int y) const;
   quint8 getSkyLight(int x, int y, int z);
   quint8 getSkyLight(int offset, int y);
-  quint8 getBlockLight(int x, int y, int z);
-  quint8 getBlockLight(int offset, int y);
+  quint8 getBlockLight(int x, int y, int z) const;
+  quint8 getBlockLight(int offset, int y) const;
 
   PaletteEntry *palette;
   int        paletteLength;
@@ -48,10 +50,11 @@ class Chunk : public QObject {
   Q_OBJECT
 
  public:
-  typedef QMap<QString, QSharedPointer<OverlayItem>> EntityMap;
   Chunk();
   ~Chunk();
   void load(const NBT &nbt);
+
+  typedef QMap<QString, QSharedPointer<OverlayItem>> EntityMap;
 
   qint32 get_biome(int x, int z);
   qint32 get_biome(int x, int y, int z);
@@ -60,10 +63,14 @@ class Chunk : public QObject {
   const EntityMap& getEntityMap() const { return *entities; }
   const QSharedPointer<EntityMap> getEntityMapSp() const { return entities; }
 
+  const ChunkSection* getSectionByY(int y) const;
+
+  uint getBlockHid(int x, int y, int z) const;
   Block getBlockData(int x, int y, int z) const;
 
-  int getChunkX() const { return chunkX; }
+  int getChunkX() const { return chunkX; } 
   int getChunkZ() const { return chunkZ; }
+
 
  protected:
   void loadSection1343(ChunkSection *cs, const Tag *section);
@@ -72,7 +79,7 @@ class Chunk : public QObject {
   int version;
   qint32 biomes[16 * 16 * 4];
   int highest;
-  ChunkSection *sections[16];
+  std::array<ChunkSection*, 16> sections;
   bool loaded;
   QSharedPointer<EntityMap> entities;
   int chunkX;

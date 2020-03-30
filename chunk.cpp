@@ -5,7 +5,7 @@
 #include "./chunk.h"
 #include "./flatteningconverter.h"
 #include "./blockidentifier.h"
-#include "./coordinateid.h"
+#include "./chunkid.h"
 
 template<typename _ValueT>
 inline void* safeMemCpy(void* __dest, const std::vector<_ValueT>& __src, size_t __len)
@@ -34,9 +34,9 @@ quint16 getBits(const unsigned char *data, int pos, int n) {
 
 
 Chunk::Chunk()
-  : loaded(false)
-  , version(0)
+  : version(0)
   , highest(0)
+  , loaded(false)
   , entities(QSharedPointer<EntityMap>::create())
 {}
 
@@ -188,6 +188,25 @@ void Chunk::load(const NBT &nbt) {
   }
 }
 
+const ChunkSection *Chunk::getSectionByY(int y) const {
+  size_t section_idx = static_cast<size_t>(y) >> 4;
+  if (section_idx >= sections.size())
+    return nullptr;
+
+  return sections[section_idx];
+}
+
+uint Chunk::getBlockHid(int x, int y, int z) const {
+  const ChunkSection * const section = getSectionByY(y);
+  if (!section) {
+    return 0;
+  }
+
+  const PaletteEntry& pdata = section->getPaletteEntry(x, y, z);
+
+  return pdata.hid;
+}
+
 // supported DataVersions:
 //    0 = 1.8 and below
 //
@@ -324,8 +343,8 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
 }
 
 
-const PaletteEntry & ChunkSection::getPaletteEntry(int x, int y, int z) {
-  int xoffset = x;
+const PaletteEntry & ChunkSection::getPaletteEntry(int x, int y, int z) const {
+  int xoffset = (x & 0x0f);
   int yoffset = (y & 0x0f) << 8;
   int zoffset = z << 4;
 
@@ -339,7 +358,7 @@ const PaletteEntry & ChunkSection::getPaletteEntry(int x, int y, int z) {
   return palette[palette_index];
 }
 
-const PaletteEntry & ChunkSection::getPaletteEntry(int offset, int y) {
+const PaletteEntry & ChunkSection::getPaletteEntry(int offset, int y) const {
   int yoffset = (y & 0x0f) << 8;
   return palette[blocks[offset + yoffset]];
 }
@@ -360,7 +379,7 @@ const PaletteEntry & ChunkSection::getPaletteEntry(int offset, int y) {
 //  return value & 0x0f;
 //}
 
-quint8 ChunkSection::getBlockLight(int x, int y, int z) {
+quint8 ChunkSection::getBlockLight(int x, int y, int z) const {
   int xoffset = x;
   int yoffset = (y & 0x0f) << 8;
   int zoffset = z << 4;
@@ -369,7 +388,7 @@ quint8 ChunkSection::getBlockLight(int x, int y, int z) {
   return value & 0x0f;
 }
 
-quint8 ChunkSection::getBlockLight(int offset, int y) {
+quint8 ChunkSection::getBlockLight(int offset, int y) const {
   int yoffset = (y & 0x0f) << 8;
   int value = blockLight[(offset + yoffset) / 2];
   if (offset & 1) value >>= 4;
