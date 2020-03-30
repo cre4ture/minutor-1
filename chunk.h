@@ -92,6 +92,9 @@ class Chunk : public QObject {
   friend class ChunkCache;
   friend class WorldSave;
   friend class DrawHelper2;
+
+private:
+  void findHighestBlock();
 };
 
 struct RenderParams
