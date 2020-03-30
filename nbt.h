@@ -24,7 +24,7 @@ class TagDataStream {
   quint16 r16() { return rBigEndian_t<quint16>(); }
   quint32 r32() { return rBigEndian_t<quint32>(); }
   quint64 r64() { return rBigEndian_t<quint64>(); }
-  quint8 *r(size_t len);
+  void r(int len, std::vector<quint8> &data_out);
   void rBuffer(quint8* buffer, size_t len);
   QString utf8(int len);
 
@@ -96,9 +96,9 @@ class Tag {
   virtual const QString toString() const;
   virtual qint32 toInt() const;
   virtual double toDouble() const;
-  virtual const std::vector<quint8>& toByteArray() const;
-  virtual const std::vector<qint32>& toIntArray() const;
-  virtual const std::vector<qint64>& toLongArray() const;
+  virtual const std::vector<quint8> &toByteArray() const;
+  virtual const std::vector<qint32> &toIntArray() const;
+  virtual const std::vector<qint64> &toLongArray() const;
   virtual const QVariant getData() const;
 };
 

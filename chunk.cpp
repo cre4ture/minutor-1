@@ -340,7 +340,7 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
 
     // copy Light data
 //  if (section->has("SkyLight")) {
-//    memcpy(cs->skyLight, section->at("SkyLight")->toByteArray(), 2048);
+//    safeMemCpy(cs->skyLight, section->at("SkyLight")->toByteArray(), 2048);
 //  }
   if (section->has("BlockLight")) {
     safeMemCpy(cs->blockLight.data(), section->at("BlockLight")->toByteArray(), 2048);

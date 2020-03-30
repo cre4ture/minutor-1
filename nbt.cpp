@@ -140,20 +140,22 @@ double Tag::toDouble() const {
   qWarning() << "Unhandled toDouble";
   return 0.0;
 }
-const std::vector<quint8> &Tag::toByteArray() const {
-  static const std::vector<quint8> nullvec;
+const std::vector<quint8>& Tag::toByteArray() const {
   qWarning() << "Unhandled toByteArray";
-  return nullvec; // in combination with returning length of 0 by default this should be fine
+  static const std::vector<quint8> dummy;
+  return dummy;
 }
 const std::vector<qint32>& Tag::toIntArray() const {
   static const std::vector<qint32> nullvec;
   qWarning() << "Unhandled toIntArray";
-  return nullvec;
+  static const std::vector<qint32> dummy;
+  return dummy;
 }
 const std::vector<qint64>& Tag::toLongArray() const {
   static const std::vector<qint64> nullvec;
   qWarning() << "Unhandled toLongArray";
-  return nullvec;
+  static const std::vector<qint64> dummy;
+  return dummy;
 }
 const QVariant Tag::getData() const {
   qWarning() << "Unhandled getData";
@@ -431,11 +433,10 @@ TagDataStream::TagDataStream(const char *data, int len)
     , len(len)
 {}
 
-quint8 *TagDataStream::r(size_t len) {
-  // you need to free anything read with this
-  quint8 *r = new quint8[len];
-  rBuffer(r, len);
-  return r;
+void TagDataStream::r(int len, std::vector<quint8>& data_out) {
+  data_out.resize(len);
+  memcpy(&data_out[0], data + pos, len);
+  pos += len;
 }
 
 void TagDataStream::rBuffer(quint8 *buffer, size_t len)
