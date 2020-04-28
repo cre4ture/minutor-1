@@ -18,8 +18,17 @@ class OverlayItem {
     double x, y, z;
     QVector3D toVector3D() const { return QVector3D(x,y,z); }
   };
+  struct Cuboid {
+    Cuboid(const Point& min, const Point& max) : min(min), max(max) {}
+    Point min;
+    Point max;
+  };
 
-  virtual bool intersects(const Point& min, const Point& max) const = 0;
+  virtual bool intersects(const Cuboid &cuboid) const = 0;
+  virtual bool intersects(const Point& min, const Point& max) const {
+    return intersects(Cuboid(min, max));
+  }
+
   virtual void draw(double offsetX, double offsetZ, double scale,
                     QPainter *canvas) const = 0;
   virtual Point midpoint() const = 0;

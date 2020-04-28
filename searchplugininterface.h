@@ -11,15 +11,16 @@ class SearchResultItem;
 class SearchPluginI
 {
 public:
-    virtual QWidget& getWidget() = 0;
+  using ResultListT = std::vector<SearchResultItem>;
 
-    virtual bool initSearch() { return true; }
 
-    using ResultListT = std::vector<SearchResultItem>;
+  virtual QWidget& getWidget() = 0;
 
-    virtual ResultListT searchChunk(Chunk &chunk) = 0;
+  virtual bool initSearch() { return true; }
 
-    virtual ~SearchPluginI() {}
+  virtual ResultListT searchChunk(Chunk &chunk) = 0;
+
+  virtual ~SearchPluginI() {}
 };
 
 #endif // SEARCHPLUGININTERFACE_H

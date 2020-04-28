@@ -20,6 +20,8 @@ class DrawHelper2;
 
 class ChunkSection {
  public:
+  ChunkSection();
+
   const PaletteEntry & getPaletteEntry(int x, int y, int z) const;
   const PaletteEntry & getPaletteEntry(int offset, int y) const;
   quint8 getSkyLight(int x, int y, int z);
@@ -29,6 +31,7 @@ class ChunkSection {
 
   PaletteEntry *palette;
   int        paletteLength;
+  bool       paletteIsShared;
 
   std::array<quint16, 16*16*16> blocks;
 //quint8  skyLight[16*16*16/2];   // not needed in Minutor
@@ -68,7 +71,7 @@ class Chunk : public QObject {
   uint getBlockHid(int x, int y, int z) const;
   Block getBlockData(int x, int y, int z) const;
 
-  int getChunkX() const { return chunkX; } 
+  int getChunkX() const { return chunkX; }
   int getChunkZ() const { return chunkZ; }
 
 

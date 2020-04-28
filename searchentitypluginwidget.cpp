@@ -9,7 +9,7 @@
 SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidgetConfigT& config)
   : QWidget(config.parent)
     , ui(new Ui::SearchEntityPluginWidget)
-    , m_config(config)
+    , config(config)
 {
   ui->setupUi(this);
 
@@ -19,9 +19,9 @@ SearchEntityPluginWidget::SearchEntityPluginWidget(const SearchEntityPluginWidge
   ui->verticalLayout->addWidget(stw_villagerType = new SearchTextWidget("villager type"));
   ui->verticalLayout->addWidget(stw_special = new SearchTextWidget("special"));
 
-  for (const auto& id: m_config.definitions.careerDefinitions->getKnownIds())
+  for (const auto& id: config.definitions.careerDefinitions->getKnownIds())
   {
-    auto desc = m_config.definitions.careerDefinitions->getDescriptor(id);
+    auto desc = config.definitions.careerDefinitions->getDescriptor(id);
     stw_villagerType->addSuggestion(desc.name);
   }
 }
@@ -40,15 +40,14 @@ SearchPluginI::ResultListT SearchEntityPluginWidget::searchChunk(Chunk &chunk)
 {
   SearchPluginI::ResultListT results;
 
-  const auto& map = chunk.getEntityMap();
+  const auto& entityMap = chunk.getEntityMap();
 
-  for(const auto& e: map)
+  for(const auto& entity: entityMap)
   {
     EntityEvaluator evaluator(
-      EntityEvaluatorConfig(m_config.definitions,
+      EntityEvaluatorConfig(config.definitions,
                             results,
-                            "",
-                            e,
+                            entity,
                             std::bind(&SearchEntityPluginWidget::evaluateEntity, this, std::placeholders::_1)
                             )
       );

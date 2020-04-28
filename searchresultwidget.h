@@ -18,47 +18,47 @@ class SearchResultWidget;
 class SearchResultItem
 {
 public:
-    QString name;
-    QVector3D pos;
-    QString buys;
-    QString sells;
-    QVariant properties;
-    QSharedPointer<OverlayItem> entity;
+  QString name;
+  QVector3D pos;
+  QString buys;
+  QString sells;
+  QVariant properties;
+  QSharedPointer<OverlayItem> entity;
 };
 
 class SearchResultWidget : public QWidget
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit SearchResultWidget(QWidget *parent = nullptr);
-    ~SearchResultWidget();
+  explicit SearchResultWidget(QWidget *parent = nullptr);
+  ~SearchResultWidget();
 
-    void clearResults();
-    void addResult(const SearchResultItem &result);
-    void searchDone();
+  void clearResults();
+  void addResult(const SearchResultItem &result);
+  void searchDone();
 
-    void setPointOfInterest(const QVector3D& centerPoint);
+  void setPointOfInterest(const QVector3D& centerPoint);
 
 signals:
-    void jumpTo(QVector3D pos);
-    void highlightEntities(QVector<QSharedPointer<OverlayItem> >);
+  void jumpTo(QVector3D pos);
+  void updateSearchResultPositions(QVector<QSharedPointer<OverlayItem> >);
 
 protected slots:
-    void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
+  void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
 private slots:
-    void on_treeWidget_itemSelectionChanged();
+  void on_treeWidget_itemSelectionChanged();
 
-    void on_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
+  void on_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
 
-    void on_check_display_all_stateChanged(int arg1);
+  void on_check_display_all_stateChanged(int arg1);
 
 private:
-    Ui::SearchResultWidget *ui;
+  Ui::SearchResultWidget *ui;
 
-    QVector3D m_pointOfInterest;
+  QVector3D pointOfInterest;
 
-    void updateStatusText();
+  void updateStatusText();
 };
 
 #endif // SEARCHRESULTWIDGET_H

@@ -13,37 +13,25 @@ class SearchBlockPluginWidget;
 
 class SearchTextWidget;
 
-struct SearchBlockPluginWidgetConfigT
-{
-    SearchBlockPluginWidgetConfigT(BlockIdentifier& blockIdentifier_)
-        : blockIdentifier(&blockIdentifier_)
-        , parent(nullptr)
-    {}
-
-    BlockIdentifier* blockIdentifier;
-    QWidget *parent;
-};
-
 class SearchBlockPluginWidget : public QWidget, public SearchPluginI
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit SearchBlockPluginWidget(const SearchBlockPluginWidgetConfigT& config);
-    ~SearchBlockPluginWidget();
+  explicit SearchBlockPluginWidget(QWidget* parent = nullptr);
+  ~SearchBlockPluginWidget();
 
-    QWidget &getWidget() override;
-    bool initSearch() override;
-    SearchPluginI::ResultListT searchChunk(Chunk &chunk) override;
+  QWidget &getWidget() override;
+  bool initSearch() override;
+  SearchPluginI::ResultListT searchChunk(Chunk &chunk) override;
 
 private:
-    Ui::SearchBlockPluginWidget *ui;
+  Ui::SearchBlockPluginWidget *ui;
 
-    SearchTextWidget* stw_blockId;
-    SearchTextWidget* stw_blockName;
+  SearchTextWidget* stw_blockId;
+  SearchTextWidget* stw_blockName;
 
-    SearchBlockPluginWidgetConfigT m_config;
-    std::set<quint32> m_searchForIds;
+  std::set<quint32> m_searchForIds;
 };
 
 #endif // SEARCHBLOCKPLUGINWIDGET_H

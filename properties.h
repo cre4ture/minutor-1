@@ -33,7 +33,7 @@ private slots:
 
 private:
   Ui::Properties *ui;
-  PropertieTreeCreator m_creator;
+  PropertieTreeCreator treeCreator;
 
   bool evaluateBB(QTreeWidgetItem *item);
 };

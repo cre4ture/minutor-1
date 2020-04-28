@@ -1,6 +1,6 @@
 /** Copyright (c) 2013, Sean Kasun */
 
-#include <algorithm>
+#include <algorithm>    // std::max
 
 #include "./chunk.h"
 #include "./flatteningconverter.h"
@@ -10,28 +10,15 @@
 template<typename ValueT>
 inline void* safeMemCpy(void* dest, const std::vector<ValueT>& srcVec, size_t length)
 {
-    if (length > (sizeof(ValueT) * srcVec.size()))
-    {
-        throw NtbStreamDecodingError("myMemCpy() size mismatch!");
-    }
+  const size_t src_data_size = (sizeof(ValueT) * srcVec.size());
+  if (length > src_data_size)
+  {
+    length = src_data_size; // this happens sometimes and I guess its then actually a bug in the load() implementation. But this way it at least doesn't crash randomly.
+    throw NtbStreamDecodingError("myMemCpy() size mismatch!");
+  }
 
-    return memcpy(dest, &srcVec[0], length);
+  return memcpy(dest, &srcVec[0], length);
 }
-
-quint16 getBits(const unsigned char *data, int pos, int n) {
-//  quint16 result = 0;
-  int arrIndex = pos/8;
-  int bitIndex = pos%8;
-  quint32 loc =
-    data[arrIndex]   << 24 |
-    data[arrIndex+1] << 16 |
-    data[arrIndex+2] << 8  |
-    data[arrIndex+3];
-
-  return ((loc >> (32-bitIndex-n)) & ((1 << n) -1));
-}
-
-
 
 Chunk::Chunk()
   : version(0)
@@ -44,7 +31,7 @@ Chunk::~Chunk() {
   if (loaded) {
     for (int i = 0; i < 16; i++)
       if (sections[i]) {
-        if (sections[i]->paletteLength > 0) {
+        if ((!sections[i]->paletteIsShared) && (sections[i]->paletteLength > 0)) {
           delete[] sections[i]->palette;
         }
         sections[i]->paletteLength = 0;
@@ -53,6 +40,7 @@ Chunk::~Chunk() {
         delete sections[i];
         sections[i] = NULL;
       }
+    loaded = false;
   }
 }
 
@@ -100,16 +88,12 @@ void Chunk::load(const NBT &nbt) {
   if (biomesAvailable) {
     const Tag_Int_Array * biomes = dynamic_cast<const Tag_Int_Array*>(level->at("Biomes"));
     if (biomes) {  // Biomes is a Tag_Int_Array
-      biomesAvailable = (biomes->length() != 0);
-      if (biomesAvailable)
-      {
-        if ((this->version >= 2203)) {
-          // raw copy Biome data
-          safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*1024);
-        } else if ((this->version >= 1519)) {
-          // raw copy Biome data
-          safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*256);
-        }
+      if ((this->version >= 2203)) {
+        // raw copy Biome data
+        safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*1024);
+      } else if ((this->version >= 1519)) {
+        // raw copy Biome data
+        safeMemCpy(this->biomes, biomes->toIntArray(), sizeof(int)*256);
       }
     } else {  // Biomes is not a Tag_Int_Array
       const Tag_Byte_Array * biomes = dynamic_cast<const Tag_Byte_Array*>(level->at("Biomes"));
@@ -261,8 +245,9 @@ void Chunk::loadSection1343(ChunkSection *cs, const Tag *section) {
   }
 
   // link to Converter palette
-  cs->paletteLength = 0;
+  cs->paletteLength = FlatteningConverter::Instance().paletteLength;
   cs->palette = FlatteningConverter::Instance().getPalette();
+  cs->paletteIsShared = true;
 }
 
 Block Chunk::getBlockData(int x, int y, int z) const
@@ -283,7 +268,7 @@ Block Chunk::getBlockData(int x, int y, int z) const
     return result;
 }
 
-// Chunk format after "The Flattening" version 1509
+// Chunk format after "The Flattening" version 1519
 void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
   BlockIdentifier &bi = BlockIdentifier::Instance();
   // decode Palette to be able to map BlockStates
@@ -321,18 +306,51 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
   }
 
   // map BlockStates to BlockData
-  // todo: bit fidling looks very complicated -> find easier code
   if (section->has("BlockStates")) {
-    auto raw = section->at("BlockStates")->toLongArray();
+    auto blockStates = section->at("BlockStates")->toLongArray();
     int blockStatesLength = section->at("BlockStates")->length();
-    unsigned char *byteData = new unsigned char[8*blockStatesLength];
-    safeMemCpy(byteData, raw, 8*blockStatesLength);
-    std::reverse(byteData, byteData+(8*blockStatesLength));
-    int bitSize = (blockStatesLength)*64/4096;
-    for (int i = 0; i < 4096; i++) {
-      cs->blocks[4095-i] = getBits(byteData, i*bitSize, bitSize);
+    int bsCnt  = 0;  // counter for 64bit words
+    int bitCnt = 0;  // counter for bits
+
+    if (this->version < 2529) {
+      // compact BlockStates
+      for (int i = 0; i < 4096; i++) {
+        int bitSize = (blockStatesLength)*64/4096;
+        int bitMask = (1 << bitSize)-1;
+        if (bitCnt+bitSize <= 64) {
+          // bits fit into current word
+          uint64_t blockState = blockStates[bsCnt];
+          cs->blocks[i] = (blockState >> bitCnt) & bitMask;
+          bitCnt += bitSize;
+          if (bitCnt == 64) {
+            bitCnt = 0;
+            bsCnt++;
+          }
+        } else {
+          // bits are spread accross two words
+          uint64_t blockState1 = blockStates[bsCnt++];
+          uint64_t blockState2 = blockStates[bsCnt];
+          uint32_t block = (blockState1 >> bitCnt) & bitMask;
+          bitCnt += bitSize;
+          bitCnt -= 64;
+          block += (blockState2 << (bitSize - bitCnt)) & bitMask;
+          cs->blocks[i] = block;
+        }
+      }
+    } else {
+      // "optimized for loading" BlockStates since 1.16.20w17a
+      int bitSize = std::max(4, int(ceil(log2(cs->paletteLength))));
+      int bitMask = (1 << bitSize)-1;
+      for (int i = 0; i < 4096; i++) {
+        uint64_t blockState = blockStates[bsCnt];
+        cs->blocks[i] = (blockState >> bitCnt) & bitMask;
+        bitCnt += bitSize;
+        if (bitCnt+bitSize > 64) {
+          bsCnt++;
+          bitCnt = 0;
+        }
+      }
     }
-    delete[] byteData;
   } else {
     // set everything to 0 (minecraft:air)
     memset(cs->blocks.data(), 0, sizeof(cs->blocks));
@@ -347,6 +365,11 @@ void Chunk::loadSection1519(ChunkSection *cs, const Tag *section) {
   }
 }
 
+ChunkSection::ChunkSection()
+  : paletteLength(0)
+  , paletteIsShared(false)  // only the "old" converted format is using one shared palette
+{}
+
 const PaletteEntry & ChunkSection::getPaletteEntry(int x, int y, int z) const {
   int xoffset = (x & 0x0f);
   int yoffset = (y & 0x0f) << 8;
@@ -357,14 +380,20 @@ const PaletteEntry & ChunkSection::getPaletteEntry(int x, int y, int z) const {
   if (blocks_index >= blocks.size())
       throw std::runtime_error("blocks_index >= blocks.size()");
 
-  int palette_index = blocks[blocks_index];
-
-  return palette[palette_index];
+  int blockid = blocks[blocks_index];
+  if (blockid < paletteLength)
+    return palette[blockid];
+  else
+    return palette[0];
 }
 
 const PaletteEntry & ChunkSection::getPaletteEntry(int offset, int y) const {
   int yoffset = (y & 0x0f) << 8;
-  return palette[blocks[offset + yoffset]];
+  int blockid = blocks[offset + yoffset];
+  if (blockid < paletteLength)
+    return palette[blockid];
+  else
+    return palette[0];
 }
 
 //quint8 ChunkSection::getSkyLight(int x, int y, int z) {

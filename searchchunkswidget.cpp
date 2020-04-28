@@ -2,27 +2,25 @@
 #include "ui_searchchunkswidget.h"
 
 #include "./chunkcache.h"
-#include "./chunkmath.hpp"
-#include "./prioritythreadpool.h"
+#include "./chunkmath.h"
 #include "./range.h"
+#include "./rectangleinnertoouteriterator.h"
 
 #include <QVariant>
 #include <QTreeWidgetItem>
-#include <boost/noncopyable.hpp>
 #include <QtConcurrent/QtConcurrent>
 
-SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
-  : QWidget(input.parent)
+SearchChunksWidget::SearchChunksWidget(QSharedPointer<SearchPluginI> searchPlugin_, QWidget *parent)
+  : QWidget(parent)
   , ui(new Ui::SearchChunksWidget)
-  , m_input(input)
-  , m_invoker()
+  , searchPlugin(searchPlugin_)
 {
   ui->setupUi(this);
 
   auto layout = new QHBoxLayout(ui->plugin_context);
   ui->plugin_context->setLayout(layout);
   layout->setSizeConstraint(QLayout::SizeConstraint::SetMinimumSize);
-  layout->addWidget(&m_input.searchPlugin->getWidget());
+  layout->addWidget(&searchPlugin->getWidget());
 
   qRegisterMetaType<QSharedPointer<SearchPluginI::ResultListT> >("QSharedPointer<SearchPluginI::ResultListT>");
 }
@@ -30,6 +28,12 @@ SearchChunksWidget::SearchChunksWidget(const SearchEntityWidgetInputC& input)
 SearchChunksWidget::~SearchChunksWidget()
 {
   cancelSearch();
+}
+
+void SearchChunksWidget::setSearchCenter(int x, int y, int z)
+{
+  searchCenter = QVector3D(x,y,z);
+  ui->resultList->setPointOfInterest(searchCenter);
 }
 
 static Range<float> helperRangeCreation(const QCheckBox& checkBox, const QSpinBox& sb1, const QSpinBox& sb2)
@@ -53,24 +57,21 @@ void SearchChunksWidget::on_pb_search_clicked()
   }
 
   const Range<float> range_y = helperRangeCreation(*ui->check_range_y, *ui->sb_y_start, *ui->sb_y_end);
-  currentSearch = QSharedPointer<AsyncSearch>::create(*this, range_y, m_input.searchPlugin, m_input.cache);
+  currentSearch = QSharedPointer<AsyncSearch>::create(*this, range_y, searchPlugin);
 
   ui->pb_search->setText("Cancel");
 
   ui->resultList->clearResults();
-  ui->resultList->setPointOfInterest(m_input.posOfInterestProvider());
 
-  const int radius = 1 + (ui->sb_radius->value() / CHUNK_SIZE);
-  ui->progressBar->reset();
-  ui->progressBar->setMaximum(radius * radius * 4);
+  const int radius = 1 + (ui->sb_radius->value() / CHUNK_SIDE_LENGTH);
 
-  const bool successfull_init = m_input.searchPlugin->initSearch();
+  const bool successfull_init = searchPlugin->initSearch();
   if (!successfull_init)
   {
     return;
   }
 
-  const QVector2D poi = getChunkCoordinates(m_input.posOfInterestProvider());
+  const QVector2D poi = getChunkCoordinates(QVector2D(searchCenter.x(), searchCenter.z()));
   const QVector2D radius2d(radius, radius);
 
   QRect searchRange((poi - radius2d).toPoint(), (poi + radius2d).toPoint());
@@ -79,9 +80,12 @@ void SearchChunksWidget::on_pb_search_clicked()
 
   for (RectangleInnerToOuterIterator it(searchRange); it != it.end(); ++it)
   {
-    const ChunkID id(it->getX(), it->getZ());
+    const ChunkID id(it->x(), it->y());
     chunks->append(id);
   }
+
+  ui->progressBar->setMaximum(chunks->size());
+  ui->progressBar->setValue(0);
 
   currentfuture = QtConcurrent::map(*chunks, [currentSearch = currentSearch, chunks /* needed to keep list alive during search */](const ChunkID& id){
     currentSearch->loadAndSearchChunk_async(id);
@@ -90,7 +94,7 @@ void SearchChunksWidget::on_pb_search_clicked()
 
 void SearchChunksWidget::AsyncSearch::loadAndSearchChunk_async(ChunkID id)
 {
-  auto chunk = cache->getChunkSynchronously(id);
+  auto chunk = ChunkCache::Instance().getChunkSynchronously(id);
 
   searchLoadedChunk_async(chunk);
 }
@@ -104,8 +108,8 @@ void SearchChunksWidget::AsyncSearch::searchLoadedChunk_async(const QSharedPoint
     results = searchExistingChunk_async(chunk);
   }
 
-  parent.m_invoker.invoke([&parent = parent, results](){
-    parent.displayResultsOfSingleChunk(results, ChunkID());
+  QMetaObject::invokeMethod(&parent, [&parent = parent, results](){
+    parent.displayResultsOfSingleChunk(results);
   });
 }
 
@@ -134,8 +138,7 @@ QSharedPointer<SearchPluginI::ResultListT> SearchChunksWidget::AsyncSearch::sear
 }
 
 
-void SearchChunksWidget::displayResultsOfSingleChunk(QSharedPointer<SearchPluginI::ResultListT> results,
-                                        ChunkID id)
+void SearchChunksWidget::displayResultsOfSingleChunk(QSharedPointer<SearchPluginI::ResultListT> results)
 {
   if (results)
   {
@@ -145,10 +148,10 @@ void SearchChunksWidget::displayResultsOfSingleChunk(QSharedPointer<SearchPlugin
     }
   }
 
-  addOneToProgress(id);
+  addOneToProgress();
 }
 
-void SearchChunksWidget::addOneToProgress(ChunkID /* id */)
+void SearchChunksWidget::addOneToProgress()
 {
   ui->progressBar->setValue(ui->progressBar->value() + 1);
 
@@ -175,7 +178,7 @@ void SearchChunksWidget::on_resultList_jumpTo(const QVector3D &pos)
   emit jumpTo(pos);
 }
 
-void SearchChunksWidget::on_resultList_highlightEntities(QVector<QSharedPointer<OverlayItem> > item)
+void SearchChunksWidget::on_resultList_updateSearchResultPositions(QVector<QSharedPointer<OverlayItem> > item)
 {
-  emit highlightEntities(item);
+  emit updateSearchResultPositions(item);
 }

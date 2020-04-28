@@ -15,11 +15,11 @@
 #include "./jumpto.h"
 #include "./pngexport.h"
 #include "./searchchunkswidget.h"
+#include "./searchentitypluginwidget.h"
+#include "./searchblockpluginwidget.h"
+#include "./searchresultwidget.h"
 #include "./playerinfos.h"
-#include "searchentitypluginwidget.h"
-#include "searchblockpluginwidget.h"
 #include "prioritythreadpool.h"
-#include "searchresultwidget.h"
 
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QAction>
@@ -35,13 +35,13 @@
 #include <QVector3D>
 
 Minutor::Minutor()
-    : threadpool(QSharedPointer<PriorityThreadPool>::create())
-    , cache(QSharedPointer<ChunkCache>::create(threadpool))
-    , searchMenu(nullptr)
-    , searchEntityAction(nullptr)
-    , searchBlockAction(nullptr)
-    , listStructuresActionsMenu(nullptr)
-    , periodicUpdateTimer()
+  : threadpool(QSharedPointer<PriorityThreadPool>::create())
+  , cache(QSharedPointer<ChunkCache>::create(threadpool))
+  , searchMenu(nullptr)
+  , searchEntityAction(nullptr)
+  , searchBlockAction(nullptr)
+  , listStructuresActionsMenu(nullptr)
+  , periodicUpdateTimer()
 {
   mapview = new MapView(threadpool, cache);
   mapview->attach(cache);
@@ -867,32 +867,33 @@ void Minutor::showProperties(QVariant props)
   }
 }
 
-SearchChunksWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin)
-{
-    SearchChunksWidget* form = new SearchChunksWidget(SearchEntityWidgetInputC(threadpool, cache,
-                                              [this](){ return mapview->getLocation().getPos3D(); },
-                                              searchPlugin
-    ));
+SearchChunksWidget* Minutor::prepareSearchForm(const QSharedPointer<SearchPluginI>& searchPlugin) {
+  SearchChunksWidget* form = new SearchChunksWidget(searchPlugin);
 
-    auto villageList = mapview->getOverlayItems("Structure.Village");
-    form->setAttribute(Qt::WA_DeleteOnClose);
+  form->setAttribute(Qt::WA_DeleteOnClose);
 
-    connect(form, SIGNAL(jumpTo(QVector3D)),
-            this, SLOT(triggerJumpToPosition(QVector3D))
-            );
+  const auto currentLocation = mapview->getLocation();
+  form->setSearchCenter(currentLocation.x, currentLocation.y, currentLocation.z);
 
-    connect(form, SIGNAL(highlightEntities(QVector<QSharedPointer<OverlayItem> >)),
-            this, SLOT(highlightEntities(QVector<QSharedPointer<OverlayItem> >))
-            );
+  connect(mapview, SIGNAL(coordinatesChanged(int,int,int)),
+          form, SLOT(setSearchCenter(int,int,int))
+          );
 
-    return form;
+  connect(form, SIGNAL(jumpTo(QVector3D)),
+          this, SLOT(triggerJumpToPosition(QVector3D))
+          );
+
+  connect(form, SIGNAL(updateSearchResultPositions(QVector<QSharedPointer<OverlayItem> >)),
+          this, SLOT(updateSearchResultPositions(QVector<QSharedPointer<OverlayItem> >))
+          );
+
+  return form;
 }
 
-void Minutor::searchBlock()
-{
-    auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create(SearchBlockPluginWidgetConfigT(BlockIdentifier::Instance()));
-    auto searchBlockForm = prepareSearchForm(searchPlugin);
-    searchBlockForm->showNormal();
+void Minutor::searchBlock() {
+  auto searchPlugin = QSharedPointer<SearchBlockPluginWidget>::create();
+  auto searchBlockForm = prepareSearchForm(searchPlugin);
+  searchBlockForm->showNormal();
 }
 
 void Minutor::searchEntity()
@@ -905,14 +906,13 @@ void Minutor::searchEntity()
     searchEntityForm->showNormal();
 }
 
-void Minutor::triggerJumpToPosition(QVector3D pos)
-{
-    mapview->setLocation(pos.x(), pos.y(), pos.z(), true, false);
+void Minutor::triggerJumpToPosition(QVector3D pos) {
+  mapview->setLocation(pos.x(), pos.y(), pos.z(), true, false);
 }
 
-void Minutor::highlightEntities(QVector<QSharedPointer<OverlayItem> > items)
-{
+void Minutor::updateSearchResultPositions(QVector<QSharedPointer<OverlayItem> > items) {
   mapview->updateSearchResultPositions(items);
+  mapview->redraw();
 }
 
 void Minutor::highlightBoundingBox(QVector3D from, QVector3D to)
@@ -920,7 +920,7 @@ void Minutor::highlightBoundingBox(QVector3D from, QVector3D to)
   auto structure = QSharedPointer<GeneratedStructure>::create();
   structure->setBounds(OverlayItem::Point(from), OverlayItem::Point(to));
 
-  highlightEntities({structure});
+  updateSearchResultPositions({structure});
 }
 
 void Minutor::periodicUpdate()

@@ -100,17 +100,6 @@ public:
 
   void drawEntityMap(const Chunk::EntityMap& map, const ChunkGroupID &cgID, const RenderGroupData &depthImg, const QSet<QString> &overlayItemTypes, const int depth, const double zoom);
 
-  void drawOverlayItemToPlayersCanvas(const QVector<QSharedPointer<OverlayItem> >& items)
-  {
-    for (const auto& item: items)
-    {
-      if (item != nullptr)
-      {
-        item->draw(h.x1, h.z1, h.zoom, &canvas_players);
-      }
-    }
-  }
-
 private:
   QPainter canvas_entities;
   QPainter canvas_players;
@@ -383,7 +372,7 @@ void MapView::updatePlayerPositions(const QVector<PlayerInfo> &playerList)
   changed();
 }
 
-void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem>> &searchResults)
+void MapView::updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem> > &searchResults)
 {
   currentSearchResults = searchResults;
 }
@@ -1036,7 +1025,7 @@ void MapView::redraw() {
   {
     renderedDataDummy->renderedImg.fill(Qt::red);
     placeholderImg.fill(Qt::green);
-            }
+  }
 
   ChunkGroupIDListT cgidList;
   cgidList.reserve(cgit.count());
@@ -1052,31 +1041,40 @@ void MapView::redraw() {
       QSharedPointer<RenderGroupData> renderedData = it ? it : renderedDataDummy;
 
       cgidList.push_back(std::pair<ChunkGroupID, QSharedPointer<RenderGroupData> >(cgid, renderedData));
-          }
-        }
+    }
+  }
 
   redraw_drawMap(cgidList, placeholderImg, h.cam, h2);
 
   if (chunkCacheSatus)
   {
     redraw_drawChunkCacheStatus(cgidList, renderedDataDummy, h2.getCanvas(), h.cam);
-      }
+  }
 
   // add on the entity layer
   // done as part of drawChunk
 
-  const OverlayItem::Point p1(h.x1 - 1, 0, h.z1 - 1);
-  const OverlayItem::Point p2(h.x2 + 1, depth, h.z2 + 1);
+  const OverlayItem::Cuboid viewingCuboid(OverlayItem::Point(h.x1 - 1, 0, h.z1 - 1),
+                                      OverlayItem::Point(h.x2 + 1, depth, h.z2 + 1));
 
   // draw the generated structures
   for (auto &type : overlayItemTypes) {
-    for (auto &item : overlayItems[type]) {
-      if (item->intersects(p1, p2)) {
-        item->draw(h.x1, h.z1, zoom, &h2.getCanvas());
-      }
-    }
+    drawOverlayItems(overlayItems[type], viewingCuboid, h.x1, h.z1, h2.getCanvas());
   }
 
+  drawGridLines(h, h2);
+
+  drawOverlayItems(currentSearchResults, viewingCuboid, h.x1, h.z1, h2.getCanvas());
+
+  drawOverlayItems(currentPlayers, viewingCuboid, h.x1, h.z1, h2.getCanvas());
+
+  emit(coordinatesChanged(x, depth, z));
+
+  update();
+}
+
+void MapView::drawGridLines(DrawHelper& h, DrawHelper3& h2)
+{
   h2.getCanvas().setPen(QPen(Qt::PenStyle::SolidLine));
 
   const int maxViewWidth = 64 * 16; // (radius 32 chunks)
@@ -1094,15 +1092,18 @@ void MapView::redraw() {
     const int line_z = round((z - h.z1) * zoom);
     h2.getCanvas().drawLine(0, line_z, imageChunks.width(), line_z);
   }
-
-  h2.drawOverlayItemToPlayersCanvas(currentPlayers);
-  h2.drawOverlayItemToPlayersCanvas(currentSearchResults);
-
-  emit(coordinatesChanged(x, depth, z));
-
-  update();
 }
 
+
+template<typename ListT>
+void MapView::drawOverlayItems(const ListT &list, const OverlayItem::Cuboid& cuboid, double x1, double z1, QPainter& canvas)
+{
+  for (auto &item : list) {
+    if (item->intersects(cuboid)) {
+      item->draw(x1, z1, zoom, &canvas);
+    }
+  }
+}
 
 void MapView::redraw_drawMap(const MapView::ChunkGroupIDListT &cgidList,
                              const QImage& placeholderImg,

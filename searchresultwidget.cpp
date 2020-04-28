@@ -24,21 +24,25 @@ void SearchResultWidget::clearResults()
   ui->treeWidget->clear();
 }
 
-class MyTreeWidgetItem : public QTreeWidgetItem {
-  public:
-  MyTreeWidgetItem(QTreeWidget* parent):QTreeWidgetItem(parent){}
-  private:
-  bool operator<(const QTreeWidgetItem &other)const {
-    int column = treeWidget()->sortColumn();
-    switch (column)
-    {
-    case 1:
-      return text(column).toDouble() < other.text(column).toDouble();
-    default:
-      return QTreeWidgetItem::operator<(other);
+namespace {
+
+  class MyTreeWidgetItem : public QTreeWidgetItem {
+    public:
+    MyTreeWidgetItem(QTreeWidget* parent):QTreeWidgetItem(parent){}
+    private:
+    bool operator<(const QTreeWidgetItem &other)const {
+      int column = treeWidget()->sortColumn();
+      switch (column)
+      {
+      case 1:
+        return text(column).toDouble() < other.text(column).toDouble();
+      default:
+        return QTreeWidgetItem::operator<(other);
+      }
     }
-  }
-};
+  };
+
+}
 
 void SearchResultWidget::addResult(const SearchResultItem &result)
 {
@@ -47,19 +51,15 @@ void SearchResultWidget::addResult(const SearchResultItem &result)
     return;
   }
 
-  auto text = QString("%1")
-                .arg(result.name)
-    ;
-
   auto item = new MyTreeWidgetItem(nullptr);
   item->setData(0, Qt::UserRole, QVariant::fromValue(result));
 
-  QVector3D distance = m_pointOfInterest - result.pos;
-  float airDistance = distance.length();
+  QVector3D distance = pointOfInterest - result.pos;
+  float slopeDistance = distance.length();
 
   int c = 0;
-  item->setText(c++, text);
-  item->setText(c++, QString::number(std::roundf(airDistance)));
+  item->setText(c++, result.name);
+  item->setText(c++, QString::number(std::roundf(slopeDistance)));
   item->setText(c++, QString("%1,%2,%3").arg(result.pos.x()).arg(result.pos.y()).arg(result.pos.z()));
   item->setText(c++, result.buys);
   item->setText(c++, result.sells);
@@ -75,7 +75,7 @@ void SearchResultWidget::searchDone()
 
 void SearchResultWidget::setPointOfInterest(const QVector3D &centerPoint)
 {
-  m_pointOfInterest = centerPoint;
+  pointOfInterest = centerPoint;
   updateStatusText();
 }
 
@@ -102,7 +102,7 @@ void SearchResultWidget::on_treeWidget_itemSelectionChanged()
       QVector<QSharedPointer<OverlayItem> > items;
       items.push_back(data.entity);
 
-      emit highlightEntities(items);
+      emit updateSearchResultPositions(items);
     }
   }
 }
@@ -128,14 +128,14 @@ void SearchResultWidget::on_check_display_all_stateChanged(int arg1)
     }
   }
 
-  emit highlightEntities(items);
+  emit updateSearchResultPositions(items);
 }
 
 void SearchResultWidget::updateStatusText()
 {
   ui->lbl_location->setText(QString("%4 results around position: %1,%2,%3")
-                              .arg(m_pointOfInterest.x())
-                              .arg(m_pointOfInterest.y())
-                              .arg(m_pointOfInterest.z())
+                              .arg(pointOfInterest.x())
+                              .arg(pointOfInterest.y())
+                              .arg(pointOfInterest.z())
                               .arg(ui->treeWidget->topLevelItemCount()));
 }

@@ -10,18 +10,18 @@ class QTreeWidgetItem;
 class PropertieTreeCreator
 {
 public:
-    PropertieTreeCreator();
+  PropertieTreeCreator();
 
-    template <class IterableT>
-        void ParseIterable(QTreeWidgetItem* node, const IterableT& seq);
-    template <class IterableT>
-        void ParseList(QTreeWidgetItem* node, const IterableT& seq);
+  template <class IterableT>
+  void ParseIterable(QTreeWidgetItem* node, const IterableT& seq);
+  template <class IterableT>
+  void ParseList(QTreeWidgetItem* node, const IterableT& seq);
 
-    void CreateTree(QTreeWidgetItem *node, const QVariant& v);
-    QString GetSummary(const QString& key, const QVariant& v);
+  void CreateTree(QTreeWidgetItem *node, const QVariant& v);
+  QString GetSummary(const QString& key, const QVariant& v);
 
 private:
-      QMap<QString, QString> summary;
+  QMap<QString, QString> summary;
 };
 
 #endif // PROPERTIETREECREATOR_H

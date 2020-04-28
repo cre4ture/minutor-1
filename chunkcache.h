@@ -14,6 +14,12 @@
 #include <QCache>
 #include <QSharedPointer>
 #include "./chunkid.h"
+enum class CacheState {
+  uncached,
+  uncached_loading,
+  cached // still can be nullptr when empty
+};
+
 class ChunkCache : public QObject {
   Q_OBJECT
 
@@ -21,7 +27,11 @@ public:
   ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool);
   ~ChunkCache();
 
+  static ChunkCache& Instance();
+
 private:
+  static ChunkCache* globalInstance;
+
   ChunkCache(const ChunkCache &) = delete;
   ChunkCache &operator=(const ChunkCache &) = delete;
 
@@ -30,6 +40,8 @@ private:
   void setPath(QString path);
   QString getPath() const;
   QSharedPointer<Chunk> fetch(int cx, int cz);         // fetch Chunk and load when not found
+  CacheState getCached(const ChunkID& id, QSharedPointer<Chunk>& chunk_out);    // fetch Chunk only if cached, can tell if just not loaded or empty
+  QSharedPointer<Chunk> getChunkSynchronously(const ChunkID& id);         // get chunk if cached directly, or load it in a synchronous blocking way
   int getCacheUsage() const;
   int getCacheMax() const;
   int getMemoryMax() const;
@@ -68,8 +80,6 @@ private:
       ChunkCache& m_parent;
       QMutexLocker m_locker;
   };
-
-  QSharedPointer<Chunk> getChunkSynchronously(ChunkID id);
 
  signals:
   void chunkLoaded(const QSharedPointer<Chunk>& chunk, int x, int z);

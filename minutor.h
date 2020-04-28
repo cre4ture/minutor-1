@@ -28,8 +28,8 @@ class Properties;
 class OverlayItem;
 class JumpTo;
 class SearchChunksWidget;
-class ChunkCache;
 class SearchPluginI;
+class ChunkCache;
 class PriorityThreadPool;
 
 class Minutor : public QMainWindow {
@@ -83,11 +83,12 @@ private slots:
   void addOverlayItemType(QString type, QColor color, QString dimension = "");
   void showProperties(QVariant props);
 
-  SearchChunksWidget* prepareSearchForm(const QSharedPointer<SearchPluginI> &searchPlugin);
   void searchBlock();
   void searchEntity();
+
   void triggerJumpToPosition(QVector3D pos);
-  void highlightEntities(QVector<QSharedPointer<OverlayItem> >);
+
+  void updateSearchResultPositions(QVector<QSharedPointer<OverlayItem> >);
 
   void highlightBoundingBox(QVector3D from, QVector3D to);
 
@@ -97,6 +98,7 @@ signals:
   void worldLoaded(bool isLoaded);
 
  private:
+  SearchChunksWidget* prepareSearchForm(const QSharedPointer<SearchPluginI> &searchPlugin);
   void updateChunksAroundPlayer(const Location& pos, size_t areaRadius);
 
   void createActions();

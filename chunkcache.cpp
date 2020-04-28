@@ -13,6 +13,17 @@
 #include <windows.h>
 #endif
 
+ChunkCache* ChunkCache::globalInstance = nullptr;
+
+ChunkCache &ChunkCache::Instance()
+{
+  if (!globalInstance)
+  {
+    throw std::runtime_error("ChunkCache::Instance(): no instance set!");
+  }
+  return *globalInstance;
+}
+
 ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
     : cache("chunks")
     , chunkStates()
@@ -20,6 +31,8 @@ ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
     , threadPool__(threadPool_)
     , safeThreadPoolI(*threadPool__)
 {
+  globalInstance = this;
+
   chunkStates.reserve(256*1024*1024);
 
   const int sizeChunkMax     = sizeof(Chunk) + 16 * sizeof(ChunkSection);  // all sections contain Blocks
@@ -66,6 +79,7 @@ ChunkCache::ChunkCache(const QSharedPointer<PriorityThreadPool>& threadPool_)
 
 ChunkCache::~ChunkCache() {
   loaderThreadPool.waitForDone();
+  globalInstance = nullptr;
 }
 
 void ChunkCache::clear() {
@@ -154,7 +168,7 @@ void ChunkCache::routeStructure(QSharedPointer<GeneratedStructure> structure) {
   emit structureFound(structure);
 }
 
-QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(ChunkID id)
+QSharedPointer<Chunk> ChunkCache::getChunkSynchronously(const ChunkID& id)
 {
   ExecutionGuard guard;
 

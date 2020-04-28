@@ -7,21 +7,20 @@
 #include <set>
 #include <algorithm>
 
-SearchBlockPluginWidget::SearchBlockPluginWidget(const SearchBlockPluginWidgetConfigT& config)
-  : QWidget(config.parent)
+SearchBlockPluginWidget::SearchBlockPluginWidget(QWidget* parent)
+  : QWidget(parent)
     , ui(new Ui::SearchBlockPluginWidget)
-    , m_config(config)
 {
   ui->setupUi(this);
 
-  auto idList = m_config.blockIdentifier->getKnownIds();
+  auto idList = BlockIdentifier::Instance().getKnownIds();
 
   QStringList nameList;
   nameList.reserve(idList.size());
 
   for (auto id: idList)
   {
-    auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
+    auto blockInfo = BlockIdentifier::Instance().getBlockInfo(id);
     nameList.push_back(blockInfo.getName());
   }
 
@@ -62,10 +61,10 @@ bool SearchBlockPluginWidget::initSearch()
 
   if (stw_blockName->isActive())
   {
-    auto idList = m_config.blockIdentifier->getKnownIds();
+    auto idList = BlockIdentifier::Instance().getKnownIds();
     for (auto id: idList)
     {
-      auto blockInfo = m_config.blockIdentifier->getBlockInfo(id);
+      auto blockInfo = BlockIdentifier::Instance().getBlockInfo(id);
       if (stw_blockName->matches(blockInfo.getName()))
       {
         m_searchForIds.insert(id);
@@ -91,16 +90,16 @@ SearchPluginI::ResultListT SearchBlockPluginWidget::searchChunk(Chunk &chunk)
     {
       for (int x = 0; x < 16; x++)
       {
-        const Block bi = chunk.getBlockData(x,y,z);
-        const auto it = m_searchForIds.find(bi.id);
+        const uint blockHid = chunk.getBlockHid(x,y,z);
+        const auto it = m_searchForIds.find(blockHid);
         if (it != m_searchForIds.end())
         {
-          auto info = m_config.blockIdentifier->getBlockInfo(bi.id);
+          auto info = BlockIdentifier::Instance().getBlockInfo(blockHid);
 
           SearchResultItem item;
-          item.name = info.getName() + " (" + QString::number(bi.id) + ")";
+          item.name = info.getName() + " (" + QString::number(blockHid) + ")";
           item.pos = QVector3D(chunk.getChunkX() * 16 + x, y, chunk.getChunkZ() * 16 + z) + QVector3D(0.5,0.5,0.5); // mark center of block, not origin
-          item.entity = QSharedPointer<Entity>::create(item.pos);
+          item.entity = QSharedPointer<Entity>::create(OverlayItem::Point(item.pos));
           results.push_back(item);
         }
       }

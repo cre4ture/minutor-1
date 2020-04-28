@@ -11,6 +11,7 @@
 #include "./mapviewrenderer.h"
 #include "./safeinvoker.h"
 #include "./threadsafequeue.hpp"
+#include "./rectangleinnertoouteriterator.h"
 
 #include <QtWidgets/QWidget>
 #include <QSharedPointer>
@@ -48,10 +49,8 @@ class MapView : public QWidget {
   typedef struct {
     float x, y, z;
     int scale;
-
-    QVector3D getPos3D() const
-    {
-        return QVector3D(x,y,z);
+    QVector3D getPos3D() const {
+      return QVector3D(x,y,z);
     }
 
   } BlockLocation;
@@ -87,10 +86,13 @@ class MapView : public QWidget {
   void updatePlayerPositions(const QVector<PlayerInfo>& playerList);
   void updateSearchResultPositions(const QVector<QSharedPointer<OverlayItem> > &searchResults);
 
+
  public slots:
   void setDepth(int depth);
   void chunkUpdated(const QSharedPointer<Chunk>& chunk, int x, int z);
   void redraw();
+
+  void drawGridLines(DrawHelper &h, DrawHelper3 &h2);
 
   // Clears the cache and redraws, causing all chunks to be re-loaded;
   // but keeps the viewport
@@ -149,6 +151,9 @@ class MapView : public QWidget {
   QList<QSharedPointer<OverlayItem>> getItems(int x, int y, int z);
   void adjustZoom(double steps, bool allowZoomOut);
 
+  template<typename ListT>
+  void drawOverlayItems(const ListT& list, const OverlayItem::Cuboid& cuboid, double x1, double z1, QPainter& canvas);
+
   MapCamera getCamera() const;
 
   static const int CAVE_DEPTH = 16;  // maximum depth caves are searched in cave mode
@@ -183,11 +188,12 @@ class MapView : public QWidget {
   QMap<QString, QList<QSharedPointer<OverlayItem>>> overlayItems;
   BlockLocation currentLocation;
 
+  QVector<QSharedPointer<OverlayItem> > currentSearchResults;
+
   QPoint lastMousePressPosition;
   bool dragging;
 
   QVector<QSharedPointer<OverlayItem> > currentPlayers;
-  QVector<QSharedPointer<OverlayItem> > currentSearchResults;
 
   SafeGuiThreadInvoker m_invoker;
   QSharedPointer<PriorityThreadPool> threadpool_;
